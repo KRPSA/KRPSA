@@ -8,6 +8,8 @@ Official website of **KRPSA (대한실용사격협회)**, the IPSC Region for th
 
 ## Editing content
 
+When you change `css/style.css` or `js/*.js`, bump the `?v=` number on their `<link>`/`<script>` tags in `index.html` so GitHub Pages' CDN serves the new file immediately.
+
 All visible text lives in `js/i18n.js` as `ko` / `en` dictionaries keyed by `data-i18n` attributes in `index.html`.
 To change a sentence, edit both languages for the same key.
 
