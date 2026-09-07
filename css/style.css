@@ -160,28 +160,64 @@ button { font: inherit; }
 .hero__glow--red { background: var(--red); top: -20vw; left: -12vw; }
 .hero__glow--blue { background: var(--blue); bottom: -22vw; right: -12vw; }
 
-.hero__target {
-  position: absolute; right: 6%; top: 50%; height: 78vh; width: auto;
-  transform: translateY(-50%);
-  color: rgba(255,255,255,.28);
+/* IPSC stage scene */
+.hero__stage {
+  position: absolute; right: -3%; bottom: 11%;
+  width: min(74vw, 1180px); height: auto;
+  color: rgba(255,255,255,.34);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 30%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 30%);
   will-change: transform;
 }
-.hero__target .t-azone { stroke: rgba(255,255,255,.55); }
-.hero__target .t-hits circle {
+.hero__stage .zone-a { stroke: rgba(255,255,255,.75); }
+.hero__stage .zone-c { stroke: rgba(255,255,255,.3); }
+.hero__stage .ground { opacity: .5; }
+.hero__stage .labels { opacity: .55; font-family: var(--font); }
+
+/* hit markers: pop in on demand */
+.hero__stage .hit {
   fill: var(--red); opacity: 0;
-  animation: hit 5.5s var(--ease) infinite;
-  filter: drop-shadow(0 0 10px rgba(205,46,58,.9));
+  transform: scale(2.6); transform-box: fill-box; transform-origin: center;
+  transition: opacity .1s linear, transform .22s cubic-bezier(.2, .9, .2, 1);
+  filter: drop-shadow(0 0 8px rgba(205,46,58,.95));
 }
-.hero__target .t-hits circle:nth-child(2) { animation-delay: .35s; }
-.hero__target .t-hits circle:nth-child(3) { animation-delay: .7s; }
-@keyframes hit {
-  0%, 20% { opacity: 0; transform: scale(2.2); transform-origin: center; transform-box: fill-box; }
-  26% { opacity: 1; transform: scale(1); }
-  80% { opacity: 1; }
-  95%, 100% { opacity: 0; }
+.hero__stage .hit.is-hit { opacity: 1; transform: scale(1); }
+
+/* steel: falls backwards from its base when hit */
+.hero__stage .steel {
+  transform-box: fill-box; transform-origin: 50% 100%;
+  transition: transform .5s cubic-bezier(.6, 0, 1, .55), opacity .5s;
+}
+.hero__stage .steel.is-down { transform: rotate(-7deg) scaleY(.06); opacity: .35; }
+
+/* swinger pendulum */
+.hero__stage .swing { transform-origin: 600px 150px; animation: swing 2.4s ease-in-out infinite alternate; }
+@keyframes swing { from { transform: rotate(-22deg); } to { transform: rotate(22deg); } }
+
+/* reset phase: everything eases back */
+.hero__stage.is-resetting .hit, .hero__stage.is-resetting .steel { transition: opacity .7s ease, transform .7s ease; }
+
+/* shot timer readout */
+.hero__hud {
+  position: absolute; right: 28px; top: calc(var(--nav-h) + 24px);
+  display: flex; gap: 22px; align-items: baseline;
+  padding: 12px 18px; border-radius: 14px;
+  background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.12);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  font-variant-numeric: tabular-nums; color: #fff;
+}
+.hero__hud b { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.hero__hud i { font-style: normal; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.55); margin-left: 5px; }
+.hero__hud .hud__hf i { margin: 0 6px 0 0; }
+.hero__hud .hud__hf b { color: #ff5b66; }
+.hero__hud.is-final b { color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__stage .swing { animation: none; }
 }
 @media (max-width: 900px) {
-  .hero__target { right: -18%; height: 60vh; opacity: .6; }
+  .hero__stage { right: -22%; bottom: 12%; width: 128vw; opacity: .7; }
+  .hero__hud { display: none; }
 }
 
 .hero__content { position: relative; max-width: 880px; width: 100%; }
