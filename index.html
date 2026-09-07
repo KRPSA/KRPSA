@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="meta.title">KRPSA — 대한실용사격협회 | Korea Practical Shooting Association</title>
+  <meta name="description" data-i18n-attr="content:meta.description" content="KRPSA(Korea Practical Shooting Association)는 국제실용사격연맹(IPSC)이 공인한 대한민국의 실용사격 협회입니다.">
+  <meta property="og:title" content="KRPSA — Korea Practical Shooting Association">
+  <meta property="og:description" content="Official IPSC Region of the Republic of Korea. Diligentia · Vis · Celeritas.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== Navigation ===== -->
+  <header class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="#top" class="nav__brand" aria-label="KRPSA Home">
+        <svg class="nav__mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#krpsa-mark"/></svg>
+        <span class="nav__wordmark">KRPSA</span>
+      </a>
+      <nav class="nav__links" aria-label="Primary">
+        <a href="#about" data-i18n="nav.about">협회 소개</a>
+        <a href="#ipsc" data-i18n="nav.ipsc">IPSC란</a>
+        <a href="#disciplines" data-i18n="nav.disciplines">종목</a>
+        <a href="#courses" data-i18n="nav.courses">교육</a>
+        <a href="#contact" data-i18n="nav.contact">연락처</a>
+      </nav>
+      <div class="nav__right">
+        <div class="lang" role="group" aria-label="Language">
+          <button class="lang__btn" data-lang="ko" type="button">KO</button>
+          <button class="lang__btn" data-lang="en" type="button">EN</button>
+        </div>
+        <button class="nav__toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span>
+        </button>
+      </div>
+    </div>
+    <div class="nav__mobile" id="navMobile">
+      <a href="#about" data-i18n="nav.about">협회 소개</a>
+      <a href="#ipsc" data-i18n="nav.ipsc">IPSC란</a>
+      <a href="#disciplines" data-i18n="nav.disciplines">종목</a>
+      <a href="#courses" data-i18n="nav.courses">교육</a>
+      <a href="#contact" data-i18n="nav.contact">연락처</a>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ===== Hero ===== -->
+    <section class="hero">
+      <div class="hero__bg" aria-hidden="true">
+        <div class="hero__glow hero__glow--red"></div>
+        <div class="hero__glow hero__glow--blue"></div>
+        <svg class="hero__target" viewBox="0 0 450 575" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-width="1.5">
+            <path class="t-outline" d="M120 0 H330 V95 L450 130 V575 H0 V130 L120 95 Z"/>
+            <path class="t-czone" d="M150 40 H300 V125 L400 160 V520 H50 V160 L150 125 Z"/>
+            <path class="t-azone" d="M195 60 H255 V125 H195 Z"/>
+            <rect class="t-azone" x="150" y="200" width="150" height="230" rx="2"/>
+          </g>
+          <g class="t-hits">
+            <circle cx="222" cy="290" r="6"/>
+            <circle cx="238" cy="320" r="6"/>
+            <circle cx="212" cy="345" r="6"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="hero__content">
+        <p class="hero__eyebrow reveal">
+          <span class="flag-dot" aria-hidden="true"><svg viewBox="0 0 72 48"><use href="#taegukgi"/></svg></span>
+          <span data-i18n="hero.eyebrow">IPSC 공식 지역 협회 · 대한민국</span>
+        </p>
+        <h1 class="hero__title reveal" data-i18n="hero.title">정확하게.<br>강하게.<br>빠르게.</h1>
+        <p class="hero__latin reveal">Diligentia · Vis · Celeritas</p>
+        <p class="hero__sub reveal" data-i18n="hero.sub">KRPSA는 국제실용사격연맹(IPSC)이 공인한 대한민국의 실용사격 협회입니다.</p>
+        <div class="hero__cta reveal">
+          <a href="#about" class="btn btn--primary" data-i18n="hero.cta1">협회 소개</a>
+          <a href="#ipsc" class="btn btn--ghost" data-i18n="hero.cta2">IPSC란 무엇인가 →</a>
+        </div>
+      </div>
+
+      <a href="#stats" class="hero__scroll" aria-label="Scroll">
+        <span></span>
+      </a>
+    </section>
+
+    <!-- ===== Stats ===== -->
+    <section class="stats" id="stats">
+      <div class="container stats__grid">
+        <div class="stat reveal">
+          <div class="stat__num">1976</div>
+          <div class="stat__label" data-i18n="stats.founded">IPSC 창립</div>
+        </div>
+        <div class="stat reveal">
+          <div class="stat__num">108<span>+</span></div>
+          <div class="stat__label" data-i18n="stats.regions">회원 지역</div>
+        </div>
+        <div class="stat reveal">
+          <div class="stat__num">2018</div>
+          <div class="stat__label" data-i18n="stats.joined">대한민국 IPSC 가입 · 106번째 지역</div>
+        </div>
+        <div class="stat reveal">
+          <div class="stat__num">50<span>th</span></div>
+          <div class="stat__label" data-i18n="stats.anniv">2026 · IPSC 창립 50주년</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== What is IPSC ===== -->
+    <section class="section section--light" id="ipsc">
+      <div class="container">
+        <div class="section__head reveal">
+          <p class="section__eyebrow" data-i18n="ipsc.eyebrow">International Practical Shooting Confederation</p>
+          <h2 class="section__title" data-i18n="ipsc.title">IPSC란 무엇인가.</h2>
+          <p class="section__lead" data-i18n="ipsc.lead">세계에서 가장 크고 오래된 실용사격 단체. 움직이며, 판단하며, 쏜다.</p>
+        </div>
+
+        <div class="ipsc-grid">
+          <div class="ipsc-grid__text reveal">
+            <p data-i18n="ipsc.p1">국제실용사격연맹(IPSC)은 1976년 5월 미국 미주리주 컬럼비아에서 창립되었으며, 네덜란드 암스테르담에 본부를 두고 있습니다. 아프리카·아메리카·아시아·유럽·중동·오세아니아에 걸쳐 108개 이상의 지역(Region)이 가입한 세계 최대의 사격 스포츠 단체입니다.</p>
+            <p data-i18n="ipsc.p2">실용사격(Practical Shooting)은 정해진 자세에서 정지 표적을 쏘는 전통 사격과 달리, 선수가 코스를 이동하면서 다양한 거리·각도·배치의 표적을 스스로 판단하여 제압하는 역동적인 종목입니다. 모든 코스는 정확성·파워·속도가 균형을 이루도록 설계됩니다.</p>
+            <p data-i18n="ipsc.p3">IPSC는 국가별로 단 하나의 회원 단체만을 인정합니다. 대한민국에서는 KRPSA가 그 역할을 맡아 공인 교육, 자격 인증, 공식 매치 개최와 국가대표 파견을 담당합니다.</p>
+            <a class="link-arrow" href="https://www.ipsc.org/what-is-ipsc/" target="_blank" rel="noopener" data-i18n="ipsc.link">ipsc.org에서 더 알아보기</a>
+          </div>
+          <div class="ipsc-grid__crest reveal">
+            <div class="crest-card">
+              <img src="assets/ipsc-crest.png" alt="IPSC crest" width="200" height="240" loading="lazy">
+              <div class="crest-card__cap">
+                <strong>IPSC</strong>
+                <span data-i18n="ipsc.crestcap">Excellence in Shooting · Est. 1976</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DVC -->
+        <div class="dvc">
+          <article class="dvc__card reveal">
+            <div class="dvc__letter">D</div>
+            <h3>Diligentia</h3>
+            <p class="dvc__ko" data-i18n="dvc.d.name">정확성</p>
+            <p data-i18n="dvc.d.desc">모든 표적에는 득점 구역이 있습니다. 빠르기만 해서는 이길 수 없습니다. A존을 맞히는 정밀함이 점수의 출발점입니다.</p>
+          </article>
+          <article class="dvc__card reveal">
+            <div class="dvc__letter">V</div>
+            <h3>Vis</h3>
+            <p class="dvc__ko" data-i18n="dvc.v.name">파워</p>
+            <p data-i18n="dvc.v.desc">탄약의 위력은 파워 팩터로 측정되며, 최소 기준을 충족해야 합니다. 강한 탄을 다루는 통제력이 곧 실력입니다.</p>
+          </article>
+          <article class="dvc__card reveal">
+            <div class="dvc__letter">C</div>
+            <h3>Celeritas</h3>
+            <p class="dvc__ko" data-i18n="dvc.c.name">속도</p>
+            <p data-i18n="dvc.c.desc">타이머는 첫 발부터 마지막 발까지를 기록합니다. 점수를 시간으로 나눈 히트 팩터(Hit Factor)가 순위를 가릅니다.</p>
+          </article>
+        </div>
+
+        <div class="formula reveal">
+          <div class="formula__eq">
+            <span data-i18n="formula.points">점수</span>
+            <span class="formula__op">÷</span>
+            <span data-i18n="formula.time">시간(초)</span>
+            <span class="formula__op">=</span>
+            <span class="formula__hf">Hit Factor</span>
+          </div>
+          <p data-i18n="formula.desc">IPSC의 컴스탁(Comstock) 채점 방식. 사격 발수와 시간에 제한이 없는 대신, 초당 획득 점수로 경쟁합니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Disciplines ===== -->
+    <section class="section section--dark" id="disciplines">
+      <div class="container">
+        <div class="section__head reveal">
+          <p class="section__eyebrow" data-i18n="disc.eyebrow">Disciplines</p>
+          <h2 class="section__title" data-i18n="disc.title">여섯 가지 종목. 하나의 규칙.</h2>
+          <p class="section__lead" data-i18n="disc.lead">핸드건에서 액션에어까지, 모든 종목은 동일한 IPSC 철학 위에 서 있습니다.</p>
+        </div>
+
+        <div class="disc-grid">
+          <article class="disc reveal">
+            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-handgun"/></svg></div>
+            <h3 data-i18n="disc.handgun">핸드건</h3>
+            <p data-i18n="disc.handgun.d">IPSC의 뿌리이자 가장 큰 종목. 3년마다 핸드건 월드 슛(World Shoot)이 열립니다.</p>
+          </article>
+          <article class="disc reveal">
+            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-rifle"/></svg></div>
+            <h3 data-i18n="disc.rifle">라이플</h3>
+            <p data-i18n="disc.rifle.d">근거리부터 300m 이상까지. 반자동·수동 부문으로 나뉘어 긴 사거리를 다룹니다.</p>
+          </article>
+          <article class="disc reveal">
+            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-shotgun"/></svg></div>
+            <h3 data-i18n="disc.shotgun">샷건</h3>
+            <p data-i18n="disc.shotgun.d">버드샷·벅샷·슬러그를 코스에 따라 전환하며 재장전 기술이 승부를 가릅니다.</p>
+          </article>
+          <article class="disc reveal">
+            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-pcc"/></svg></div>
+            <h3>PCC</h3>
+            <p data-i18n="disc.pcc.d">권총탄을 사용하는 카빈. 핸드건 코스를 카빈으로 소화하는 빠르게 성장하는 종목입니다.</p>
+          </article>
+          <article class="disc disc--highlight reveal">
+            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-airsoft"/></svg></div>
+            <h3 data-i18n="disc.aa">액션에어</h3>
+            <p data-i18n="disc.aa.d">에어소프트 핸드건으로 IPSC 규칙을 그대로 적용합니다. 대한민국에서 실용사격을 시작하는 가장 가까운 문입니다.</p>
+            <span class="disc__badge" data-i18n="disc.aa.badge">국내 입문 추천</span>
+          </article>
+          <article class="disc reveal">
+            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-minirifle"/></svg></div>
+            <h3 data-i18n="disc.mini">미니라이플</h3>
+            <p data-i18n="disc.mini.d">.22 LR 림파이어 라이플. 낮은 반동과 비용으로 라이플 기술을 익힙니다.</p>
+          </article>
+        </div>
+
+        <!-- Divisions -->
+        <div class="divisions reveal">
+          <div class="divisions__head">
+            <h3 data-i18n="div.title">핸드건 디비전</h3>
+            <p data-i18n="div.lead">격투기의 체급처럼, 총기의 종류와 개조 범위에 따라 나뉩니다.</p>
+          </div>
+          <div class="divisions__scroll">
+            <div class="div-card"><span class="div-card__n">01</span><h4>Open</h4><p data-i18n="div.open">광학조준기·컴펜세이터 등 제한 없는 최상위 장비 부문.</p></div>
+            <div class="div-card"><span class="div-card__n">02</span><h4>Standard</h4><p data-i18n="div.standard">가늠자·가늠쇠 사용. 상자 규격 안에서 제한적 개조 허용.</p></div>
+            <div class="div-card"><span class="div-card__n">03</span><h4>Production</h4><p data-i18n="div.production">양산형 권총을 거의 원형 그대로. 가장 참가자가 많은 부문.</p></div>
+            <div class="div-card"><span class="div-card__n">04</span><h4>Production Optics</h4><p data-i18n="div.po">양산형 권총에 슬라이드 장착 도트사이트를 더한 부문.</p></div>
+            <div class="div-card"><span class="div-card__n">05</span><h4>Classic</h4><p data-i18n="div.classic">1911 계열 싱글스택 권총 전용 부문.</p></div>
+            <div class="div-card"><span class="div-card__n">06</span><h4>Revolver</h4><p data-i18n="div.revolver">리볼버 전용. 재장전이 곧 기술인 부문.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== About KRPSA ===== -->
+    <section class="section section--light" id="about">
+      <div class="container">
+        <div class="about">
+          <div class="about__flag reveal" aria-hidden="true">
+            <svg viewBox="0 0 72 48" class="taegukgi"><use href="#taegukgi"/></svg>
+          </div>
+          <div class="about__text">
+            <p class="section__eyebrow reveal" data-i18n="about.eyebrow">Korea Practical Shooting Association</p>
+            <h2 class="section__title reveal" data-i18n="about.title">대한민국 실용사격의<br>공식 창구.</h2>
+            <p class="reveal" data-i18n="about.p1">KRPSA(Korea Practical Shooting Association, 대한실용사격협회)는 IPSC 헌장에 따라 대한민국을 대표하는 IPSC 지역 협회(Region)입니다. 대한민국은 2018년 IPSC 제42차 총회에서 106번째 회원 지역으로 가입했으며, 2024년 11월 아르헨티나 코르도바에서 열린 제48차 IPSC 총회에서 새로운 대한민국 지역 이사회(Regional Directorate)가 승인되어 KRPSA가 공식 지역 협회로 활동하고 있습니다.</p>
+            <p class="reveal" data-i18n="about.p2">KRPSA는 IPSC 규정에 따른 안전 교육과 자격 인증, 국내 공식 매치 운영, 국제 대회 국가대표 선발·파견을 담당하며, 대한민국 실용사격이 국제 기준 위에서 성장하도록 이끕니다.</p>
+
+            <ul class="pillars reveal">
+              <li>
+                <strong data-i18n="about.pil1">안전이 먼저</strong>
+                <span data-i18n="about.pil1.d">모든 교육과 매치는 IPSC 안전 규정을 최우선으로 운영합니다.</span>
+              </li>
+              <li>
+                <strong data-i18n="about.pil2">공인 교육과 자격</strong>
+                <span data-i18n="about.pil2.d">IPSC 공식 커리큘럼에 따른 교육과 국제적으로 통용되는 자격.</span>
+              </li>
+              <li>
+                <strong data-i18n="about.pil3">공식 매치</strong>
+                <span data-i18n="about.pil3.d">IPSC 공인 Level I–III 매치를 국내에서 개최합니다.</span>
+              </li>
+              <li>
+                <strong data-i18n="about.pil4">세계로</strong>
+                <span data-i18n="about.pil4.d">월드 슛과 대륙 선수권에 대한민국 국가대표를 파견합니다.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Courses ===== -->
+    <section class="section section--dark" id="courses">
+      <div class="container">
+        <div class="section__head reveal">
+          <p class="section__eyebrow" data-i18n="courses.eyebrow">Get Started</p>
+          <h2 class="section__title" data-i18n="courses.title">시작하는 방법.</h2>
+          <p class="section__lead" data-i18n="courses.lead">IPSC 공식 매치에 서기까지, 세 단계면 충분합니다.</p>
+        </div>
+
+        <ol class="steps">
+          <li class="step reveal">
+            <div class="step__n">1</div>
+            <div class="step__body">
+              <h3>Action Air Course <span data-i18n="courses.s1.tag">액션에어 자격 교육</span></h3>
+              <p data-i18n="courses.s1.d">에어소프트 핸드건으로 IPSC 규칙, 안전한 총기 취급, 사격 기본기와 매치 운영을 배웁니다. 수료 시 IPSC 공식 액션에어 매치 출전 자격이 주어집니다.</p>
+            </div>
+          </li>
+          <li class="step reveal">
+            <div class="step__n">2</div>
+            <div class="step__body">
+              <h3>Safety Course <span data-i18n="courses.s2.tag">실탄 안전 교육</span></h3>
+              <p data-i18n="courses.s2.d">실탄 자격 교육을 준비하는 분을 위한 필수 안전 과정. 격렬한 이동을 동반하는 실탄 사격의 특성상 사전 안전 교육과 검토를 거칩니다.</p>
+            </div>
+          </li>
+          <li class="step reveal">
+            <div class="step__n">3</div>
+            <div class="step__body">
+              <h3>Live Fire Course <span data-i18n="courses.s3.tag">실탄 자격 교육</span></h3>
+              <p data-i18n="courses.s3.d">공인 사격장에서 실제 매치 형식으로 이동·사격·문제 해결을 익힙니다. 수료 시 IPSC 공식 실탄 매치 출전 자격이 주어집니다.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="levels reveal">
+          <h3 data-i18n="levels.title">매치 레벨</h3>
+          <div class="levels__row">
+            <div class="level"><span>Level I</span><em data-i18n="levels.l1">클럽 매치</em></div>
+            <div class="level"><span>Level II</span><em data-i18n="levels.l2">지역 매치</em></div>
+            <div class="level"><span>Level III</span><em data-i18n="levels.l3">전국 선수권</em></div>
+            <div class="level"><span>Level IV</span><em data-i18n="levels.l4">대륙 선수권</em></div>
+            <div class="level level--top"><span>Level V</span><em data-i18n="levels.l5">월드 슛</em></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Leadership & Contact ===== -->
+    <section class="section section--light" id="contact">
+      <div class="container">
+        <div class="section__head reveal">
+          <p class="section__eyebrow" data-i18n="contact.eyebrow">Leadership & Contact</p>
+          <h2 class="section__title" data-i18n="contact.title">문의하기.</h2>
+        </div>
+
+        <div class="contact-grid">
+          <article class="rd-card reveal">
+            <div class="rd-card__avatar" aria-hidden="true">
+              <svg viewBox="0 0 64 64"><use href="#krpsa-mark"/></svg>
+            </div>
+            <p class="rd-card__role" data-i18n="rd.role">IPSC 지역 이사 (Regional Director)</p>
+            <h3 class="rd-card__name" data-i18n="rd.name">임원택</h3>
+            <p class="rd-card__latin" data-i18n="rd.latin">Won-Taek Lim · RD, IPSC Korea Region</p>
+            <p class="rd-card__desc" data-i18n="rd.desc">지역 이사는 IPSC 헌장에 따라 대한민국 지역을 대표하며, IPSC 총회에서 대한민국의 투표권을 행사하고 국내 IPSC 활동 전반을 총괄합니다.</p>
+            <a class="btn btn--dark" href="mailto:kor@ipsc.org">kor@ipsc.org</a>
+          </article>
+
+          <div class="contact-list reveal">
+            <div class="contact-item">
+              <span class="contact-item__k" data-i18n="contact.email">이메일</span>
+              <a class="contact-item__v" href="mailto:kor@ipsc.org">kor@ipsc.org</a>
+              <small data-i18n="contact.email.note">IPSC 공식 지역 대표 메일</small>
+            </div>
+            <div class="contact-item">
+              <span class="contact-item__k" data-i18n="contact.address">주소</span>
+              <span class="contact-item__v" data-i18n="contact.address.v">서울특별시 영등포구 63로 40, 라이프빌딩 1213호</span>
+              <small data-i18n="contact.address.note">IPSC 지역 등록 주소</small>
+            </div>
+            <div class="contact-item">
+              <span class="contact-item__k" data-i18n="contact.links">공식 링크</span>
+              <span class="contact-item__v contact-item__links">
+                <a href="https://www.ipsc.org/" target="_blank" rel="noopener">ipsc.org</a>
+                <a href="https://www.ipsc.org/regions/" target="_blank" rel="noopener" data-i18n="contact.link.regions">IPSC 지역 목록</a>
+                <a href="https://www.ipsc.org/ipsc-rules/" target="_blank" rel="noopener" data-i18n="contact.link.rules">IPSC 규정</a>
+                <a href="https://www.ipsc.org/ipsc-match-calendar/" target="_blank" rel="noopener" data-i18n="contact.link.calendar">매치 캘린더</a>
+              </span>
+            </div>
+            <div class="contact-item">
+              <span class="contact-item__k" data-i18n="contact.hours">문의</span>
+              <span class="contact-item__v" data-i18n="contact.hours.v">교육·매치·언론 문의는 이메일로 보내주시면 순차적으로 답변드립니다.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Closing statement ===== -->
+    <section class="closing">
+      <div class="container reveal">
+        <svg class="closing__flag" viewBox="0 0 72 48" aria-hidden="true"><use href="#taegukgi"/></svg>
+        <h2 data-i18n="closing.title">대한민국에서, 세계 기준으로.</h2>
+        <p data-i18n="closing.sub">KRPSA · Korea Practical Shooting Association</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <svg viewBox="0 0 64 64" class="footer__mark" aria-hidden="true"><use href="#krpsa-mark"/></svg>
+        <div>
+          <strong>KRPSA</strong>
+          <span data-i18n="footer.name">대한실용사격협회 · Korea Practical Shooting Association</span>
+        </div>
+      </div>
+      <div class="footer__affil">
+        <img src="assets/ipsc-crest.png" alt="IPSC" width="34" height="41" loading="lazy">
+        <span data-i18n="footer.affil">국제실용사격연맹(IPSC) 공식 지역 협회 · Republic of Korea (KOR)</span>
+      </div>
+      <p class="footer__legal">
+        <span data-i18n="footer.copy">© 2026 KRPSA. All rights reserved.</span>
+        <span data-i18n="footer.tm">IPSC 및 IPSC 문장은 International Practical Shooting Confederation의 상표입니다.</span>
+      </p>
+    </div>
+  </footer>
+
+  <!-- ===== SVG symbol library ===== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <!-- Taegukgi: official geometry (3:2, circle d = H/2, trigrams on diagonals) -->
+      <symbol id="taegukgi" viewBox="-36 -24 72 48">
+        <rect x="-36" y="-24" width="72" height="48" fill="#fff"/>
+        <g transform="rotate(-56.3099325)">
+          <circle r="12" fill="#CD2E3A"/>
+          <path d="M0 -12 A6 6 0 0 0 0 0 A6 6 0 0 1 0 12 A12 12 0 0 1 0 -12 Z" fill="#0047A0"/>
+        </g>
+        <!-- Geon ☰ (top-left) -->
+        <g transform="rotate(-56.3099325)" stroke="#000" stroke-width="2">
+          <path d="M-6 -25 H6 M-6 -22 H6 M-6 -19 H6"/>
+        </g>
+        <!-- Gam ☵ (top-right) -->
+        <g transform="rotate(56.3099325)" stroke="#000" stroke-width="2">
+          <path d="M-6 -25 H-0.5 M0.5 -25 H6 M-6 -22 H6 M-6 -19 H-0.5 M0.5 -19 H6"/>
+        </g>
+        <!-- Ri ☲ (bottom-left) -->
+        <g transform="rotate(-123.6900675)" stroke="#000" stroke-width="2">
+          <path d="M-6 -25 H6 M-6 -22 H-0.5 M0.5 -22 H6 M-6 -19 H6"/>
+        </g>
+        <!-- Gon ☷ (bottom-right) -->
+        <g transform="rotate(123.6900675)" stroke="#000" stroke-width="2">
+          <path d="M-6 -25 H-0.5 M0.5 -25 H6 M-6 -22 H-0.5 M0.5 -22 H6 M-6 -19 H-0.5 M0.5 -19 H6"/>
+        </g>
+      </symbol>
+
+      <!-- KRPSA mark: target rings split red/blue on the taegeuk diagonal -->
+      <symbol id="krpsa-mark" viewBox="0 0 64 64">
+        <defs>
+          <clipPath id="km-top"><path d="M0 0 H64 L0 64 Z"/></clipPath>
+          <clipPath id="km-bot"><path d="M64 0 V64 H0 Z"/></clipPath>
+        </defs>
+        <g fill="none" stroke-width="4">
+          <circle cx="32" cy="32" r="28" stroke="#CD2E3A" clip-path="url(#km-top)"/>
+          <circle cx="32" cy="32" r="28" stroke="#0047A0" clip-path="url(#km-bot)"/>
+          <circle cx="32" cy="32" r="16" stroke="currentColor" stroke-width="3"/>
+        </g>
+        <circle cx="32" cy="32" r="5" fill="currentColor"/>
+        <path d="M32 0 V10 M32 54 V64 M0 32 H10 M54 32 H64" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </symbol>
+
+      <!-- Discipline icons (stroke, 48x48) -->
+      <symbol id="ic-handgun" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16h34v8H26l-3 12h-9l3-12H6z"/><path d="M14 24h8"/><path d="M40 16v-3"/></g></symbol>
+      <symbol id="ic-rifle" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 30l26-10h14v5H30l-4 4-4 8h-6l3-7z"/><path d="M12 20l6 4"/><path d="M40 20v-4"/></g></symbol>
+      <symbol id="ic-shotgun" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 30l18-8h22v5H28l-3 4-6 7h-7l4-8z"/><path d="M24 22v5"/><path d="M34 22v5"/></g></symbol>
+      <symbol id="ic-pcc" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 28l14-6h26v5H32l-2 4-4 8h-6l3-9z"/><path d="M26 27v6"/><path d="M8 22v6"/></g></symbol>
+      <symbol id="ic-airsoft" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16h30v8H26l-3 12h-9l3-12H8z"/><circle cx="41" cy="12" r="2.5"/><circle cx="43" cy="20" r="1.5"/><path d="M40 16h2"/></g></symbol>
+      <symbol id="ic-minirifle" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 30l22-8h14v4H30l-3 3-3 7h-6l3-6z"/><path d="M14 22l4 3"/><circle cx="34" cy="17" r="3"/></g></symbol>
+    </defs>
+  </svg>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
