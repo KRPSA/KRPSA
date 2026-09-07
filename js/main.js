@@ -116,23 +116,24 @@
   if (stage) {
     var hits = {};
     stage.querySelectorAll('.hit').forEach(function (h) { hits[h.getAttribute('data-shot')] = h; });
-    var popper = document.getElementById('popper');
-    var plate = document.getElementById('plate');
+    var steel = ['popper', 'minipopper', 'plate', 'plate2'].map(function (id) { return document.getElementById(id); });
     var hudTime = document.getElementById('hudTime');
     var hudShots = document.getElementById('hudShots');
     var hudHf = document.getElementById('hudHf');
     var hud = document.getElementById('heroHud');
 
-    // Course of fire (ms): paper 2×A → popper → plate → swinger 2×A → paper 2×A
-    // Points: 6 A-hits × 5 + popper 5 + plate 5 = 40
+    // Course of fire (ms): paper 2×A → popper → mini popper → round plate → square plate → swinger 2×A → paper 2×A
+    // Points: 6 A-hits × 5 + 4 steel × 5 = 50
     var COURSE = [
       { t: 450,  shot: 1 }, { t: 680,  shot: 2 },
-      { t: 1250, shot: 3, down: popper },
-      { t: 1900, shot: 4, down: plate },
-      { t: 2650, shot: 5 }, { t: 2900, shot: 6 },
-      { t: 3550, shot: 7 }, { t: 3780, shot: 8 }
+      { t: 1250, shot: 3, down: steel[0] },
+      { t: 1650, shot: 4, down: steel[1] },
+      { t: 2150, shot: 5, down: steel[2] },
+      { t: 2480, shot: 6, down: steel[3] },
+      { t: 3200, shot: 7 }, { t: 3450, shot: 8 },
+      { t: 4050, shot: 9 }, { t: 4280, shot: 10 }
     ];
-    var POINTS = 40, RESET_AT = 7200, LOOP = 8600;
+    var POINTS = 50, RESET_AT = 7800, LOOP = 9300;
 
     function fire(step) {
       var h = hits[step.shot];
@@ -162,8 +163,7 @@
       setTimeout(function () {
         stage.classList.add('is-resetting');
         Object.keys(hits).forEach(function (k) { hits[k].classList.remove('is-hit'); });
-        popper && popper.classList.remove('is-down');
-        plate && plate.classList.remove('is-down');
+        steel.forEach(function (s) { s && s.classList.remove('is-down'); });
         if (hudShots) hudShots.textContent = '0';
         if (hudTime) hudTime.textContent = '0.00';
         if (hudHf) hudHf.textContent = '—';

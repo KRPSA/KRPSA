@@ -12,7 +12,7 @@
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="stylesheet" href="css/style.css?v=3">
 </head>
 <body>
 
@@ -56,84 +56,118 @@
       <div class="hero__bg" aria-hidden="true">
         <div class="hero__glow hero__glow--red"></div>
         <div class="hero__glow hero__glow--blue"></div>
-        <!-- IPSC stage: paper (2×A), popper (falls), plate (falls), swinger (2×A), paper + no-shoot -->
-        <svg class="hero__stage" id="heroStage" viewBox="0 0 1060 620" aria-hidden="true">
+        <!-- IPSC stage — geometry from IPSC Handgun Rules (Jan 2025) Appendix B2 (IPSC Target 45×57 cm),
+             C2 (Popper 85 cm / Mini Popper 56 cm), C3 (plates 20–30 cm on ≥1 m stakes). Units: 1 cm = 2.4 px. -->
+        <svg class="hero__stage" id="heroStage" viewBox="0 0 1180 620" aria-hidden="true">
           <defs>
-            <!-- IPSC Classic target, 450 × 575 units: D (outline) / C / A zones -->
-            <g id="ipsc-paper" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round">
-              <path class="zone-d" d="M130 0 H320 V75 L450 150 V575 H0 V150 L130 75 Z"/>
-              <path class="zone-c" d="M165 38 H285 V108 L405 168 V537 H45 V168 L165 108 Z"/>
-              <rect class="zone-a" x="150" y="190" width="150" height="300" rx="2"/>
-              <rect class="zone-a" x="175" y="12" width="100" height="52" rx="2"/>
+            <!-- IPSC Target, cm. Zones: D outer octagon, C, A (Appendix B2) -->
+            <g id="ipsc-paper" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round">
+              <path class="zone-d" d="M15 0 H30 L45 19 V38 L30 57 H15 L0 38 V19 Z"/>
+              <path class="zone-c" d="M17.5 0.5 H27.5 L37.5 19 V33.5 L27.5 45 H17.5 L7.5 33.5 V19 Z"/>
+              <path class="zone-a" d="M20 2.5 H25 L30 19 V27.5 L25 35 H20 L15 27.5 V19 Z"/>
+            </g>
+            <!-- No-shoot: same target, marked with an X -->
+            <g id="ipsc-noshoot" stroke="currentColor" stroke-linejoin="round">
+              <path d="M15 0 H30 L45 19 V38 L30 57 H15 L0 38 V19 Z" fill="#000" stroke-width="1.4"/>
+              <path d="M9 14 L36 43 M36 14 L9 43" fill="none" stroke-width="3" stroke-linecap="round"/>
             </g>
           </defs>
 
           <!-- ground -->
-          <line class="ground" x1="0" y1="560" x2="1060" y2="560" stroke="currentColor" stroke-width="1.5"/>
+          <line class="ground" x1="0" y1="560" x2="1180" y2="560" stroke="currentColor" stroke-width="1.5"/>
 
-          <!-- 1. paper target -->
-          <line class="post" x1="130" y1="500" x2="130" y2="560" stroke="currentColor" stroke-width="3"/>
-          <g transform="translate(30 244) scale(0.4444)">
-            <use href="#ipsc-paper"/>
-            <circle class="hit" data-shot="1" cx="215" cy="300" r="16"/>
-            <circle class="hit" data-shot="2" cx="240" cy="352" r="16"/>
-          </g>
+          <!-- everything below is in cm, origin on the ground line, y up = negative -->
+          <g transform="translate(0 560) scale(2.4)">
 
-          <!-- 2. popper (steel, falls) -->
-          <g class="steel" id="popper">
-            <g fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round">
-              <path d="M282 352 H358 L342 560 H298 Z"/>
-              <circle cx="320" cy="316" r="50"/>
+            <!-- 1. IPSC Target on two sticks, tops cut flush (Appendix B1) -->
+            <g transform="translate(46 0)">
+              <path class="stick" d="M-16 0 V-132 M16 0 V-132" stroke="currentColor" stroke-width="1.2"/>
+              <g transform="translate(-22.5 -132)">
+                <use href="#ipsc-paper"/>
+                <circle class="hit" data-shot="1" cx="21.5" cy="23.5" r="2.4"/>
+                <circle class="hit" data-shot="2" cx="25" cy="29" r="2.4"/>
+              </g>
             </g>
-            <circle class="hit" data-shot="3" cx="318" cy="318" r="7"/>
-          </g>
 
-          <!-- 3. plate (steel, falls) -->
-          <g class="steel" id="plate">
-            <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-              <circle cx="440" cy="440" r="40"/>
-              <line x1="440" y1="480" x2="440" y2="560"/>
-              <line x1="412" y1="560" x2="468" y2="560"/>
+            <!-- 2. IPSC Popper: R15 head, body 20→15 cm, 85 cm tall; calibration zone = upper half of head -->
+            <g transform="translate(112 0)"><g class="steel" id="popper">
+              <path class="calib" d="M-15 -70 A15 15 0 0 1 15 -70 Z"/>
+              <g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round">
+                <path d="M-10 -70 H10 L7.5 0 H-7.5 Z"/>
+                <circle cx="0" cy="-70" r="15"/>
+              </g>
+              <circle class="hit" data-shot="3" cx="1.5" cy="-75" r="2.6"/>
+            </g></g>
+
+            <!-- 3. IPSC Mini Popper: R10 head, body 13.5→10 cm, 56 cm tall -->
+            <g transform="translate(158 0)"><g class="steel" id="minipopper">
+              <path class="calib" d="M-10 -46 A10 10 0 0 1 10 -46 Z"/>
+              <g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round">
+                <path d="M-6.75 -46 H6.75 L5 0 H-5 Z"/>
+                <circle cx="0" cy="-46" r="10"/>
+              </g>
+              <circle class="hit" data-shot="4" cx="-1" cy="-49" r="2.4"/>
+            </g></g>
+
+            <!-- 4. Round plate Ø25 cm on a 1 m stake -->
+            <g transform="translate(200 0)">
+              <path d="M-8 0 H8 M0 0 V-100" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <g class="steel" id="plate">
+                <circle class="plate" cx="0" cy="-112.5" r="12.5"/>
+                <circle class="hit" data-shot="5" cx="-1.5" cy="-111" r="2.6"/>
+              </g>
             </g>
-            <circle class="hit" data-shot="4" cx="437" cy="442" r="7"/>
-          </g>
 
-          <!-- 4. swinger (paper on a pendulum arm) -->
-          <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
-            <line x1="600" y1="560" x2="600" y2="150"/>
-            <line x1="565" y1="560" x2="635" y2="560"/>
-          </g>
-          <g class="swing" id="swinger">
-            <line x1="600" y1="150" x2="600" y2="256" stroke="currentColor" stroke-width="3"/>
-            <g transform="translate(519 256) scale(0.36)">
-              <use href="#ipsc-paper"/>
-              <circle class="hit" data-shot="5" cx="210" cy="290" r="20"/>
-              <circle class="hit" data-shot="6" cx="245" cy="360" r="20"/>
+            <!-- 5. Square plate 20×20 cm on a 1 m stake -->
+            <g transform="translate(233 0)">
+              <path d="M-8 0 H8 M0 0 V-100" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <g class="steel" id="plate2">
+                <rect class="plate" x="-10" y="-120" width="20" height="20" rx="0.8"/>
+                <circle class="hit" data-shot="6" cx="1" cy="-109" r="2.6"/>
+              </g>
             </g>
-          </g>
-          <circle cx="600" cy="150" r="7" fill="#000" stroke="currentColor" stroke-width="3"/>
 
-          <!-- 5. paper target + no-shoot -->
-          <line class="post" x1="880" y1="500" x2="880" y2="560" stroke="currentColor" stroke-width="3"/>
-          <g transform="translate(780 244) scale(0.4444)">
-            <use href="#ipsc-paper"/>
-            <circle class="hit" data-shot="7" cx="205" cy="290" r="16"/>
-            <circle class="hit" data-shot="8" cx="228" cy="345" r="16"/>
-          </g>
-          <line class="post" x1="953" y1="507" x2="953" y2="560" stroke="currentColor" stroke-width="3"/>
-          <g class="noshoot" transform="translate(872 300) scale(0.36)">
-            <path d="M130 0 H320 V75 L450 150 V575 H0 V150 L130 75 Z" fill="#000" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
-            <path d="M60 200 L390 520 M390 200 L60 520" stroke="currentColor" stroke-width="10" stroke-linecap="round"/>
+            <!-- 6. Swinger: inverted pendulum — pivot 40 cm above ground on an A-frame,
+                 1 m arm with the IPSC Target on top, counterweight below the pivot -->
+            <g transform="translate(300 0)">
+              <path d="M-22 0 H22 M-14 0 L0 -40 L14 0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+              <g transform="translate(0 -40)"><g class="swing" id="swinger">
+                <rect x="-25" y="-160" width="50" height="200" fill="none" stroke="none"/>
+                <path d="M0 0 V-100 M0 0 V30" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                <circle class="weight" cx="0" cy="34" r="6"/>
+                <g transform="translate(-22.5 -157)">
+                  <use href="#ipsc-paper"/>
+                  <circle class="hit" data-shot="7" cx="21" cy="22.5" r="2.6"/>
+                  <circle class="hit" data-shot="8" cx="25.5" cy="28.5" r="2.6"/>
+                </g>
+              </g></g>
+              <circle cx="0" cy="-40" r="2.2" fill="#000" stroke="currentColor" stroke-width="1.2"/>
+            </g>
+
+            <!-- 7. IPSC Target partially covered by a no-shoot -->
+            <g transform="translate(388 0)">
+              <path class="stick" d="M-16 0 V-132 M16 0 V-132" stroke="currentColor" stroke-width="1.2"/>
+              <g transform="translate(-22.5 -132)">
+                <use href="#ipsc-paper"/>
+                <circle class="hit" data-shot="9" cx="20" cy="22" r="2.4"/>
+                <circle class="hit" data-shot="10" cx="23.5" cy="27.5" r="2.4"/>
+              </g>
+            </g>
+            <g transform="translate(430 0)">
+              <path class="stick" d="M-16 0 V-108 M16 0 V-108" stroke="currentColor" stroke-width="1.2"/>
+              <use href="#ipsc-noshoot" transform="translate(-22.5 -108)"/>
+            </g>
           </g>
 
           <!-- labels -->
-          <g class="labels" fill="currentColor" font-size="13" font-weight="600" letter-spacing="2.5" text-anchor="middle">
-            <text x="130" y="598" data-i18n="tgt.paper">PAPER</text>
-            <text x="320" y="598" data-i18n="tgt.popper">POPPER</text>
-            <text x="440" y="598" data-i18n="tgt.plate">PLATE</text>
-            <text x="600" y="598" data-i18n="tgt.swinger">SWINGER</text>
-            <text x="840" y="598" data-i18n="tgt.paper">PAPER</text>
-            <text x="985" y="598" data-i18n="tgt.noshoot">NO-SHOOT</text>
+          <g class="labels" fill="currentColor" font-size="12" font-weight="600" letter-spacing="2" text-anchor="middle">
+            <text x="110" y="598" data-i18n="tgt.paper">IPSC TARGET</text>
+            <text x="269" y="598" data-i18n="tgt.popper">POPPER</text>
+            <text x="379" y="598" data-i18n="tgt.minipopper">MINI POPPER</text>
+            <text x="520" y="598" data-i18n="tgt.plate">PLATES</text>
+            <text x="720" y="598" data-i18n="tgt.swinger">SWINGER</text>
+            <text x="931" y="598" data-i18n="tgt.paper">IPSC TARGET</text>
+            <text x="1050" y="598" data-i18n="tgt.noshoot">NO-SHOOT</text>
           </g>
         </svg>
 
@@ -524,7 +558,7 @@
     </defs>
   </svg>
 
-  <script src="js/i18n.js?v=2"></script>
-  <script src="js/main.js?v=2"></script>
+  <script src="js/i18n.js?v=3"></script>
+  <script src="js/main.js?v=3"></script>
 </body>
 </html>
