@@ -446,8 +446,8 @@ button { font: inherit; }
   position: relative; overflow: hidden;
 }
 .rd-card::after { content: ""; position: absolute; right: -60px; bottom: -80px; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(205,46,58,.45), transparent 65%); pointer-events: none; }
-.rd-card__avatar { width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,.08); display: grid; place-items: center; color: #fff; margin-bottom: 18px; }
-.rd-card__avatar img { width: 40px; height: auto; }
+.rd-card__avatar { width: 60px; margin-bottom: 20px; }
+.rd-card__avatar img { width: 100%; height: auto; display: block; filter: drop-shadow(0 10px 18px rgba(0,0,0,.45)); }
 .rd-card__role { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: #ff5b66; font-weight: 600; }
 .rd-card__name { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
 .rd-card__latin { color: rgba(255,255,255,.6); font-size: 15px; }
