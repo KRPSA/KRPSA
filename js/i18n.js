@@ -81,7 +81,9 @@ window.KRPSA_I18N = {
 
     'div.title': '핸드건 디비전',
     'div.lead': '격투기의 체급처럼, 총기의 종류와 개조 범위에 따라 나뉩니다.',
-    'div.ruleslink': 'IPSC 공식 규정 전문 보기',
+    'div.ruleslink.n': '더 알아보기',
+    'div.ruleslink': 'IPSC 공식 규정 전문 ↗',
+    'div.ruleslink.d': '각 디비전의 전체 조항과 최신 개정 내용은 IPSC 공식 룰북에서 확인할 수 있습니다.',
     'div.open': '컴펜세이터, 전자조준기, 확장 매거진까지 사실상 제한이 없는 최상위 장비 부문입니다. Major 파워팩터 160, Minor 125.',
     'div.optics': '총기 종류에는 제한이 없고, 슬라이드 후방에 전자조준기 하나만 장착합니다. 그 외 개조는 자유롭게 허용됩니다.',
     'div.standard': '225×150×45mm 박스 규격 안에 들어가야 하며, 가늠자·가늠쇠만 사용합니다. 컴펜세이터와 전자조준기는 금지됩니다.',
@@ -227,7 +229,9 @@ window.KRPSA_I18N = {
 
     'div.title': 'Handgun divisions',
     'div.lead': 'Like weight classes, divisions separate firearms by type and permitted modification.',
-    'div.ruleslink': 'Read the full IPSC rulebooks',
+    'div.ruleslink.n': 'Learn more',
+    'div.ruleslink': 'The full IPSC rulebooks ↗',
+    'div.ruleslink.d': 'Every clause for each division, and the latest amendments, live in the official IPSC rulebooks.',
     'div.open': 'Compensators, electronic sights and extended magazines are all fair game — the top-tier equipment division. Major power factor 160, Minor 125.',
     'div.optics': 'Any handgun is eligible, fitted with a single electronic sight on the rear of the slide. Modification is otherwise unrestricted.',
     'div.standard': 'Must fit inside a 225×150×45mm box. Iron sights only — no compensators, no electronic sights.',
