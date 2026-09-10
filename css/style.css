@@ -453,7 +453,7 @@ button { font: inherit; }
 .contact-item__v { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
 a.contact-item__v:hover { color: var(--blue); }
 .contact-item small { font-size: 13px; color: var(--ink-2); }
-.contact-item__links { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 16px; }
+.contact-item__links { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; font-size: 16px; }
 .contact-item__links a { color: var(--blue); }
 .contact-item__links a:hover { text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 900px) { .contact-grid { grid-template-columns: 1fr; } }
