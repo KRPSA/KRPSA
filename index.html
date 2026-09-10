@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-  <link rel="stylesheet" href="css/style.css?v=8">
+  <link rel="stylesheet" href="css/style.css?v=9">
 </head>
 <body>
 
@@ -376,36 +376,56 @@
     <!-- ===== About KRPSA ===== -->
     <section class="section section--light" id="about">
       <div class="container">
-        <div class="about">
-          <div class="about__flag reveal" aria-hidden="true">
-            <svg viewBox="0 0 72 48" class="taegukgi"><use href="#taegukgi"/></svg>
-          </div>
-          <div class="about__text">
-            <p class="section__eyebrow reveal" data-i18n="about.eyebrow">Korea Practical Shooting Association</p>
-            <h2 class="section__title reveal" data-i18n="about.title">대한민국 실용사격의<br>공식 창구.</h2>
-            <p class="reveal" data-i18n="about.p1">KRPSA(Korea Practical Shooting Association, 대한실용사격협회)는 IPSC 헌장에 따라 대한민국을 대표하는 IPSC 지역 협회(Region)입니다. 대한민국은 2018년 IPSC 제42차 총회에서 106번째 회원 지역으로 가입했으며, 2024년 11월 아르헨티나 코르도바에서 열린 제48차 IPSC 총회에서 새로운 대한민국 지역 이사회(Regional Directorate)가 승인되어 KRPSA가 공식 지역 협회로 활동하고 있습니다.</p>
-            <p class="reveal" data-i18n="about.p2">KRPSA는 IPSC 규정에 따른 안전 교육과 자격 인증, 국내 공식 매치 운영, 국제 대회 국가대표 선발·파견을 담당하며, 대한민국 실용사격이 국제 기준 위에서 성장하도록 이끕니다.</p>
+        <div class="section__head reveal">
+          <p class="section__eyebrow" data-i18n="about.eyebrow">Korea Practical Shooting Association</p>
+          <h2 class="section__title" data-i18n="about.title">대한민국 실용사격의<br>공식 창구.</h2>
+          <p class="section__lead" data-i18n="about.lead">대한민국의 실용사격을 대표하는 단 하나의 이름.</p>
+        </div>
 
-            <ul class="pillars reveal">
-              <li>
-                <strong data-i18n="about.pil1">안전이 먼저</strong>
-                <span data-i18n="about.pil1.d">모든 교육과 매치는 IPSC 안전 규정을 최우선으로 운영합니다.</span>
-              </li>
-              <li>
-                <strong data-i18n="about.pil2">공인 교육과 자격</strong>
-                <span data-i18n="about.pil2.d">IPSC 공식 커리큘럼에 따른 교육과 국제적으로 통용되는 자격.</span>
-              </li>
-              <li>
-                <strong data-i18n="about.pil3">공식 매치</strong>
-                <span data-i18n="about.pil3.d">IPSC 공인 Level I–III 매치를 국내에서 개최합니다.</span>
-              </li>
-              <li>
-                <strong data-i18n="about.pil4">세계로</strong>
-                <span data-i18n="about.pil4.d">월드 슛과 대륙 선수권에 대한민국 국가대표를 파견합니다.</span>
-              </li>
-            </ul>
+        <div class="ipsc-grid about-grid">
+          <div class="ipsc-grid__text reveal">
+            <p data-i18n="about.p1">KRPSA(Korea Practical Shooting Association, 대한실용사격협회)는 IPSC 헌장에 따라 대한민국을 대표하는 IPSC 지역 협회(Region)입니다. 대한민국은 2018년 IPSC 제42차 총회에서 106번째 회원 지역으로 가입했으며, 2024년 11월 아르헨티나 코르도바에서 열린 제48차 IPSC 총회에서 새로운 대한민국 지역 이사회(Regional Directorate)가 승인되어 KRPSA가 공식 지역 협회로 활동하고 있습니다.</p>
+            <p data-i18n="about.p2">KRPSA는 IPSC 규정에 따른 안전 교육과 자격 인증, 국내 공식 매치 운영, 국제 대회 국가대표 선발·파견을 담당하며, 대한민국 실용사격이 국제 기준 위에서 성장하도록 이끕니다.</p>
+            <p data-i18n="about.p3">액션에어로 첫 발을 떼는 신규 회원부터 핸드건 월드 슛에 도전하는 국가대표까지, KRPSA는 대한민국 실용사격의 모든 단계를 함께합니다.</p>
+          </div>
+          <div class="about-grid__badges reveal">
+            <div class="crest-card">
+              <div class="crest-card__flag" aria-hidden="true">
+                <svg viewBox="0 0 72 48"><use href="#taegukgi"/></svg>
+              </div>
+              <div class="crest-card__cap">
+                <strong>KOR</strong>
+                <span data-i18n="about.flagcap">대한민국</span>
+              </div>
+            </div>
+            <div class="crest-card">
+              <img src="assets/krpsa-logo.png" alt="KRPSA" width="150" height="190">
+              <div class="crest-card__cap">
+                <strong>KRPSA</strong>
+                <span data-i18n="about.logocap">IPSC 지역 · 2018년 가입</span>
+              </div>
+            </div>
           </div>
         </div>
+
+        <ul class="pillars reveal">
+          <li>
+            <strong data-i18n="about.pil1">안전이 먼저</strong>
+            <span data-i18n="about.pil1.d">모든 교육과 매치는 IPSC 안전 규정을 최우선으로 운영합니다.</span>
+          </li>
+          <li>
+            <strong data-i18n="about.pil2">공인 교육과 자격</strong>
+            <span data-i18n="about.pil2.d">IPSC 공식 커리큘럼에 따른 교육과 국제적으로 통용되는 자격.</span>
+          </li>
+          <li>
+            <strong data-i18n="about.pil3">공식 매치</strong>
+            <span data-i18n="about.pil3.d">IPSC 공인 Level I–III 매치를 국내에서 개최합니다.</span>
+          </li>
+          <li>
+            <strong data-i18n="about.pil4">세계로</strong>
+            <span data-i18n="about.pil4.d">월드 슛과 대륙 선수권에 대한민국 국가대표를 파견합니다.</span>
+          </li>
+        </ul>
       </div>
     </section>
 
@@ -561,7 +581,7 @@
     </defs>
   </svg>
 
-  <script src="js/i18n.js?v=7"></script>
-  <script src="js/main.js?v=7"></script>
+  <script src="js/i18n.js?v=8"></script>
+  <script src="js/main.js?v=8"></script>
 </body>
 </html>
