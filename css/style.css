@@ -403,12 +403,12 @@ button { font: inherit; }
 .about-grid { margin-bottom: 56px; }
 /* Side by side, not stacked — two cards this small stacked vertically ran
    roughly twice the height of the text column beside them. */
-.about-grid__badges { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; align-content: center; }
-.about-grid__badges .crest-card { padding: 26px 18px 24px; }
-.about-grid__badges .crest-card img { width: 92px; }
+.about-grid__badges { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.about-grid__badges .crest-card { padding: 28px 24px 26px; }
+.about-grid__badges .crest-card img { width: 110px; }
 .crest-card__flag { width: 150px; border-radius: 10px; overflow: hidden; box-shadow: 0 14px 30px -14px rgba(0,0,0,.3), 0 0 0 1px var(--line); }
 .crest-card__flag svg { width: 100%; height: auto; display: block; }
-.about-grid__badges .crest-card__flag { width: 92px; }
+.about-grid__badges .crest-card__flag { width: 110px; }
 .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 .pillars li { padding: 22px 22px 20px; border-radius: 18px; background: var(--paper-2); display: grid; gap: 6px; box-shadow: inset 0 0 0 1px var(--line); }
 .pillars strong { font-size: 16px; font-weight: 700; }
