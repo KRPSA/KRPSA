@@ -78,6 +78,7 @@ button { font: inherit; }
 .link-arrow { display: inline-block; margin-top: 8px; color: var(--blue); font-weight: 500; }
 .link-arrow::after { content: " ↗"; font-weight: 400; }
 .link-arrow:hover { text-decoration: underline; text-underline-offset: 3px; }
+.section--dark .link-arrow { color: #7fb2ff; }
 
 /* --------------------------------------------------------------------------
    Navigation
@@ -381,9 +382,10 @@ button { font: inherit; }
 @media (max-width: 700px) { .disc-more__row { grid-template-columns: 1fr; } }
 
 .divisions { margin-top: 96px; }
-.divisions__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 28px; }
+.divisions__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 16px; }
 .divisions__head h3 { font-size: clamp(26px, 3.4vw, 36px); font-weight: 700; letter-spacing: -0.02em; }
 .divisions__head p { color: rgba(255,255,255,.6); font-size: 16px; }
+.divisions__rules { display: inline-block; margin-bottom: 28px; }
 .divisions__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .div-card { background: #0d0d0d; border: 1px solid var(--line-dark); border-radius: var(--radius); padding: 26px 26px 28px; display: grid; align-content: start; gap: 9px; }
 .div-card__n { font-size: 12px; letter-spacing: .12em; color: rgba(255,255,255,.4); font-weight: 600; }
@@ -453,9 +455,6 @@ button { font: inherit; }
 .contact-item__v { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
 a.contact-item__v:hover { color: var(--blue); }
 .contact-item small { font-size: 13px; color: var(--ink-2); }
-.contact-item__links { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; font-size: 16px; }
-.contact-item__links a { color: var(--blue); }
-.contact-item__links a:hover { text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 900px) { .contact-grid { grid-template-columns: 1fr; } }
 
 /* --------------------------------------------------------------------------
