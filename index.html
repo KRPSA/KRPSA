@@ -9,10 +9,11 @@
   <meta property="og:description" content="Official IPSC Region of the Republic of Korea. Diligentia · Vis · Celeritas.">
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#000000">
-  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/krpsa-logo-192.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-  <link rel="stylesheet" href="css/style.css?v=3">
+  <link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 
@@ -20,7 +21,7 @@
   <header class="nav" id="nav">
     <div class="nav__inner">
       <a href="#top" class="nav__brand" aria-label="KRPSA Home">
-        <svg class="nav__mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#krpsa-mark"/></svg>
+        <img class="nav__mark" src="assets/krpsa-logo.png" alt="" width="28" height="35">
         <span class="nav__wordmark">KRPSA</span>
       </a>
       <nav class="nav__links" aria-label="Primary">
@@ -109,39 +110,40 @@
               <circle class="hit" data-shot="4" cx="-1" cy="-49" r="2.4"/>
             </g></g>
 
-            <!-- 4. Round plate Ø25 cm on a 1 m stake -->
+            <!-- 4. Round plate Ø25 cm on a 1 m stake: knocked off its hanger, drops to the ground -->
             <g transform="translate(200 0)">
-              <path d="M-8 0 H8 M0 0 V-100" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-              <g class="steel" id="plate">
+              <path d="M-8 0 H8 M0 0 V-100 M-5 -100 H5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <g class="plate-rig" id="plate">
                 <circle class="plate" cx="0" cy="-112.5" r="12.5"/>
                 <circle class="hit" data-shot="5" cx="-1.5" cy="-111" r="2.6"/>
               </g>
             </g>
 
-            <!-- 5. Square plate 20×20 cm on a 1 m stake -->
+            <!-- 5. Square plate 20×20 cm on a 1 m stake: knocked off its hanger, drops to the ground -->
             <g transform="translate(233 0)">
-              <path d="M-8 0 H8 M0 0 V-100" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-              <g class="steel" id="plate2">
+              <path d="M-8 0 H8 M0 0 V-100 M-5 -100 H5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <g class="plate-rig" id="plate2">
                 <rect class="plate" x="-10" y="-120" width="20" height="20" rx="0.8"/>
                 <circle class="hit" data-shot="6" cx="1" cy="-109" r="2.6"/>
               </g>
             </g>
 
-            <!-- 6. Swinger: inverted pendulum — pivot 40 cm above ground on an A-frame,
-                 1 m arm with the IPSC Target on top, counterweight below the pivot -->
+            <!-- 6. Swinger: inverted pendulum on a sawhorse stand — pivot 55 cm up,
+                 92 cm arm to the IPSC Target, counterweight disc below the pivot -->
             <g transform="translate(300 0)">
-              <path d="M-22 0 H22 M-14 0 L0 -40 L14 0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
-              <g transform="translate(0 -40)"><g class="swing" id="swinger">
-                <rect x="-25" y="-160" width="50" height="200" fill="none" stroke="none"/>
-                <path d="M0 0 V-100 M0 0 V30" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                <circle class="weight" cx="0" cy="34" r="6"/>
-                <g transform="translate(-22.5 -157)">
+              <path d="M-30 0 H30 M-22 0 L0 -55 L22 0 M0 -55 L13 -10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+              <path d="M-9 -55 H9" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+              <g transform="translate(0 -55)"><g class="swing" id="swinger">
+                <rect x="-30" y="-160" width="60" height="200" fill="none" stroke="none"/>
+                <path d="M0 0 V-92 M0 0 V26" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <circle class="weight" cx="0" cy="30" r="8"/>
+                <g transform="translate(-22.5 -149)">
                   <use href="#ipsc-paper"/>
                   <circle class="hit" data-shot="7" cx="21" cy="22.5" r="2.6"/>
                   <circle class="hit" data-shot="8" cx="25.5" cy="28.5" r="2.6"/>
                 </g>
               </g></g>
-              <circle cx="0" cy="-40" r="2.2" fill="#000" stroke="currentColor" stroke-width="1.2"/>
+              <circle cx="0" cy="-55" r="2.6" fill="#000" stroke="currentColor" stroke-width="1.4"/>
             </g>
 
             <!-- 7. IPSC Target partially covered by a no-shoot -->
@@ -291,38 +293,52 @@
           <p class="section__lead" data-i18n="disc.lead">핸드건에서 액션에어까지, 모든 종목은 동일한 IPSC 철학 위에 서 있습니다.</p>
         </div>
 
-        <div class="disc-grid">
-          <article class="disc reveal">
-            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-handgun"/></svg></div>
+        <!-- Handgun: featured, KRPSA's core discipline -->
+        <article class="disc-feature reveal">
+          <div class="disc-feature__icon"><svg viewBox="0 0 48 48"><use href="#ic-handgun"/></svg></div>
+          <div class="disc-feature__body">
+            <p class="disc-feature__eyebrow" data-i18n="disc.handgun.eyebrow">01 · 핵심 종목</p>
             <h3 data-i18n="disc.handgun">핸드건</h3>
-            <p data-i18n="disc.handgun.d">IPSC의 뿌리이자 가장 큰 종목. 3년마다 핸드건 월드 슛(World Shoot)이 열립니다.</p>
-          </article>
+            <p class="disc-feature__desc" data-i18n="disc.handgun.d">IPSC의 출발점이자 가장 오래되고 가장 큰 종목입니다. 오픈부터 리볼버까지 7개 디비전이 있어 양산형 권총부터 경기용 커스텀 건까지 같은 코스에서 경쟁하며, KRPSA가 여는 매치의 절대다수를 차지합니다. 3년마다 열리는 핸드건 월드 슛(Handgun World Shoot)이 이 종목의 정점입니다.</p>
+            <ul class="disc-feature__facts">
+              <li data-i18n="disc.handgun.f1">7개 디비전 · Open / Optics / Standard / Production Optics / Production / Classic / Revolver</li>
+              <li data-i18n="disc.handgun.f2">3년 주기 핸드건 월드 슛</li>
+              <li data-i18n="disc.handgun.f3">KRPSA 국내 매치의 중심 종목</li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- PCC + Shotgun: secondary, moderate detail -->
+        <div class="disc-grid disc-grid--secondary">
           <article class="disc reveal">
-            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-rifle"/></svg></div>
-            <h3 data-i18n="disc.rifle">라이플</h3>
-            <p data-i18n="disc.rifle.d">근거리부터 300m 이상까지. 반자동·수동 부문으로 나뉘어 긴 사거리를 다룹니다.</p>
+            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-pcc"/></svg></div>
+            <h3>PCC</h3>
+            <p data-i18n="disc.pcc.d">권총탄을 쓰는 카빈(Pistol Caliber Carbine)으로, 핸드건과 같은 코스를 소총의 안정성과 빠른 팔로업 샷으로 소화합니다. 진입 장벽이 낮아 빠르게 성장하는 종목으로, KRPSA도 정기적으로 매치를 편성합니다.</p>
           </article>
           <article class="disc reveal">
             <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-shotgun"/></svg></div>
             <h3 data-i18n="disc.shotgun">샷건</h3>
-            <p data-i18n="disc.shotgun.d">버드샷·벅샷·슬러그를 코스에 따라 전환하며 재장전 기술이 승부를 가릅니다.</p>
+            <p data-i18n="disc.shotgun.d">버드샷·벅샷·슬러그를 하나의 코스 안에서 전환하며 쏩니다. 탄종 교체와 재장전이 곧 실력이 되는 종목으로, 다른 종목과는 완전히 다른 운영 리듬을 요구합니다.</p>
           </article>
-          <article class="disc reveal">
-            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-pcc"/></svg></div>
-            <h3>PCC</h3>
-            <p data-i18n="disc.pcc.d">권총탄을 사용하는 카빈. 핸드건 코스를 카빈으로 소화하는 빠르게 성장하는 종목입니다.</p>
-          </article>
-          <article class="disc disc--highlight reveal">
-            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-airsoft"/></svg></div>
-            <h3 data-i18n="disc.aa">액션에어</h3>
-            <p data-i18n="disc.aa.d">에어소프트 핸드건으로 IPSC 규칙을 그대로 적용합니다. 대한민국에서 실용사격을 시작하는 가장 가까운 문입니다.</p>
-            <span class="disc__badge" data-i18n="disc.aa.badge">국내 입문 추천</span>
-          </article>
-          <article class="disc reveal">
-            <div class="disc__icon"><svg viewBox="0 0 48 48"><use href="#ic-minirifle"/></svg></div>
-            <h3 data-i18n="disc.mini">미니라이플</h3>
-            <p data-i18n="disc.mini.d">.22 LR 림파이어 라이플. 낮은 반동과 비용으로 라이플 기술을 익힙니다.</p>
-          </article>
+        </div>
+
+        <!-- Rifle / Action Air / Mini Rifle: exists-in-passing mention -->
+        <div class="disc-more reveal">
+          <p class="disc-more__label" data-i18n="disc.more.label">이 외에도 KRPSA는 아래 종목을 함께 다룹니다.</p>
+          <div class="disc-more__row">
+            <div class="disc-more__item">
+              <svg viewBox="0 0 48 48"><use href="#ic-rifle"/></svg>
+              <span><strong data-i18n="disc.rifle">라이플</strong><em data-i18n="disc.rifle.tag">근거리 ~ 300m 이상</em></span>
+            </div>
+            <div class="disc-more__item disc-more__item--highlight">
+              <svg viewBox="0 0 48 48"><use href="#ic-airsoft"/></svg>
+              <span><strong data-i18n="disc.aa">액션에어</strong><em data-i18n="disc.aa.tag">에어소프트 · 국내 입문 추천</em></span>
+            </div>
+            <div class="disc-more__item">
+              <svg viewBox="0 0 48 48"><use href="#ic-minirifle"/></svg>
+              <span><strong data-i18n="disc.mini">미니라이플</strong><em data-i18n="disc.mini.tag">.22 LR 림파이어</em></span>
+            </div>
+          </div>
         </div>
 
         <!-- Divisions -->
@@ -333,11 +349,12 @@
           </div>
           <div class="divisions__scroll">
             <div class="div-card"><span class="div-card__n">01</span><h4>Open</h4><p data-i18n="div.open">광학조준기·컴펜세이터 등 제한 없는 최상위 장비 부문.</p></div>
-            <div class="div-card"><span class="div-card__n">02</span><h4>Standard</h4><p data-i18n="div.standard">가늠자·가늠쇠 사용. 상자 규격 안에서 제한적 개조 허용.</p></div>
-            <div class="div-card"><span class="div-card__n">03</span><h4>Production</h4><p data-i18n="div.production">양산형 권총을 거의 원형 그대로. 가장 참가자가 많은 부문.</p></div>
-            <div class="div-card"><span class="div-card__n">04</span><h4>Production Optics</h4><p data-i18n="div.po">양산형 권총에 슬라이드 장착 도트사이트를 더한 부문.</p></div>
-            <div class="div-card"><span class="div-card__n">05</span><h4>Classic</h4><p data-i18n="div.classic">1911 계열 싱글스택 권총 전용 부문.</p></div>
-            <div class="div-card"><span class="div-card__n">06</span><h4>Revolver</h4><p data-i18n="div.revolver">리볼버 전용. 재장전이 곧 기술인 부문.</p></div>
+            <div class="div-card"><span class="div-card__n">02</span><h4>Optics</h4><p data-i18n="div.optics">총기 제한 없이 슬라이드에 도트사이트 하나만 더하는 부문. 개조는 허용되지만 컴펜세이터는 없습니다.</p></div>
+            <div class="div-card"><span class="div-card__n">03</span><h4>Standard</h4><p data-i18n="div.standard">가늠자·가늠쇠 사용. 상자 규격 안에서 제한적 개조 허용.</p></div>
+            <div class="div-card"><span class="div-card__n">04</span><h4>Production Optics</h4><p data-i18n="div.po">공인 양산형 권총에 슬라이드 장착 도트사이트를 더한 부문.</p></div>
+            <div class="div-card"><span class="div-card__n">05</span><h4>Production</h4><p data-i18n="div.production">양산형 권총을 거의 원형 그대로. 가장 참가자가 많은 부문.</p></div>
+            <div class="div-card"><span class="div-card__n">06</span><h4>Classic</h4><p data-i18n="div.classic">1911 계열 싱글스택 권총 전용 부문.</p></div>
+            <div class="div-card"><span class="div-card__n">07</span><h4>Revolver</h4><p data-i18n="div.revolver">리볼버 전용. 재장전이 곧 기술인 부문.</p></div>
           </div>
         </div>
       </div>
@@ -436,7 +453,7 @@
         <div class="contact-grid">
           <article class="rd-card reveal">
             <div class="rd-card__avatar" aria-hidden="true">
-              <svg viewBox="0 0 64 64"><use href="#krpsa-mark"/></svg>
+              <img src="assets/krpsa-logo.png" alt="" width="44" height="56">
             </div>
             <p class="rd-card__role" data-i18n="rd.role">IPSC 지역 이사 (Regional Director)</p>
             <h3 class="rd-card__name" data-i18n="rd.name">임원택</h3>
@@ -474,21 +491,13 @@
       </div>
     </section>
 
-    <!-- ===== Closing statement ===== -->
-    <section class="closing">
-      <div class="container reveal">
-        <svg class="closing__flag" viewBox="0 0 72 48" aria-hidden="true"><use href="#taegukgi"/></svg>
-        <h2 data-i18n="closing.title">대한민국에서, 세계 기준으로.</h2>
-        <p data-i18n="closing.sub">KRPSA · Korea Practical Shooting Association</p>
-      </div>
-    </section>
   </main>
 
   <!-- ===== Footer ===== -->
   <footer class="footer">
     <div class="container footer__inner">
       <div class="footer__brand">
-        <svg viewBox="0 0 64 64" class="footer__mark" aria-hidden="true"><use href="#krpsa-mark"/></svg>
+        <img class="footer__mark" src="assets/krpsa-logo.png" alt="" width="30" height="38">
         <div>
           <strong>KRPSA</strong>
           <span data-i18n="footer.name">대한실용사격협회 · Korea Practical Shooting Association</span>
@@ -533,21 +542,6 @@
         </g>
       </symbol>
 
-      <!-- KRPSA mark: target rings split red/blue on the taegeuk diagonal -->
-      <symbol id="krpsa-mark" viewBox="0 0 64 64">
-        <defs>
-          <clipPath id="km-top"><path d="M0 0 H64 L0 64 Z"/></clipPath>
-          <clipPath id="km-bot"><path d="M64 0 V64 H0 Z"/></clipPath>
-        </defs>
-        <g fill="none" stroke-width="4">
-          <circle cx="32" cy="32" r="28" stroke="#CD2E3A" clip-path="url(#km-top)"/>
-          <circle cx="32" cy="32" r="28" stroke="#0047A0" clip-path="url(#km-bot)"/>
-          <circle cx="32" cy="32" r="16" stroke="currentColor" stroke-width="3"/>
-        </g>
-        <circle cx="32" cy="32" r="5" fill="currentColor"/>
-        <path d="M32 0 V10 M32 54 V64 M0 32 H10 M54 32 H64" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-      </symbol>
-
       <!-- Discipline icons (stroke, 48x48) -->
       <symbol id="ic-handgun" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16h34v8H26l-3 12h-9l3-12H6z"/><path d="M14 24h8"/><path d="M40 16v-3"/></g></symbol>
       <symbol id="ic-rifle" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 30l26-10h14v5H30l-4 4-4 8h-6l3-7z"/><path d="M12 20l6 4"/><path d="M40 20v-4"/></g></symbol>
@@ -558,7 +552,7 @@
     </defs>
   </svg>
 
-  <script src="js/i18n.js?v=3"></script>
-  <script src="js/main.js?v=3"></script>
+  <script src="js/i18n.js?v=5"></script>
+  <script src="js/main.js?v=5"></script>
 </body>
 </html>
