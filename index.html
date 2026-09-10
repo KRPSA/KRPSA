@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-  <link rel="stylesheet" href="css/style.css?v=6">
+  <link rel="stylesheet" href="css/style.css?v=7">
 </head>
 <body>
 
@@ -360,14 +360,14 @@
             <h3 data-i18n="div.title">핸드건 디비전</h3>
             <p data-i18n="div.lead">격투기의 체급처럼, 총기의 종류와 개조 범위에 따라 나뉩니다.</p>
           </div>
-          <div class="divisions__scroll">
-            <div class="div-card"><span class="div-card__n">01</span><h4>Open</h4><p data-i18n="div.open">광학조준기·컴펜세이터 등 제한 없는 최상위 장비 부문.</p></div>
-            <div class="div-card"><span class="div-card__n">02</span><h4>Optics</h4><p data-i18n="div.optics">총기 제한 없이 슬라이드에 도트사이트 하나만 더하는 부문. 개조는 허용되지만 컴펜세이터는 없습니다.</p></div>
-            <div class="div-card"><span class="div-card__n">03</span><h4>Standard</h4><p data-i18n="div.standard">가늠자·가늠쇠 사용. 상자 규격 안에서 제한적 개조 허용.</p></div>
-            <div class="div-card"><span class="div-card__n">04</span><h4>Production Optics</h4><p data-i18n="div.po">공인 양산형 권총에 슬라이드 장착 도트사이트를 더한 부문.</p></div>
-            <div class="div-card"><span class="div-card__n">05</span><h4>Production</h4><p data-i18n="div.production">양산형 권총을 거의 원형 그대로. 가장 참가자가 많은 부문.</p></div>
-            <div class="div-card"><span class="div-card__n">06</span><h4>Classic</h4><p data-i18n="div.classic">1911 계열 싱글스택 권총 전용 부문.</p></div>
-            <div class="div-card"><span class="div-card__n">07</span><h4>Revolver</h4><p data-i18n="div.revolver">리볼버 전용. 재장전이 곧 기술인 부문.</p></div>
+          <div class="divisions__grid">
+            <div class="div-card"><span class="div-card__n">01</span><h4>Open</h4><p data-i18n="div.open">컴펜세이터, 전자조준기, 확장 매거진까지 사실상 제한이 없는 최상위 장비 부문입니다. Major 파워팩터 160, Minor 125.</p></div>
+            <div class="div-card"><span class="div-card__n">02</span><h4>Optics</h4><p data-i18n="div.optics">총기 종류에는 제한이 없고, 슬라이드 후방에 전자조준기 하나만 장착합니다. 그 외 개조는 자유롭게 허용됩니다.</p></div>
+            <div class="div-card"><span class="div-card__n">03</span><h4>Standard</h4><p data-i18n="div.standard">225×150×45mm 박스 규격 안에 들어가야 하며, 가늠자·가늠쇠만 사용합니다. 컴펜세이터와 전자조준기는 금지됩니다.</p></div>
+            <div class="div-card"><span class="div-card__n">04</span><h4>Production Optics</h4><p data-i18n="div.po">IPSC 승인 양산형 권총에 슬라이드 가공으로 장착한 도트사이트 하나만 허용됩니다. 매거진은 15발 이하이며 그 외 개조는 금지됩니다.</p></div>
+            <div class="div-card"><span class="div-card__n">05</span><h4>Production</h4><p data-i18n="div.production">IPSC 승인 양산형 권총을 거의 원형 그대로 사용합니다. 조준경 없이 가늠자·가늠쇠만 쓰며, 매거진은 15발 이하입니다.</p></div>
+            <div class="div-card"><span class="div-card__n">06</span><h4>Classic</h4><p data-i18n="div.classic">1911 계열 싱글스택 권총 전용. 같은 박스 규격 안에서 매거진은 8발(메이저)·10발(마이너)로 제한되며, 조준경은 금지됩니다.</p></div>
+            <div class="div-card div-card--wide"><span class="div-card__n">07</span><h4>Revolver</h4><p data-i18n="div.revolver">실린더 방식 리볼버 전용. 7발 이상 실린더는 Major로 인정되지 않아 사실상 6발 기준으로 겨루며, 조준경은 금지됩니다.</p></div>
           </div>
         </div>
       </div>
@@ -482,13 +482,9 @@
               <small data-i18n="contact.email.note">IPSC 공식 지역 대표 메일</small>
             </div>
             <div class="contact-item">
-              <span class="contact-item__k" data-i18n="contact.address">주소</span>
-              <span class="contact-item__v" data-i18n="contact.address.v">서울특별시 영등포구 63로 40, 라이프빌딩 1213호</span>
-              <small data-i18n="contact.address.note">IPSC 지역 등록 주소</small>
-            </div>
-            <div class="contact-item">
               <span class="contact-item__k" data-i18n="contact.links">공식 링크</span>
               <span class="contact-item__v contact-item__links">
+                <a href="https://ipsckorea.co.kr/" target="_blank" rel="noopener" data-i18n="contact.link.krsite">ipsckorea.co.kr</a>
                 <a href="https://www.ipsc.org/" target="_blank" rel="noopener">ipsc.org</a>
                 <a href="https://www.ipsc.org/regions/" target="_blank" rel="noopener" data-i18n="contact.link.regions">IPSC 지역 목록</a>
                 <a href="https://www.ipsc.org/ipsc-rules/" target="_blank" rel="noopener" data-i18n="contact.link.rules">IPSC 규정</a>
@@ -497,7 +493,7 @@
             </div>
             <div class="contact-item">
               <span class="contact-item__k" data-i18n="contact.hours">문의</span>
-              <span class="contact-item__v" data-i18n="contact.hours.v">교육·매치·언론 문의는 이메일로 보내주시면 순차적으로 답변드립니다.</span>
+              <span class="contact-item__v" data-i18n="contact.hours.v">교육·매치·언론 문의는 이메일 또는 카카오톡 ID 'ipsckorea'로 보내주시면 순차적으로 답변드립니다.</span>
             </div>
           </div>
         </div>
@@ -565,7 +561,7 @@
     </defs>
   </svg>
 
-  <script src="js/i18n.js?v=6"></script>
-  <script src="js/main.js?v=6"></script>
+  <script src="js/i18n.js?v=7"></script>
+  <script src="js/main.js?v=7"></script>
 </body>
 </html>
