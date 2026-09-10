@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-  <link rel="stylesheet" href="css/style.css?v=15">
+  <link rel="stylesheet" href="css/style.css?v=16">
 </head>
 <body>
 
@@ -26,8 +26,8 @@
       </a>
       <nav class="nav__links" aria-label="Primary">
         <a href="#about" data-i18n="nav.about">협회 소개</a>
-        <a href="#ipsc" data-i18n="nav.ipsc">IPSC란</a>
         <a href="#disciplines" data-i18n="nav.disciplines">종목</a>
+        <a href="#ipsc" data-i18n="nav.ipsc">IPSC란</a>
         <a href="#courses" data-i18n="nav.courses">교육</a>
         <a href="#contact" data-i18n="nav.contact">연락처</a>
       </nav>
@@ -43,8 +43,8 @@
     </div>
     <div class="nav__mobile" id="navMobile">
       <a href="#about" data-i18n="nav.about">협회 소개</a>
-      <a href="#ipsc" data-i18n="nav.ipsc">IPSC란</a>
       <a href="#disciplines" data-i18n="nav.disciplines">종목</a>
+      <a href="#ipsc" data-i18n="nav.ipsc">IPSC란</a>
       <a href="#courses" data-i18n="nav.courses">교육</a>
       <a href="#contact" data-i18n="nav.contact">연락처</a>
     </div>
@@ -224,65 +224,59 @@
       </div>
     </section>
 
-    <!-- ===== What is IPSC ===== -->
-    <section class="section section--light" id="ipsc">
+    <!-- ===== About KRPSA ===== -->
+    <section class="section section--light" id="about">
       <div class="container">
         <div class="section__head reveal">
-          <p class="section__eyebrow" data-i18n="ipsc.eyebrow">International Practical Shooting Confederation</p>
-          <h2 class="section__title" data-i18n="ipsc.title">IPSC란 무엇인가.</h2>
-          <p class="section__lead" data-i18n="ipsc.lead">세계에서 가장 크고 오래된 실용사격 단체. 움직이며, 판단하며, 쏜다.</p>
+          <p class="section__eyebrow" data-i18n="about.eyebrow">Korea Practical Shooting Association</p>
+          <h2 class="section__title" data-i18n="about.title">대한민국 실용사격의<br>공식 창구.</h2>
+          <p class="section__lead" data-i18n="about.lead">대한민국의 실용사격을 대표하는 단 하나의 이름.</p>
         </div>
 
-        <div class="ipsc-grid">
+        <div class="ipsc-grid about-grid">
           <div class="ipsc-grid__text reveal">
-            <p data-i18n="ipsc.p1">국제실용사격연맹(IPSC)은 1976년 5월 미국 미주리주 컬럼비아에서 창립되었으며, 네덜란드 암스테르담에 본부를 두고 있습니다. 아프리카·아메리카·아시아·유럽·중동·오세아니아에 걸쳐 108개 이상의 지역(Region)이 가입한 세계 최대의 사격 스포츠 단체입니다.</p>
-            <p data-i18n="ipsc.p2">실용사격(Practical Shooting)은 정해진 자세에서 정지 표적을 쏘는 전통 사격과 달리, 선수가 코스를 이동하면서 다양한 거리·각도·배치의 표적을 스스로 판단하여 제압하는 역동적인 종목입니다. 모든 코스는 정확성·파워·속도가 균형을 이루도록 설계됩니다.</p>
-            <p data-i18n="ipsc.p3">IPSC는 국가별로 단 하나의 회원 단체만을 인정합니다. 대한민국에서는 KRPSA가 그 역할을 맡아 공인 교육, 자격 인증, 공식 매치 개최와 국가대표 파견을 담당합니다.</p>
-            <a class="link-arrow" href="https://www.ipsc.org/what-is-ipsc/" target="_blank" rel="noopener" data-i18n="ipsc.link">ipsc.org에서 더 알아보기</a>
+            <p data-i18n="about.p1">KRPSA(Korea Practical Shooting Association, 대한실용사격협회)는 IPSC 헌장에 따라 대한민국을 대표하는 IPSC 지역 협회(Region)입니다. 대한민국은 2018년 IPSC 제42차 총회에서 106번째 회원 지역으로 가입했으며, 2024년 11월 아르헨티나 코르도바에서 열린 제48차 IPSC 총회에서 새로운 대한민국 지역 이사회(Regional Directorate)가 승인되어 KRPSA가 공식 지역 협회로 활동하고 있습니다.</p>
+            <p data-i18n="about.p2">KRPSA는 IPSC 규정에 따른 안전 교육과 자격 인증, 국내 공식 매치 운영, 국제 대회 국가대표 선발·파견을 담당하며, 대한민국 실용사격이 국제 기준 위에서 성장하도록 이끕니다.</p>
+            <p data-i18n="about.p3">액션에어로 첫 발을 떼는 신규 회원부터 핸드건 월드 슛에 도전하는 국가대표까지, KRPSA는 대한민국 실용사격의 모든 단계를 함께합니다.</p>
           </div>
-          <div class="ipsc-grid__crest reveal">
+          <div class="about-grid__badges reveal">
             <div class="crest-card">
-              <img src="assets/ipsc-crest.png" alt="IPSC crest" width="200" height="240" loading="lazy">
+              <div class="crest-card__flag" aria-hidden="true">
+                <svg viewBox="0 0 72 48"><use href="#taegukgi"/></svg>
+              </div>
               <div class="crest-card__cap">
-                <strong>IPSC</strong>
-                <span data-i18n="ipsc.crestcap">Excellence in Shooting · Est. 1976</span>
+                <strong>KOR</strong>
+                <span data-i18n="about.flagcap">대한민국</span>
+              </div>
+            </div>
+            <div class="crest-card">
+              <img src="assets/krpsa-logo.png" alt="KRPSA" width="150" height="190">
+              <div class="crest-card__cap">
+                <strong>KRPSA</strong>
+                <span data-i18n="about.logocap">IPSC 지역 · 2018년 가입</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- DVC -->
-        <div class="dvc">
-          <article class="dvc__card reveal">
-            <div class="dvc__letter">D</div>
-            <h3>Diligentia</h3>
-            <p class="dvc__ko" data-i18n="dvc.d.name">정확성</p>
-            <p data-i18n="dvc.d.desc">모든 표적에는 득점 구역이 있습니다. 빠르기만 해서는 이길 수 없습니다. A존을 맞히는 정밀함이 점수의 출발점입니다.</p>
-          </article>
-          <article class="dvc__card reveal">
-            <div class="dvc__letter">V</div>
-            <h3>Vis</h3>
-            <p class="dvc__ko" data-i18n="dvc.v.name">파워</p>
-            <p data-i18n="dvc.v.desc">탄약의 위력은 파워 팩터로 측정되며, 최소 기준을 충족해야 합니다. 강한 탄을 다루는 통제력이 곧 실력입니다.</p>
-          </article>
-          <article class="dvc__card reveal">
-            <div class="dvc__letter">C</div>
-            <h3>Celeritas</h3>
-            <p class="dvc__ko" data-i18n="dvc.c.name">속도</p>
-            <p data-i18n="dvc.c.desc">타이머는 첫 발부터 마지막 발까지를 기록합니다. 점수를 시간으로 나눈 히트 팩터(Hit Factor)가 순위를 가릅니다.</p>
-          </article>
-        </div>
-
-        <div class="formula reveal">
-          <div class="formula__eq">
-            <span data-i18n="formula.points">점수</span>
-            <span class="formula__op">÷</span>
-            <span data-i18n="formula.time">시간(초)</span>
-            <span class="formula__op">=</span>
-            <span class="formula__hf">Hit Factor</span>
-          </div>
-          <p data-i18n="formula.desc">IPSC의 컴스탁(Comstock) 채점 방식. 사격 발수와 시간에 제한이 없는 대신, 초당 획득 점수로 경쟁합니다.</p>
-        </div>
+        <ul class="pillars reveal">
+          <li>
+            <strong data-i18n="about.pil1">안전이 먼저</strong>
+            <span data-i18n="about.pil1.d">모든 교육과 매치는 IPSC 안전 규정을 최우선으로 운영합니다.</span>
+          </li>
+          <li>
+            <strong data-i18n="about.pil2">공인 교육과 자격</strong>
+            <span data-i18n="about.pil2.d">IPSC 공식 커리큘럼에 따른 교육과 국제적으로 통용되는 자격.</span>
+          </li>
+          <li>
+            <strong data-i18n="about.pil3">공식 매치</strong>
+            <span data-i18n="about.pil3.d">IPSC 공인 Level I–III 매치를 국내에서 개최합니다.</span>
+          </li>
+          <li>
+            <strong data-i18n="about.pil4">세계로</strong>
+            <span data-i18n="about.pil4.d">월드 슛과 대륙 선수권에 대한민국 국가대표를 파견합니다.</span>
+          </li>
+        </ul>
       </div>
     </section>
 
@@ -378,59 +372,65 @@
       </div>
     </section>
 
-    <!-- ===== About KRPSA ===== -->
-    <section class="section section--light" id="about">
+    <!-- ===== What is IPSC ===== -->
+    <section class="section section--light" id="ipsc">
       <div class="container">
         <div class="section__head reveal">
-          <p class="section__eyebrow" data-i18n="about.eyebrow">Korea Practical Shooting Association</p>
-          <h2 class="section__title" data-i18n="about.title">대한민국 실용사격의<br>공식 창구.</h2>
-          <p class="section__lead" data-i18n="about.lead">대한민국의 실용사격을 대표하는 단 하나의 이름.</p>
+          <p class="section__eyebrow" data-i18n="ipsc.eyebrow">International Practical Shooting Confederation</p>
+          <h2 class="section__title" data-i18n="ipsc.title">IPSC란 무엇인가.</h2>
+          <p class="section__lead" data-i18n="ipsc.lead">세계에서 가장 크고 오래된 실용사격 단체. 움직이며, 판단하며, 쏜다.</p>
         </div>
 
-        <div class="ipsc-grid about-grid">
+        <div class="ipsc-grid">
           <div class="ipsc-grid__text reveal">
-            <p data-i18n="about.p1">KRPSA(Korea Practical Shooting Association, 대한실용사격협회)는 IPSC 헌장에 따라 대한민국을 대표하는 IPSC 지역 협회(Region)입니다. 대한민국은 2018년 IPSC 제42차 총회에서 106번째 회원 지역으로 가입했으며, 2024년 11월 아르헨티나 코르도바에서 열린 제48차 IPSC 총회에서 새로운 대한민국 지역 이사회(Regional Directorate)가 승인되어 KRPSA가 공식 지역 협회로 활동하고 있습니다.</p>
-            <p data-i18n="about.p2">KRPSA는 IPSC 규정에 따른 안전 교육과 자격 인증, 국내 공식 매치 운영, 국제 대회 국가대표 선발·파견을 담당하며, 대한민국 실용사격이 국제 기준 위에서 성장하도록 이끕니다.</p>
-            <p data-i18n="about.p3">액션에어로 첫 발을 떼는 신규 회원부터 핸드건 월드 슛에 도전하는 국가대표까지, KRPSA는 대한민국 실용사격의 모든 단계를 함께합니다.</p>
+            <p data-i18n="ipsc.p1">국제실용사격연맹(IPSC)은 1976년 5월 미국 미주리주 컬럼비아에서 창립되었으며, 네덜란드 암스테르담에 본부를 두고 있습니다. 아프리카·아메리카·아시아·유럽·중동·오세아니아에 걸쳐 108개 이상의 지역(Region)이 가입한 세계 최대의 사격 스포츠 단체입니다.</p>
+            <p data-i18n="ipsc.p2">실용사격(Practical Shooting)은 정해진 자세에서 정지 표적을 쏘는 전통 사격과 달리, 선수가 코스를 이동하면서 다양한 거리·각도·배치의 표적을 스스로 판단하여 제압하는 역동적인 종목입니다. 모든 코스는 정확성·파워·속도가 균형을 이루도록 설계됩니다.</p>
+            <p data-i18n="ipsc.p3">IPSC는 국가별로 단 하나의 회원 단체만을 인정합니다. 대한민국에서는 KRPSA가 그 역할을 맡아 공인 교육, 자격 인증, 공식 매치 개최와 국가대표 파견을 담당합니다.</p>
+            <a class="link-arrow" href="https://www.ipsc.org/what-is-ipsc/" target="_blank" rel="noopener" data-i18n="ipsc.link">ipsc.org에서 더 알아보기</a>
           </div>
-          <div class="about-grid__badges reveal">
+          <div class="ipsc-grid__crest reveal">
             <div class="crest-card">
-              <div class="crest-card__flag" aria-hidden="true">
-                <svg viewBox="0 0 72 48"><use href="#taegukgi"/></svg>
-              </div>
+              <img src="assets/ipsc-crest.png" alt="IPSC crest" width="200" height="240" loading="lazy">
               <div class="crest-card__cap">
-                <strong>KOR</strong>
-                <span data-i18n="about.flagcap">대한민국</span>
-              </div>
-            </div>
-            <div class="crest-card">
-              <img src="assets/krpsa-logo.png" alt="KRPSA" width="150" height="190">
-              <div class="crest-card__cap">
-                <strong>KRPSA</strong>
-                <span data-i18n="about.logocap">IPSC 지역 · 2018년 가입</span>
+                <strong>IPSC</strong>
+                <span data-i18n="ipsc.crestcap">Excellence in Shooting · Est. 1976</span>
               </div>
             </div>
           </div>
         </div>
 
-        <ul class="pillars reveal">
-          <li>
-            <strong data-i18n="about.pil1">안전이 먼저</strong>
-            <span data-i18n="about.pil1.d">모든 교육과 매치는 IPSC 안전 규정을 최우선으로 운영합니다.</span>
-          </li>
-          <li>
-            <strong data-i18n="about.pil2">공인 교육과 자격</strong>
-            <span data-i18n="about.pil2.d">IPSC 공식 커리큘럼에 따른 교육과 국제적으로 통용되는 자격.</span>
-          </li>
-          <li>
-            <strong data-i18n="about.pil3">공식 매치</strong>
-            <span data-i18n="about.pil3.d">IPSC 공인 Level I–III 매치를 국내에서 개최합니다.</span>
-          </li>
-          <li>
-            <strong data-i18n="about.pil4">세계로</strong>
-            <span data-i18n="about.pil4.d">월드 슛과 대륙 선수권에 대한민국 국가대표를 파견합니다.</span>
-          </li>
-        </ul>
+        <!-- DVC -->
+        <div class="dvc">
+          <article class="dvc__card reveal">
+            <div class="dvc__letter">D</div>
+            <h3>Diligentia</h3>
+            <p class="dvc__ko" data-i18n="dvc.d.name">정확성</p>
+            <p data-i18n="dvc.d.desc">모든 표적에는 득점 구역이 있습니다. 빠르기만 해서는 이길 수 없습니다. A존을 맞히는 정밀함이 점수의 출발점입니다.</p>
+          </article>
+          <article class="dvc__card reveal">
+            <div class="dvc__letter">V</div>
+            <h3>Vis</h3>
+            <p class="dvc__ko" data-i18n="dvc.v.name">파워</p>
+            <p data-i18n="dvc.v.desc">탄약의 위력은 파워 팩터로 측정되며, 최소 기준을 충족해야 합니다. 강한 탄을 다루는 통제력이 곧 실력입니다.</p>
+          </article>
+          <article class="dvc__card reveal">
+            <div class="dvc__letter">C</div>
+            <h3>Celeritas</h3>
+            <p class="dvc__ko" data-i18n="dvc.c.name">속도</p>
+            <p data-i18n="dvc.c.desc">타이머는 첫 발부터 마지막 발까지를 기록합니다. 점수를 시간으로 나눈 히트 팩터(Hit Factor)가 순위를 가릅니다.</p>
+          </article>
+        </div>
+
+        <div class="formula reveal">
+          <div class="formula__eq">
+            <span data-i18n="formula.points">점수</span>
+            <span class="formula__op">÷</span>
+            <span data-i18n="formula.time">시간(초)</span>
+            <span class="formula__op">=</span>
+            <span class="formula__hf">Hit Factor</span>
+          </div>
+          <p data-i18n="formula.desc">IPSC의 컴스탁(Comstock) 채점 방식. 사격 발수와 시간에 제한이 없는 대신, 초당 획득 점수로 경쟁합니다.</p>
+        </div>
       </div>
     </section>
 
@@ -582,7 +582,7 @@
     </defs>
   </svg>
 
-  <script src="js/i18n.js?v=10"></script>
-  <script src="js/main.js?v=10"></script>
+  <script src="js/i18n.js?v=11"></script>
+  <script src="js/main.js?v=11"></script>
 </body>
 </html>
