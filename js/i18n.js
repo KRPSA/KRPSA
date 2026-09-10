@@ -51,8 +51,8 @@ window.KRPSA_I18N = {
     'formula.desc': 'IPSC의 컴스탁(Comstock) 채점 방식. 사격 발수와 시간에 제한이 없는 대신, 초당 획득 점수로 경쟁합니다.',
 
     'disc.eyebrow': 'Disciplines',
-    'disc.title': '핸드건을 중심으로, 여섯 종목.',
-    'disc.lead': 'KRPSA 매치의 절대다수는 핸드건입니다. PCC와 샷건도 정기적으로 열리며, 라이플·액션에어·미니라이플까지 IPSC의 모든 종목을 다룹니다.',
+    'disc.title': '핸드건과 액션에어, 두 개의 중심.',
+    'disc.lead': 'KRPSA는 핸드건과 액션에어를 중심으로 운영됩니다. PCC와 샷건도 정기적으로 열리며, 라이플·미니라이플까지 IPSC의 모든 종목을 다룹니다.',
 
     'disc.handgun.eyebrow': '01 · 핵심 종목',
     'disc.handgun': '핸드건',
@@ -60,6 +60,13 @@ window.KRPSA_I18N = {
     'disc.handgun.f1': '7개 디비전 · Open / Optics / Standard / Production Optics / Production / Classic / Revolver',
     'disc.handgun.f2': '3년 주기 핸드건 월드 슛',
     'disc.handgun.f3': 'KRPSA 국내 매치의 중심 종목',
+
+    'disc.aa.eyebrow': '02 · 핵심 종목',
+    'disc.aa': '액션에어',
+    'disc.aa.d': '에어소프트 핸드건으로 IPSC 규칙을 그대로 적용하는 종목입니다. 실탄과 같은 코스, 같은 움직임, 같은 안전 절차를 따르면서도 진입 장벽은 훨씬 낮아, 대한민국에서 실용사격을 시작하는 가장 가까운 문입니다. KRPSA 신규 회원 대부분이 액션에어로 첫 매치를 경험합니다.',
+    'disc.aa.f1': 'IPSC 실탄 규칙을 그대로 적용',
+    'disc.aa.f2': '국내 실용사격 입문의 첫 걸음',
+    'disc.aa.f3': 'KRPSA 신규 회원 대다수가 선택하는 종목',
 
     'disc.pcc': 'PCC',
     'disc.pcc.d': '권총탄을 쓰는 카빈(Pistol Caliber Carbine)으로, 핸드건과 같은 코스를 소총의 안정성과 빠른 팔로업 샷으로 소화합니다. 진입 장벽이 낮아 빠르게 성장하는 종목으로, KRPSA도 정기적으로 매치를 편성합니다.',
@@ -69,8 +76,6 @@ window.KRPSA_I18N = {
     'disc.more.label': '이 외에도 KRPSA는 아래 종목을 함께 다룹니다.',
     'disc.rifle': '라이플',
     'disc.rifle.tag': '근거리 ~ 300m 이상',
-    'disc.aa': '액션에어',
-    'disc.aa.tag': '에어소프트 · 국내 입문 추천',
     'disc.mini': '미니라이플',
     'disc.mini.tag': '.22 LR 림파이어',
 
@@ -190,8 +195,8 @@ window.KRPSA_I18N = {
     'formula.desc': 'IPSC Comstock scoring: no limit on rounds or time — competitors are ranked by points earned per second.',
 
     'disc.eyebrow': 'Disciplines',
-    'disc.title': 'Six disciplines, handgun-first.',
-    'disc.lead': "Most KRPSA matches are handgun. PCC and Shotgun run regularly, and we cover every IPSC discipline down to Rifle, Action Air and Mini Rifle.",
+    'disc.title': 'Handgun and Action Air, our two mains.',
+    'disc.lead': "KRPSA is built around Handgun and Action Air. PCC and Shotgun run regularly too, and we cover every IPSC discipline down to Rifle and Mini Rifle.",
 
     'disc.handgun.eyebrow': '01 · Core discipline',
     'disc.handgun': 'Handgun',
@@ -199,6 +204,13 @@ window.KRPSA_I18N = {
     'disc.handgun.f1': '7 divisions · Open / Optics / Standard / Production Optics / Production / Classic / Revolver',
     'disc.handgun.f2': 'Handgun World Shoot every 3 years',
     'disc.handgun.f3': "The core of KRPSA's domestic match calendar",
+
+    'disc.aa.eyebrow': '02 · Core discipline',
+    'disc.aa': 'Action Air',
+    'disc.aa.d': "Full IPSC rules applied to airsoft handguns — the same courses, the same movement, the same safety procedure as live fire, with a far lower barrier to entry. It's the closest door into practical shooting in Korea, and where most new KRPSA members shoot their first match.",
+    'disc.aa.f1': 'Same rules as live-fire IPSC',
+    'disc.aa.f2': "Korea's entry point into practical shooting",
+    'disc.aa.f3': 'Where most new KRPSA members start',
 
     'disc.pcc': 'PCC',
     'disc.pcc.d': 'Pistol Caliber Carbine: handgun-style courses shot with the stability and fast follow-up shots of a carbine. Low barrier to entry and fast-growing — KRPSA runs it regularly too.',
@@ -208,8 +220,6 @@ window.KRPSA_I18N = {
     'disc.more.label': 'KRPSA also runs these disciplines.',
     'disc.rifle': 'Rifle',
     'disc.rifle.tag': 'Close range to 300 m+',
-    'disc.aa': 'Action Air',
-    'disc.aa.tag': 'Airsoft · Best entry in Korea',
     'disc.mini': 'Mini Rifle',
     'disc.mini.tag': '.22 LR rimfire',
 
