@@ -439,7 +439,7 @@ button { font: inherit; }
 /* --------------------------------------------------------------------------
    Contact
    -------------------------------------------------------------------------- */
-.contact-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 24px; align-items: start; }
+.contact-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 24px; align-items: stretch; }
 .rd-card {
   background: #000; color: #fff; border-radius: var(--radius-lg); padding: 40px 36px 36px;
   display: grid; justify-items: start; gap: 6px;
@@ -453,7 +453,7 @@ button { font: inherit; }
 .rd-card__latin { color: rgba(255,255,255,.6); font-size: 15px; }
 .rd-card__desc { margin: 18px 0 24px; color: rgba(255,255,255,.72); font-size: 15.5px; }
 
-.contact-list { display: grid; gap: 10px; }
+.contact-list { display: grid; gap: 10px; align-content: space-between; }
 .contact-item { display: grid; gap: 4px; padding: 22px 24px; border-radius: 18px; background: var(--paper-2); box-shadow: inset 0 0 0 1px var(--line); }
 .contact-item__k { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
 .contact-item__v { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
