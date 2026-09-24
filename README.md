@@ -1,32 +1,21 @@
 # KRPSA — Korea Practical Shooting Association
 
-Official website of **KRPSA (대한실용사격협회)**, the IPSC Region for the Republic of Korea.
+KRPSA bilingual Korean/English association landing page. Includes Handgun and Action Air introductions, handgun divisions, other IPSC disciplines, a three-stage beginner training guide, and KakaoTalk membership inquiries.
 
-- Static site: `index.html` + `css/` + `js/` + `assets/` — no build step.
-- Bilingual (한국어 / English). The toggle in the top-right switches every string via `js/i18n.js`; the choice is remembered in `localStorage` and can be forced with `?lang=en` or `?lang=ko`.
-- Deployed with GitHub Pages via `.github/workflows/pages.yml` (Settings → Pages → Source: **GitHub Actions**).
+## Structure
 
-## Editing content
+- `index.html`: page content and Korean text
+- `style.css`: responsive layout and slideshow styling
+- `app.js`: English translations, language toggle, photo slideshow and contact ID copy
+- `assets/`: logos, Korean flag and KRPSA member photos
+- `SOURCES.md`: source references and photo attribution
 
-When you change `css/style.css` or `js/*.js`, bump the `?v=` number on their `<link>`/`<script>` tags in `index.html` so GitHub Pages' CDN serves the new file immediately.
+No build step or dependencies are required. Serve the repository root locally, for example with `python -m http.server 8080`.
 
-All visible text lives in `js/i18n.js` as `ko` / `en` dictionaries keyed by `data-i18n` attributes in `index.html`.
-To change a sentence, edit both languages for the same key.
+## Deployment
 
-Contact details (email, address, Regional Director) are in the `contact` / `rd` keys and in the `#contact` section of `index.html`.
+The existing `.github/workflows/pages.yml` publishes the repository root to GitHub Pages when changes reach `main`.
 
-## Local preview
+## Photos
 
-Open `index.html` directly, or serve the folder:
-
-```bash
-python -m http.server 8080
-```
-
-## Sources
-
-- IPSC — What is IPSC, region directory, rules: <https://www.ipsc.org/>
-- IPSC region record for Korea (KOR): <https://www.ipsc.org/regions/>
-- Korea joined IPSC as the 106th region at the 42nd General Assembly (2018); a new Regional Directorate for the Republic of Korea was approved at the 48th General Assembly, Córdoba (Nov 2024).
-
-IPSC and the IPSC crest are trademarks of the International Practical Shooting Confederation and are used to indicate affiliation.
+The slideshow contains four KRPSA member/team photos: Wontaek Lim and the EHC/EEO 2026 delegation. Photo source links are also included in the footer.
