@@ -45,3 +45,5 @@ All three are 1280x720 public source images. Source linked in footer; no open li
 
 ## Current photo selection
 Per user request, the current slideshow contains only KRPSA members: meggi-match.jpg, ehc-2026-team.jpg, eeo-2026-team.jpg, ehc-2026-flag.jpg. All foreign-athlete photos and associated live credits removed. Prior source notes above are historical only.
+
+Standard division card: https://www.ipsc.org/handgun-standard-division/ (verified 2026-09-25). Iron sights; unloaded handgun with empty magazine must fit the prescribed box; no compensators or barrel ports.
