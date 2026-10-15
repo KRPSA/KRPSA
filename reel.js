@@ -1473,12 +1473,22 @@
 
     function caption(t) {
       const lang = opt.lang;
-      for (const [a, b, ko, en] of CAPTIONS) {
-        if (t < a || t > b + 0.3) continue;
+      CAPTIONS.forEach(([a, b, ko, en], i) => {
+        // each caption is fully gone before the next one starts
+        const next = CAPTIONS[i + 1]?.[0] ?? Infinity;
+        const exit = clamp(next - b - 0.02, 0.06, 0.3);
+        if (t < a || t > b + exit) return;
         const lt = t - a;
         const out = t > b ? t - b : -1;
-        const fade = 1 - seg(t, b, b + 0.3);
+        const fade = 1 - seg(t, b, b + exit);
         ctx.save();
+        // a soft scrim keeps the caption legible over busy scenes
+        const scrim = ctx.createLinearGradient(0, H - 300, 0, H);
+        scrim.addColorStop(0, "rgba(8,10,13,0)");
+        scrim.addColorStop(1, "rgba(8,10,13,0.62)");
+        ctx.globalAlpha = fade * ease.out3(seg(lt, 0, 0.3));
+        ctx.fillStyle = scrim;
+        ctx.fillRect(0, H - 300, W, 300);
         ctx.globalAlpha = fade;
         const y = lang === "both" ? H - 128 : H - 96;
         const bar = ease.outExpo(seg(lt, 0, 0.35));
@@ -1493,14 +1503,15 @@
           out,
           stagger: 0.008,
           dur: 0.4,
-          outDur: 0.25,
+          outDur: exit * 0.8,
+          outStagger: 0,
         });
         if (lang === "both") {
           ctx.globalAlpha = fade * ease.out3(seg(lt, 0.15, 0.5));
           text(en, 120, y + 40, { size: 20, weight: 500, color: C.dim });
         }
         ctx.restore();
-      }
+      });
     }
 
     function hud(t) {
@@ -1586,9 +1597,8 @@
         align: "right",
         color: frozen ? C.red : C.dim,
       });
-      const blink = frozen
-        ? 0.55 + 0.45 * Math.round((Math.sin(t * 7) + 1) / 2)
-        : 1;
+      // on for the first half of every beat (120 BPM), dim for the second
+      const blink = frozen ? ((t - BEEP) % 0.5 < 0.25 ? 1 : 0.55) : 1;
       ctx.globalAlpha = a * blink;
       digits(fmt2(ms), W - 96, 150, 64, { align: "right", weight: 700 });
       if (frozen) {
@@ -1606,8 +1616,8 @@
       floorGrid(0.6 * ease.out3(seg(t, 0, 1.2)), t);
       const words = [
         ["DILIGENTIA", "ACCURACY", "01", 0.08],
-        ["VIS", "POWER", "02", 0.55],
-        ["CELERITAS", "SPEED", "03", 1.02],
+        ["VIS", "POWER", "02", 0.58],
+        ["CELERITAS", "SPEED", "03", 1.08],
       ];
       // ruler under the words
       const rw = ease.outExpo(seg(t, 0.0, 0.6)) * 1280;
@@ -3460,6 +3470,13 @@
         if (dt > 0.05) {
           const P = project(cam, add(hit, [0, 0.42 + dt * 0.45, 0]));
           if (P[2] < 0.5) return;
+          // a follow-up hit on the same target lifts this pop instead of stacking on it
+          P[1] -= SHOTS.filter(
+            (o) => o.target === s.target && o.st > s.st && o.st - s.st < 0.9,
+          ).reduce(
+            (sum, o) => sum + 44 * ease.out3(seg(st - o.st, 0.03, 0.15)),
+            0,
+          );
           const pa = ease.out3(seg(dt, 0.05, 0.15)) * (1 - seg(dt, 0.55, 0.9));
           ctx.save();
           ctx.globalAlpha *= pa;
@@ -4453,10 +4470,10 @@
       if (t >= 12.75 && t <= 13.25) blinds(t, 12.75, 13.15);
       sceneEnd(t - SHIFT);
       ctx.restore();
+      overlays(t);
       timerHud(t);
       if (opt.captions) caption(t);
       hud(t);
-      overlays(t);
     }
 
     return {
