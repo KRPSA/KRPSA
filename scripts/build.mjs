@@ -151,7 +151,7 @@ function sharedMarkup(homepage, tag, rootPrefix) {
 
 function pageDocument({ homepage, rootPrefix, title, titleEn, description, descriptionEn = description, content }) {
   return `<!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><meta name="theme-color" content="#111317"><link rel="icon" href="${rootPrefix}assets/kr.svg"><link rel="stylesheet" href="${rootPrefix}style.css"><link rel="stylesheet" href="${rootPrefix}announcements.css"><script src="${rootPrefix}app.js" defer></script></head>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><meta name="theme-color" content="#111317"><link rel="icon" type="image/png" href="${rootPrefix}assets/krpsa-logo.png"><link rel="stylesheet" href="${rootPrefix}style.css"><link rel="stylesheet" href="${rootPrefix}announcements.css"><script src="${rootPrefix}app.js" defer></script></head>
 <body class="announcement-page" data-title-ko="${escapeHtml(title)}" data-title-en="${escapeHtml(titleEn)}" data-description-ko="${escapeHtml(description)}" data-description-en="${escapeHtml(descriptionEn)}">
 <a href="#main" class="skip" data-i18n="skip">본문으로 이동</a>
 ${sharedMarkup(homepage, 'header', rootPrefix)}
