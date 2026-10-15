@@ -15,26 +15,34 @@
     <script src="reel.js" defer></script>
     <script src="app.js" defer></script>
   </head>
-  <body>
+  <body
+    data-description-ko="Korea Practical Shooting Association. 대한민국 IPSC 실용사격 협회 소개, 공지사항, MISIA 교육 과정 및 공식 문의."
+    data-description-en="Korea Practical Shooting Association. Discover IPSC practical shooting in Korea, association news, MISIA training courses and official contact information."
+  >
     <a href="#main" class="skip" data-i18n="skip">본문으로 이동</a>
     <header class="header">
-      <a class="brand" href="#" aria-label="KRPSA Home"
+      <a class="brand" href="#" aria-label="KRPSA 홈" data-aria-ko="KRPSA 홈" data-aria-en="KRPSA Home"
         ><span class="crest small"
           ><img src="assets/krpsa-logo.png" alt="KRPSA" /></span
         ><span>KRPSA<small>IPSC KOREA</small></span></a
       >
-      <nav aria-label="Main navigation">
-        <a href="#about" data-i18n="navAbout">협회 소개</a
-        ><a href="#ipsc" data-i18n="navSport">실용사격</a
-        ><a href="#disciplines" data-i18n="navDisciplines">종목 안내</a
-        ><a href="#training" data-i18n="navTraining">교육 과정</a
-        ><a href="announcements/" data-i18n="navAnnouncements">공지사항</a
-        ><a href="#contact" data-i18n="navContact">문의</a>
-      </nav>
+      <details class="header-navigation" open>
+        <summary class="navigation-toggle" aria-label="메뉴" data-aria-ko="메뉴" data-aria-en="Menu">
+          <span aria-hidden="true"></span>
+        </summary>
+        <nav aria-label="주 메뉴" data-aria-ko="주 메뉴" data-aria-en="Main navigation">
+          <a href="#about" data-i18n="navAbout">협회 소개</a
+          ><a href="#ipsc" data-i18n="navSport">실용사격</a
+          ><a href="#disciplines" data-i18n="navDisciplines">종목 안내</a
+          ><a href="#training" data-i18n="navTraining">교육 과정</a
+          ><a href="announcements/" data-i18n="navAnnouncements">공지사항</a
+          ><a href="#contact" data-i18n="navContact">문의</a>
+        </nav>
+      </details>
       <div class="header-end">
-        <div class="languages" aria-label="Language">
-          <button data-lang="ko" aria-pressed="true">KO</button><span>/</span
-          ><button data-lang="en" aria-pressed="false">EN</button>
+        <div class="languages" aria-label="언어 선택" data-aria-ko="언어 선택" data-aria-en="Language">
+          <button data-lang="ko" aria-pressed="true" aria-label="한국어" data-aria-ko="한국어" data-aria-en="Korean">KO</button><span>/</span
+          ><button data-lang="en" aria-pressed="false" aria-label="영어" data-aria-ko="영어" data-aria-en="English">EN</button>
         </div>
         <a href="#contact" class="contact-pill" data-i18n="contactCta"
           >협회 문의 ↗</a
@@ -103,8 +111,8 @@
             정확함, 파워, 스피드.<br />대한민국 실용사격, KRPSA와 함께.
           </p>
           <div class="hero-actions">
-            <a class="button" href="#ipsc"
-              ><span data-i18n="explore">실용사격 알아보기</span> ↗</a
+            <a class="button" href="#training"
+              ><span data-ko="교육 과정 알아보기" data-en="Explore training">교육 과정 알아보기</span> ↗</a
             ><a class="text-link" href="#about" data-i18n="meet"
               >KRPSA 소개 →</a
             >
@@ -197,18 +205,20 @@
         <div class="wrap latest-announcements-layout">
           <div class="latest-announcements-heading">
             <span class="section-label">KRPSA NOTICEBOARD</span>
-            <h2 id="latest-title" data-i18n="latestTitle">
-              함께 나누는<br />새로운 소식.
-            </h2>
-            <p data-i18n="latestBody">
-              교육 안내부터 협회 소식까지.<br />KRPSA의 최신 공지를 확인하세요.
-            </p>
-            <a
-              class="inline-link"
-              href="announcements/"
-              data-i18n="allAnnouncements"
-              >공지사항 전체 보기 ↗</a
-            >
+            <div class="latest-announcements-title-row">
+              <h2 id="latest-title" data-ko="최신 공지사항" data-en="Latest news">최신 공지사항</h2>
+              <a
+                class="inline-link"
+                href="announcements/"
+                data-ko="전체 보기 ↗"
+                data-en="View all ↗"
+                aria-label="공지사항 전체 보기"
+                data-aria-ko="공지사항 전체 보기"
+                data-aria-en="View all announcements"
+                >전체 보기 ↗</a
+              >
+            </div>
+            <p data-ko="교육과 협회의 새 소식을 확인하세요." data-en="Training updates and association news.">교육과 협회의 새 소식을 확인하세요.</p>
           </div>
           <div class="latest-announcements-content">
             <!-- latest-announcements:start -->
@@ -526,110 +536,116 @@
               핸드건과 액션에어를 넘어,<br />다양한 장비로 이어지는 도전.
             </p>
           </div>
-          <div class="more-sports-list">
-            <article class="sport-row">
-              <h4>Shotgun<small data-i18n="moreSportName0">샷건</small></h4>
-              <div>
-                <p data-i18n="moreSportBody0">
-                  산탄총을 사용하는 종목. 다양한 표적과 코스 구성 안에서
-                  정확도와 경기 수행 능력을 겨룹니다.
-                </p>
-                <span class="sport-divisions"
-                  >Open · Modified · Standard · Standard Manual</span
+          <details class="more-sports-details" open>
+            <summary>
+              <span data-ko="다른 IPSC 종목 5가지" data-en="5 more IPSC disciplines">다른 IPSC 종목 5가지</span>
+              <span class="disclosure-icon" aria-hidden="true"></span>
+            </summary>
+            <div class="more-sports-list">
+              <article class="sport-row">
+                <h4>Shotgun<small data-i18n="moreSportName0">샷건</small></h4>
+                <div>
+                  <p data-i18n="moreSportBody0">
+                    산탄총을 사용하는 종목. 다양한 표적과 코스 구성 안에서
+                    정확도와 경기 수행 능력을 겨룹니다.
+                  </p>
+                  <span class="sport-divisions"
+                    >Open · Modified · Standard · Standard Manual</span
+                  >
+                </div>
+                <a
+                  href="https://www.ipsc.org/ipsc-rules/rule-books/"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="Shotgun — IPSC rules"
+                  >↗</a
                 >
-              </div>
-              <a
-                href="https://www.ipsc.org/ipsc-rules/rule-books/"
-                target="_blank"
-                rel="noopener"
-                aria-label="Shotgun — IPSC rules"
-                >↗</a
-              >
-            </article>
-            <article class="sport-row">
-              <h4>Rifle<small data-i18n="moreSportName1">라이플</small></h4>
-              <div>
-                <p data-i18n="moreSportBody1">
-                  소총을 사용하는 종목. 서로 다른 거리와 배치의 표적을 포함한
-                  스테이지에서 실력을 겨룹니다.
-                </p>
-                <span class="sport-divisions"
-                  >Semi Auto Open · Semi Auto Standard · Manual Action
-                  Contemporary · Manual Action Bolt</span
+              </article>
+              <article class="sport-row">
+                <h4>Rifle<small data-i18n="moreSportName1">라이플</small></h4>
+                <div>
+                  <p data-i18n="moreSportBody1">
+                    소총을 사용하는 종목. 서로 다른 거리와 배치의 표적을 포함한
+                    스테이지에서 실력을 겨룹니다.
+                  </p>
+                  <span class="sport-divisions"
+                    >Semi Auto Open · Semi Auto Standard · Manual Action
+                    Contemporary · Manual Action Bolt</span
+                  >
+                </div>
+                <a
+                  href="https://www.ipsc.org/ipsc-rules/rule-books/"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="Rifle — IPSC rules"
+                  >↗</a
                 >
-              </div>
-              <a
-                href="https://www.ipsc.org/ipsc-rules/rule-books/"
-                target="_blank"
-                rel="noopener"
-                aria-label="Rifle — IPSC rules"
-                >↗</a
-              >
-            </article>
-            <article class="sport-row">
-              <h4>
-                PCC<small data-i18n="moreSportName2">피스톨 칼리버 카빈</small>
-              </h4>
-              <div>
-                <p data-i18n="moreSportBody2">
-                  권총 탄약을 사용하는 카빈 종목. 광학 조준기 또는 기계식
-                  조준기에 따라 디비전이 나뉩니다.
-                </p>
-                <span class="sport-divisions">Optics · Iron</span>
-              </div>
-              <a
-                href="https://www.ipsc.org/ipsc-rules/rule-books/"
-                target="_blank"
-                rel="noopener"
-                aria-label="PCC — IPSC rules"
-                >↗</a
-              >
-            </article>
-            <article class="sport-row">
-              <h4>
-                Mini Rifle<small data-i18n="moreSportName3">미니 라이플</small>
-              </h4>
-              <div>
-                <p data-i18n="moreSportBody3">
-                  림파이어 소총을 사용하는 종목. 별도의 IPSC 규정 아래 정확도와
-                  속도를 겨룹니다.
-                </p>
-                <span class="sport-divisions">Open · Standard</span>
-              </div>
-              <a
-                href="https://www.ipsc.org/ipsc-rules/rule-books/"
-                target="_blank"
-                rel="noopener"
-                aria-label="Mini Rifle — IPSC rules"
-                >↗</a
-              >
-            </article>
-            <article class="sport-row">
-              <h4>
-                .22LR Handgun<small data-i18n="moreSportName4"
-                  >.22LR 핸드건</small
+              </article>
+              <article class="sport-row">
+                <h4>
+                  PCC<small data-i18n="moreSportName2">피스톨 칼리버 카빈</small>
+                </h4>
+                <div>
+                  <p data-i18n="moreSportBody2">
+                    권총 탄약을 사용하는 카빈 종목. 광학 조준기 또는 기계식
+                    조준기에 따라 디비전이 나뉩니다.
+                  </p>
+                  <span class="sport-divisions">Optics · Iron</span>
+                </div>
+                <a
+                  href="https://www.ipsc.org/ipsc-rules/rule-books/"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="PCC — IPSC rules"
+                  >↗</a
                 >
-              </h4>
-              <div>
-                <p data-i18n="moreSportBody4">
-                  .22LR 림파이어 권총을 사용하는 종목. 일반 핸드건과 구분된 경기
-                  규정이 적용됩니다.
-                </p>
-                <span class="sport-divisions">Open · Standard · Classic</span>
-              </div>
-              <a
-                href="https://www.ipsc.org/ipsc-rules/rule-books/"
-                target="_blank"
-                rel="noopener"
-                aria-label=".22LR Handgun — IPSC rules"
-                >↗</a
-              >
-            </article>
-          </div>
-          <p class="fine-note" data-i18n="moreSportsNote">
-            IPSC 국제 종목 안내입니다. 국내 참여 가능 종목과 교육·대회 일정은
-            KRPSA에 문의해 주세요.
-          </p>
+              </article>
+              <article class="sport-row">
+                <h4>
+                  Mini Rifle<small data-i18n="moreSportName3">미니 라이플</small>
+                </h4>
+                <div>
+                  <p data-i18n="moreSportBody3">
+                    림파이어 소총을 사용하는 종목. 별도의 IPSC 규정 아래 정확도와
+                    속도를 겨룹니다.
+                  </p>
+                  <span class="sport-divisions">Open · Standard</span>
+                </div>
+                <a
+                  href="https://www.ipsc.org/ipsc-rules/rule-books/"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="Mini Rifle — IPSC rules"
+                  >↗</a
+                >
+              </article>
+              <article class="sport-row">
+                <h4>
+                  .22LR Handgun<small data-i18n="moreSportName4"
+                    >.22LR 핸드건</small
+                  >
+                </h4>
+                <div>
+                  <p data-i18n="moreSportBody4">
+                    .22LR 림파이어 권총을 사용하는 종목. 일반 핸드건과 구분된 경기
+                    규정이 적용됩니다.
+                  </p>
+                  <span class="sport-divisions">Open · Standard · Classic</span>
+                </div>
+                <a
+                  href="https://www.ipsc.org/ipsc-rules/rule-books/"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label=".22LR Handgun — IPSC rules"
+                  >↗</a
+                >
+              </article>
+            </div>
+            <p class="fine-note" data-i18n="moreSportsNote">
+              IPSC 국제 종목 안내입니다. 국내 참여 가능 종목과 교육·대회 일정은
+              KRPSA에 문의해 주세요.
+            </p>
+          </details>
         </div>
       </section>
       <section

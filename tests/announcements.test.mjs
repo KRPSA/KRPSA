@@ -23,7 +23,47 @@ test('parses metadata, Markdown, CRLF and filename-derived slugs', () => {
   assert.equal(result.titleEn, result.title);
   assert.equal(result.category, '안내');
   assert.equal(result.draft, false);
+  assert.equal(result.htmlEn, null);
   assert.match(result.html, /<strong>Markdown<\/strong>/);
+});
+
+test('one Markdown post renders independently formatted Korean and English bodies', () => {
+  const body = '한국어 안내입니다.\n\n## 교육 문의\n\n- 카카오톡\n\n<!-- lang:en -->\n\nThis is the English announcement.\n\n## Training inquiries\n\n- KakaoTalk';
+  const result = parseAnnouncement(source({}, body).replaceAll('\n', '\r\n'), 'notice.md');
+  assert.match(result.html, /한국어 안내입니다/);
+  assert.match(result.html, /<h2>교육 문의<\/h2>/);
+  assert.doesNotMatch(result.html, /English|lang:en/);
+  assert.match(result.htmlEn, /English announcement/);
+  assert.match(result.htmlEn, /<h2>Training inquiries<\/h2>/);
+  assert.match(result.htmlEn, /<li>KakaoTalk<\/li>/);
+  assert.doesNotMatch(result.htmlEn, /한국어|lang:en/);
+});
+
+test('bilingual body validation catches duplicate dividers, empty translations and unsupported markers', () => {
+  for (const body of ['<!-- lang:en -->\nEnglish', 'Korean\n<!-- lang:en -->', 'Korean\n<!-- lang:en -->\n   ']) {
+    assert.throws(() => parseAnnouncement(source({}, body), 'notice.md'), /both Korean and English/);
+  }
+  assert.throws(() => parseAnnouncement(source({}, 'Korean\n<!-- lang:en -->\nEnglish\n<!-- lang:en -->\nOther'), 'notice.md'), /only one/);
+  assert.throws(() => parseAnnouncement(source({}, 'Korean\n<!-- lang:fr -->\nFrench'), 'notice.md'), /unsupported body language/);
+});
+
+test('language divider examples inside fenced or indented code remain literal Markdown', () => {
+  for (const example of ['```markdown\n<!-- lang:en -->\n```', '~~~markdown\n<!-- lang:en -->\n~~~', '    <!-- lang:en -->']) {
+    const result = parseAnnouncement(source({}, `${example}\n\n한국어 안내\n\n<!-- lang:en -->\n\nEnglish announcement`), 'notice.md');
+    assert.match(result.html, /<pre><code[^>]*>&lt;!-- lang:en --&gt;/);
+    assert.match(result.html, /한국어 안내/);
+    assert.match(result.htmlEn, /English announcement/);
+  }
+  const onlyExample = parseAnnouncement(source({}, '```markdown\n<!-- lang:en -->\n```'), 'notice.md');
+  assert.equal(onlyExample.htmlEn, null);
+});
+
+test('English Markdown applies the same HTML escaping and unsafe-link protection', () => {
+  const english = '<script>alert(1)</script>\n\n<img src=x onerror=alert(1)>\n\n[unsafe](javascript:alert%281%29)\n\n[valid](https://www.misia.world/)';
+  const result = parseAnnouncement(source({}, `한국어\n\n<!-- lang:en -->\n\n${english}`), 'notice.md');
+  assert.doesNotMatch(result.htmlEn, /<script|<img|href="javascript:/);
+  assert.match(result.htmlEn, /&lt;script&gt;/);
+  assert.match(result.htmlEn, /href="https:\/\/www\.misia\.world\/"/);
 });
 
 test('requires usable title, summary, date and body', () => {
@@ -153,7 +193,7 @@ test('full build creates latest three, complete archive, detail pages and correc
   assert.match(detail, /href="https:\/\/example.com\/"/);
   assert.match(detail, /class="back-top" href="#"/);
   assert.match(detail, /data-title-ko="Notice 4 — KRPSA"/);
-  assert.match(detail, /class="announcement-prose" lang="ko"><p>A useful announcement with <strong>Markdown<\/strong>/);
+  assert.match(detail, /class="announcement-prose" data-announcement-language="ko" lang="ko"><p>A useful announcement with <strong>Markdown<\/strong>/);
   assert.match(detail, /href="\.\.\/notice-3\/"/);
   const published = await readdir(path.join(result.dist, 'announcements'));
   assert.deepEqual(published.sort(), ['index.html', 'notice-1', 'notice-2', 'notice-3', 'notice-4']);
@@ -162,6 +202,38 @@ test('full build creates latest three, complete archive, detail pages and correc
   assert.ok(!deployedFiles.includes('private.txt'));
   assert.ok(deployedFiles.includes('.nojekyll'));
   assert.ok(deployedFiles.includes('reel.js'));
+});
+
+test('bilingual posts keep one route per notice, translated metadata and an accessible locale switch contract', async (t) => {
+  const root = await fixture(t);
+  const body = '한국어 본문\n\n[교육 안내](../../#training)\n\n<!-- lang:en -->\n\n## English body\n\n[Training information](../../#training)';
+  await writeFile(path.join(root, 'announcements', 'notice-4.md'), source({
+    title: '교육 공지', titleEn: 'Training announcement',
+    summary: '한국어 요약', summaryEn: 'An English summary.',
+    category: '교육 안내', categoryEn: 'Training',
+    date: '2026-10-04', slug: 'notice-4',
+  }, body));
+  // A translated draft must remain absent from the public site.
+  await writeFile(path.join(root, 'announcements', 'notice-5.md'), source({ draft: true, slug: 'notice-5' }, body));
+  const result = await buildSite(root);
+  assert.equal(result.count, 4);
+  const [home, archive, detail, fallback] = await Promise.all(['index.html', 'announcements/index.html', 'announcements/notice-4/index.html', 'announcements/notice-3/index.html'].map((name) => readFile(path.join(result.dist, name), 'utf8')));
+  assert.equal((home.match(/class="announcement-card"/g) || []).length, 3);
+  assert.equal((archive.match(/class="announcement-card"/g) || []).length, 4);
+  assert.match(home, /data-en="Training announcement"/);
+  assert.match(archive, /data-en="An English summary\."/);
+  assert.match(detail, /data-title-en="Training announcement — KRPSA"/);
+  assert.match(detail, /data-description-en="An English summary\."/);
+  assert.match(detail, /data-aria-ko="공지사항 탐색" data-aria-en="Announcement navigation"/);
+  assert.match(detail, /data-announcement-language="ko" lang="ko"><p>한국어 본문<\/p>/);
+  assert.match(detail, /data-announcement-language="en" lang="en" hidden><h2>English body<\/h2>/);
+  assert.match(detail, /href="\.\.\/\.\.\/#training">Training information<\/a>/);
+  assert.doesNotMatch(detail, /data-announcement-fallback|lang:en|available in Korean/);
+  assert.match(fallback, /data-announcement-fallback lang="en" hidden>An English translation is not available/);
+  assert.match(fallback, /data-announcement-language="ko" lang="ko">/);
+  assert.doesNotMatch(fallback, /data-announcement-language="en"/);
+  const published = await readdir(path.join(result.dist, 'announcements'));
+  assert.deepEqual(published.sort(), ['index.html', 'notice-1', 'notice-2', 'notice-3', 'notice-4']);
 });
 
 test('rebuild removes deleted or unpublished pages without leaving stale announcements', async (t) => {

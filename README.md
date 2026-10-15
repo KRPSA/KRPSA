@@ -21,16 +21,19 @@ npm start
 **`announcements/` 폴더에 Markdown 파일 하나를 추가하면 됩니다.** 별도의 글 목록이나 JavaScript 파일을 수정할 필요가 없습니다.
 
 1. `announcements/_template.md`를 `announcements/2026-10-15-your-announcement.md`처럼 복사합니다.
-2. 맨 위 YAML 메타데이터와 아래 Markdown 본문을 작성합니다.
+2. 맨 위 YAML 메타데이터와 아래 한국어 본문을 작성합니다. 본문 뒤에 `<!-- lang:en -->`을 한 줄 넣고 영어 번역을 이어서 작성합니다.
 3. 게시하려면 `draft: false`로 변경하거나 `draft` 항목을 삭제합니다.
 4. `npm test && npm run build`로 확인합니다. `main`에 반영되면 GitHub Actions가 자동으로 빌드·배포합니다.
 
 ```markdown
 ---
 title: "공지사항 제목"
+titleEn: "Announcement title"
 date: "2026-10-15"
 summary: "메인 화면과 전체 목록에 표시할 짧은 요약입니다."
+summaryEn: "A short summary for the homepage and announcement list."
 category: "교육 안내"
+categoryEn: "Training"
 slug: "your-announcement"
 draft: false
 ---
@@ -41,6 +44,15 @@ draft: false
 
 - 안내 사항
 - [관련 링크](https://www.misia.world/)
+
+<!-- lang:en -->
+
+Write the main message in the first paragraph.
+
+## Further information
+
+- Announcement details
+- [Related website](https://www.misia.world/)
 ```
 
 | 항목 | 설명 |
@@ -57,7 +69,15 @@ draft: false
 
 `README.md`, `template.md`, `_`로 시작하는 파일과 하위 폴더는 글로 처리하지 않습니다. 잘못된 날짜, 중복 주소, 누락·오타 메타데이터, YAML 중복 키는 빌드를 실패시켜 잘못된 게시를 방지합니다. `draft` 글도 메타데이터를 검증합니다.
 
-본문은 한국어로 제공됩니다. 페이지 메뉴와 제목·요약은 한·영 전환을 지원하며, 본문 언어는 한국어로 명시합니다. 제목은 메타데이터에서 생성하므로 본문의 소제목은 `##`부터 작성하는 것을 권장합니다. 표, 목록, 인용, 코드, 링크와 이미지를 사용할 수 있습니다. 이미지는 `assets/`에 추가하고 `![설명](../../assets/사진.jpg)`로 참조하세요. 홈페이지 섹션 링크는 `[교육 안내](../../#training)`처럼 작성합니다. 원시 HTML은 실행되지 않고 텍스트로 표시되며, `javascript:`, `data:`, `file:` 등 안전하지 않은 링크는 허용하지 않습니다.
+### 한국어·영어 본문
+
+한 파일에서 **한국어 본문 → `<!-- lang:en -->` → 영어 본문** 순서로 작성합니다. 구분자는 다른 내용 없이 독립된 한 줄에 한 번만 넣으세요. 두 본문 모두 Markdown을 지원하며, 사이트의 KO/EN 버튼을 누르면 제목·요약과 함께 본문 전체가 전환됩니다. 번역을 별도 공지로 등록하지 않으므로 목록과 주소는 하나씩 유지됩니다.
+
+영어 본문은 작성자가 직접 번역합니다. 구분자를 넣었다면 한국어·영어 본문이 모두 있어야 하며, 빈 번역이나 중복 구분자는 빌드를 실패시킵니다. 코드 블록 안에 예시로 적은 구분자는 실제 언어 전환으로 처리하지 않습니다.
+
+기존 한국어 전용 글도 계속 사용할 수 있습니다. 영어 본문이 없는 글은 EN 모드에서 영어 번역이 아직 없다는 안내와 한국어 원문을 표시합니다. `titleEn`, `summaryEn`, `categoryEn`을 생략하면 해당 항목은 원문을 유지합니다. **완전한 영어 공지를 제공하려면 세 메타데이터와 본문을 모두 번역하세요.** JavaScript를 사용할 수 없는 경우에는 기본 한국어 본문을 표시합니다.
+
+제목은 메타데이터에서 생성하므로 본문의 소제목은 `##`부터 작성하는 것을 권장합니다. 표, 목록, 인용, 코드, 링크와 이미지를 사용할 수 있습니다. 이미지는 `assets/`에 추가하고 `![설명](../../assets/사진.jpg)`로 참조하세요. 영어 본문에서는 이미지 설명도 번역하세요. 홈페이지 섹션 링크는 `[교육 안내](../../#training)`처럼 작성합니다. 원시 HTML은 실행되지 않고 텍스트로 표시되며, `javascript:`, `data:`, `file:` 등 안전하지 않은 링크는 허용하지 않습니다.
 
 ## 파일 구조
 

@@ -18,3 +18,14 @@ draft: true
 - [관련 링크](https://www.ipsckorea.co.kr/)
 
 문의: 카카오톡 **ipsckorea**
+
+<!-- lang:en -->
+
+Write the main message in the first paragraph. To publish, change `draft` to `false` or remove the `draft` field.
+
+## Section heading
+
+- Announcement details
+- [Related website](https://www.ipsckorea.co.kr/)
+
+Inquiries: **ipsckorea** on KakaoTalk
