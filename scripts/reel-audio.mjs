@@ -9,12 +9,20 @@ import vm from 'node:vm';
 // so a checkout path containing '#', '?' or '%' still finds reel.js.
 const sandbox = { window: {} };
 vm.runInNewContext(await readFile(new URL('../reel.js', import.meta.url), 'utf8'), sandbox);
-const { CUES, DURATION, MARKS } = sandbox.window.KRPSAReel;
+const { CUES, DURATION, MARKS, SHOTS, TARGETS } = sandbox.window.KRPSAReel;
 
 const SR = 48000;
 const N = Math.ceil((DURATION + 0.5) * SR);
-const dry = [new Float32Array(N), new Float32Array(N)];
-const wet = [new Float32Array(N), new Float32Array(N)];
+// Music and effects go to separate buses, so the music alone can tape-stop into
+// slow motion and duck under the shots; each has a dry pair and a reverb send.
+const bus = () => ({
+  dry: [new Float32Array(N), new Float32Array(N)],
+  wet: [new Float32Array(N), new Float32Array(N)],
+});
+const music = bus();
+const fx = bus();
+let target = music; // the bus place() writes to
+let speed = 1; // varispeed of the voice being placed (see the cue loop)
 const BPM = 120;
 const BEAT = 60 / BPM;
 
@@ -25,24 +33,81 @@ const noise = () => {
 };
 const midi = (n) => 440 * 2 ** ((n - 69) / 12);
 
-// Write a mono voice into the mix. fn(t) returns a sample at t seconds into the voice.
+// Write a mono voice into the mix. fn(t) returns a sample at t seconds into the voice;
+// pan is -1..1, or a function of t for a voice that moves.
 function place(t0, dur, fn, { gain = 1, pan = 0, send = 0 } = {}) {
+  let src = fn;
+  let length = dur;
+  if (speed !== 1) {
+    // Varispeed, like tape: render the voice, then read it back faster or
+    // slower, so pitch and length move together.
+    const s = speed;
+    const buf = new Float32Array(Math.ceil(dur * SR) + 1);
+    for (let i = 0; i < buf.length; i++) buf[i] = fn(i / SR);
+    length = dur / s;
+    src = (t) => {
+      const x = t * s * SR;
+      const i = Math.floor(x);
+      return i + 1 < buf.length ? buf[i] + (buf[i + 1] - buf[i]) * (x - i) : 0;
+    };
+  }
   const i0 = Math.round(t0 * SR);
-  const len = Math.round(dur * SR);
-  const gl = Math.cos(((pan + 1) * Math.PI) / 4) * gain;
-  const gr = Math.sin(((pan + 1) * Math.PI) / 4) * gain;
+  const len = Math.round(length * SR);
+  const moving = typeof pan === 'function';
+  let gl = moving ? 0 : Math.cos(((pan + 1) * Math.PI) / 4) * gain;
+  let gr = moving ? 0 : Math.sin(((pan + 1) * Math.PI) / 4) * gain;
   for (let i = 0; i < len; i++) {
     const k = i0 + i;
     if (k < 0 || k >= N) continue;
-    const v = fn(i / SR);
-    dry[0][k] += v * gl;
-    dry[1][k] += v * gr;
+    const v = src(i / SR);
+    if (moving) {
+      const p = Math.min(1, Math.max(-1, pan(i / SR)));
+      gl = Math.cos(((p + 1) * Math.PI) / 4) * gain;
+      gr = Math.sin(((p + 1) * Math.PI) / 4) * gain;
+    }
+    target.dry[0][k] += v * gl;
+    target.dry[1][k] += v * gr;
     if (send) {
-      wet[0][k] += v * gl * send;
-      wet[1][k] += v * gr * send;
+      target.wet[0][k] += v * gl * send;
+      target.wet[1][k] += v * gr * send;
     }
   }
 }
+
+// ------------------------------------------------------------------- stage
+// Stage time (s, the shot timer) at video time t and back: the clock runs at
+// each speed ramp's rate. Checked against the shots so it cannot drift from reel.js.
+const rateAt = (t) => (MARKS.ramps.find(([a, b]) => t >= a && t < b) ?? [0, 0, 1])[2];
+const stageOf = (t) =>
+  MARKS.ramps.reduce((st, [a, b, r]) => st + (r - 1) * Math.min(Math.max(t - a, 0), b - a), MARKS.stageStart + t - MARKS.resume);
+function videoOf(st) {
+  let lo = MARKS.resume;
+  let hi = DURATION;
+  for (let i = 0; i < 50; i++) {
+    const mid = (lo + hi) / 2;
+    if (stageOf(mid) < st) lo = mid;
+    else hi = mid;
+  }
+  return hi;
+}
+for (const s of SHOTS) if (Math.abs(videoOf(s.st) - s.t) > 1e-6) throw new Error(`Stage clock out of sync at shot ${s.i}`);
+// How far a sound of the world is slowed or sped up inside a ramp: less than
+// the picture, so it still reads.
+const vari = (t) => {
+  const r = rateAt(t);
+  return r < 1 ? r ** 0.6 : r ** 0.4;
+};
+// Where a target sits left to right as seen from its shooting area (+x is
+// screen right); a pair of plates sits side by side.
+function panOf(key, plate) {
+  const tg = TARGETS[key];
+  const area = Object.values(TARGETS).filter((o) => o.from === tg.from);
+  const mid = area.reduce((x, o) => x + o.pos[0], 0) / area.length;
+  const p = Math.min(0.5, Math.max(-0.5, (tg.pos[0] - mid) / 6));
+  return tg.kind === 'plates' ? p + ((plate ?? 0) - 0.5) * 0.12 : p;
+}
+// The key of the first target of a kind, if the stage has one.
+const keyOf = (kind) => Object.keys(TARGETS).find((key) => TARGETS[key].kind === kind);
 
 // Topology-preserving state-variable filter (stable under fast sweeps). k is the
 // damping: small k rings, large k is broad.
@@ -282,6 +347,196 @@ const voice = {
   },
 };
 
+// Struck steel: inharmonic partials [Hz, level, decay s], each a slightly
+// detuned pair so the ring shimmers, after a short bright strike.
+function ring(t0, partials, dur, { gain, pan = 0, send = 0.4, strike = 0.6 }) {
+  const ph = partials.map(() => [0, 0]);
+  const hp = svf(0.7);
+  place(t0, dur, (t) => {
+    let x = t < 0.004 ? hp(noise(), 3500, 'high') * strike * (1 - t / 0.004) : 0;
+    partials.forEach(([f, a, d], k) => {
+      ph[k][0] += f / SR;
+      ph[k][1] += (f * 1.0023) / SR;
+      x += (Math.sin(2 * Math.PI * ph[k][0]) + Math.sin(2 * Math.PI * ph[k][1])) * 0.5 * a * Math.exp(-t / d);
+    });
+    return x;
+  }, { gain, pan, send });
+}
+// A short knock: a noise burst through a resonance plus a decaying body tone.
+function knock(t0, { f = 1200, k = 0.5, body = 120, bodyDecay = 30, len = 0.2, noiseDecay = 200, gain, pan = 0, send = 0.2 }) {
+  const bp = svf(k);
+  let ph = 0;
+  place(t0, len, (t) => {
+    ph += body / SR;
+    return bp(noise(), f, 'band') * Math.exp(-t * noiseDecay) * 2 + Math.sin(2 * Math.PI * ph) * Math.exp(-t * bodyDecay);
+  }, { gain, pan, send });
+}
+// Band-passed noise swept along a path: fc(p) and level(p) for p in 0..1.
+function swish(t0, dur, fc, level, { k = 1.2, gain, pan = 0, send = 0.3 }) {
+  const bp = svf(k);
+  place(t0, dur, (t) => bp(noise(), fc(t / dur), 'band') * level(t / dur), { gain, pan, send });
+}
+
+// The stage's own voices. They take the cue as a third argument for its extra
+// fields: pan (from the cue's target), k (which plate) and dur.
+const stage = {
+  // Paper: a dull, quiet thud of cardboard on its stick.
+  paper(t0, v = 1, { pan = 0 } = {}) {
+    const lp = svf(0.8);
+    const bp = svf(1.1);
+    let ph = 0;
+    place(t0, 0.14, (t) => {
+      const n = noise();
+      ph += (150 + 90 * Math.exp(-t * 70)) / SR;
+      const thud = Math.sin(2 * Math.PI * ph) * Math.exp(-t * 40);
+      const slap = bp(n, 750, 'band') * Math.exp(-t * 60) * 2.2;
+      const pap = t < 0.005 ? lp(n, 2500) * 0.8 : 0;
+      return (thud + slap + pap) * v;
+    }, { gain: 0.18, pan, send: 0.12 });
+  },
+  // A popper: a big plate, so a low, long ring.
+  popper(t0, v = 1, { pan = 0 } = {}) {
+    ring(t0, [[560, 1, 0.55], [1370, 0.55, 0.42], [2460, 0.38, 0.28], [3980, 0.22, 0.16]], 1.5, { gain: 0.16 * v, pan, send: 0.5 });
+  },
+  // ...that tips over and lands flat: a dead thump with a short clang.
+  fall(t0, v = 1, { pan = 0 } = {}) {
+    knock(t0, { f: 520, k: 0.9, body: 82, bodyDecay: 16, len: 0.4, noiseDecay: 45, gain: 0.3 * v, pan, send: 0.25 });
+    ring(t0 + 0.004, [[330, 0.6, 0.12], [810, 0.4, 0.07]], 0.4, { gain: 0.12 * v, pan, strike: 0 });
+  },
+  // Metal plates: small, so a fast, high ping; each plate (k) a little apart
+  // in pitch so a pair reads as two. They tip back onto the base with a tick.
+  plates(t0, v = 1, { pan = 0, k = 0 } = {}) {
+    const m = 1 + (k ?? 0) * 0.035;
+    ring(t0, [[1780 * m, 1, 0.22], [4080 * m, 0.55, 0.13], [6830 * m, 0.32, 0.08]], 0.7, { gain: 0.17 * v, pan, send: 0.4, strike: 0.9 });
+    knock(t0 + 0.2, { f: 2400, k: 0.6, body: 640, bodyDecay: 80, len: 0.07, noiseDecay: 220, gain: 0.05 * v, pan });
+  },
+  // A sear lets go: a sharp snap, the weight's clunk and a spring's twang.
+  latch(t0, v = 1, { pan = 0 } = {}) {
+    knock(t0, { f: 3800, k: 0.3, body: 1900, bodyDecay: 90, len: 0.05, noiseDecay: 380, gain: 0.14 * v, pan });
+    knock(t0 + 0.014, { f: 700, k: 0.8, body: 135, bodyDecay: 20, len: 0.3, noiseDecay: 40, gain: 0.24 * v, pan, send: 0.3 });
+    let ph = 0;
+    place(t0 + 0.014, 0.6, (t) => {
+      ph += (245 * (1 + 0.025 * Math.sin(2 * Math.PI * 11 * t))) / SR;
+      return Math.sin(2 * Math.PI * ph) * Math.exp(-t * 7) * v;
+    }, { gain: 0.05, pan, send: 0.4 });
+  },
+  // The swinger's pivot creaking as it turns round: stick-slip pulses through
+  // two resonances.
+  creak(t0, v = 1, { pan = 0 } = {}) {
+    const r1 = svf(0.06);
+    const r2 = svf(0.1);
+    const dur = 0.24;
+    let ph = 0;
+    place(t0, dur, (t) => {
+      const p = t / dur;
+      const prev = ph;
+      ph += (46 + 34 * p + noise() * 6) / SR;
+      const x = Math.floor(ph) !== Math.floor(prev) ? 1 : 0;
+      return (r1(x, 690, 'band') + r2(x, 1720, 'band') * 0.6) * Math.sin(Math.PI * p) ** 1.5 * v;
+    }, { gain: 0.6, pan, send: 0.3 });
+  },
+  // The mover's carriage: the cable yanks its brake off with a heavy clank and
+  // a rattle of the target on its stick.
+  carriage(t0, v = 1, { pan = 0 } = {}) {
+    knock(t0, { f: 1300, k: 0.5, body: 150, bodyDecay: 18, len: 0.35, noiseDecay: 70, gain: 0.2 * v, pan, send: 0.3 });
+    ring(t0, [[380, 0.8, 0.09], [930, 0.6, 0.06], [2050, 0.35, 0.04]], 0.3, { gain: 0.1 * v, pan, strike: 0.8 });
+    [0.05, 0.09, 0.14].forEach((d, j) =>
+      knock(t0 + d, { f: 1700, k: 0.8, body: 420, bodyDecay: 90, len: 0.05, noiseDecay: 260, gain: 0.05 * v * 0.7 ** j, pan }),
+    );
+  },
+  // ...and hitting the buffer at the end of the rail: a dead, heavy thud.
+  buffer(t0, v = 1, { pan = 0 } = {}) {
+    knock(t0, { f: 380, k: 1.0, body: 72, bodyDecay: 14, len: 0.45, noiseDecay: 35, gain: 0.26 * v, pan, send: 0.25 });
+    knock(t0 + 0.01, { f: 1500, k: 0.7, body: 260, bodyDecay: 45, len: 0.12, noiseDecay: 160, gain: 0.07 * v, pan });
+  },
+  // The drop turner's panel swinging round.
+  turn(t0, v = 1, { pan = 0, dur = 0.3 } = {}) {
+    swish(t0, dur, (p) => 450 + 1300 * Math.sin(p * Math.PI), (p) => Math.sin(p * Math.PI) ** 2 * v, { gain: 0.32, pan, k: 1.4 });
+  },
+  // ...and hitting its stop.
+  clack(t0, v = 1, { pan = 0 } = {}) {
+    knock(t0, { f: 1500, k: 0.35, body: 105, bodyDecay: 26, len: 0.25, noiseDecay: 160, gain: 0.15 * v, pan });
+    ring(t0, [[430, 0.7, 0.05], [1160, 0.5, 0.035]], 0.2, { gain: 0.08 * v, pan, strike: 0 });
+  },
+  // Reload: the slide locks back on the last round.
+  lock(t0, v = 1) {
+    ring(t0, [[3150, 1, 0.045], [5450, 0.5, 0.03], [1720, 0.45, 0.06]], 0.2, { gain: 0.09 * v, pan: -0.1, send: 0.2, strike: 1.2 });
+  },
+  // The magazine release clicks and the empty magazine slides out.
+  magout(t0, v = 1) {
+    knock(t0, { f: 4300, k: 0.4, body: 2100, bodyDecay: 120, len: 0.04, noiseDecay: 400, gain: 0.12 * v, pan: -0.1 });
+    swish(t0 + 0.012, 0.13, (p) => 1600 + 2200 * p, (p) => Math.sin(p * Math.PI) * (1 - p * 0.4) * v, { gain: 0.24, pan: -0.15, k: 1.6, send: 0.15 });
+  },
+  // ...and hits the ground, with a small bounce.
+  magdrop(t0, v = 1) {
+    [0, 0.075].forEach((d, j) =>
+      knock(t0 + d, { f: 1100, k: 0.7, body: 360, bodyDecay: 55, len: 0.12, noiseDecay: 70, gain: 0.16 * v * (j ? 0.45 : 1), pan: -0.25, send: 0.2 }),
+    );
+  },
+  // A fresh magazine slides in and seats.
+  magin(t0, v = 1) {
+    swish(t0 - 0.07, 0.075, (p) => 1300 + 1600 * p, (p) => p * p * v, { gain: 0.22, pan: -0.1, k: 1.6, send: 0.1 });
+    knock(t0, { f: 2700, k: 0.5, body: 165, bodyDecay: 32, len: 0.2, noiseDecay: 240, gain: 0.15 * v, pan: -0.1, send: 0.25 });
+    ring(t0, [[1460, 0.8, 0.04], [2620, 0.5, 0.03]], 0.15, { gain: 0.07 * v, pan: -0.1, strike: 0 });
+  },
+  // The slide release is pressed and the slide slams home.
+  slidefwd(t0, v = 1) {
+    knock(t0 - 0.045, { f: 4100, k: 0.4, body: 2400, bodyDecay: 140, len: 0.03, noiseDecay: 450, gain: 0.08 * v, pan: -0.1 });
+    swish(t0 - 0.03, 0.032, (p) => 2600 + 3000 * p, (p) => p * v, { gain: 0.24, pan: -0.1, k: 1.4, send: 0.1 });
+    knock(t0, { f: 3300, k: 0.45, body: 125, bodyDecay: 30, len: 0.25, noiseDecay: 300, gain: 0.18 * v, pan: -0.1, send: 0.3 });
+    ring(t0, [[2120, 1, 0.07], [3540, 0.6, 0.05], [5650, 0.4, 0.035]], 0.3, { gain: 0.08 * v, pan: -0.1, send: 0.3, strike: 0.8 });
+  },
+  // Into slow motion: a tape stop falls into the ramp, then a low boom and a
+  // dark tail while the picture crawls. v = 1 - rate.
+  slowmo(t0, v = 1) {
+    const L = 0.22 + 0.25 * v;
+    const lp = svf(0.5);
+    const lp2 = svf(0.7);
+    let ph = 0;
+    let ph2 = 0;
+    place(t0 - L, L + 1.1, (t) => {
+      if (t < L) {
+        const p = t / L;
+        ph += (190 * (1 - 0.8 * p * p)) / SR;
+        const x = lp(saw(ph) * 0.5 + saw(ph * 1.5) * 0.25 + noise() * 0.35, 2600 * (1 - 0.85 * p));
+        return x * (0.25 + 0.75 * p);
+      }
+      const u = t - L;
+      ph2 += (26 + 40 * Math.exp(-u * 3)) / SR;
+      return Math.sin(2 * Math.PI * ph2) * Math.exp(-u * 2.8) + lp2(noise(), 260) * Math.exp(-u * 2.2) * 1.2;
+    }, { gain: 0.16 + 0.3 * v, send: 0.5 });
+  },
+  // Into fast forward: a riser snaps up to the ramp, then a thin tape flutter
+  // for as long as the picture runs fast.
+  ffwd(t0, v = 1, { dur = 1 } = {}) {
+    const pre = 0.32;
+    const bp = svf(1.0);
+    let ph = 0;
+    place(t0 - pre, pre + 0.1, (t) => {
+      const p = Math.min(1, t / pre);
+      ph += (240 + 2100 * p * p) / SR;
+      const x = bp(noise(), 500 + 6800 * p * p, 'band') + Math.sin(2 * Math.PI * ph) * 0.25;
+      return x * (t < pre ? p * p : Math.exp(-(t - pre) * 45)) * v;
+    }, { gain: 0.36, send: 0.35 });
+    const bp2 = svf(0.9);
+    place(t0, dur, (t) => {
+      const flutter = 0.65 + 0.35 * Math.sin(2 * Math.PI * 13 * t);
+      const a = Math.min(1, t / 0.06, (dur - t) / 0.12);
+      return bp2(noise(), 3600 + 700 * Math.sin(2 * Math.PI * 3 * t), 'band') * flutter * a * v;
+    }, { gain: 0.07, send: 0.2 });
+  },
+  // A camera cut: a soft swish across the stereo field, peaking mid-move.
+  cut(t0, v = 1, { dur = 0.4, pan = 0.3 } = {}) {
+    swish(t0, dur, (p) => 420 + 2300 * Math.sin(p * Math.PI) ** 2, (p) => Math.sin(p * Math.PI) ** 2 * v, {
+      gain: 0.19,
+      pan: (t) => pan * ((2 * t) / dur - 1),
+      k: 1.5,
+      send: 0.35,
+    });
+  },
+};
+Object.assign(voice, stage);
+
 // ------------------------------------------------------------------- music
 const AM = [57, 60, 64];
 const F = [53, 57, 60];
@@ -294,7 +549,6 @@ voice.pad(6.0, AM, 2.0, 1, 1400);
 // moved by MARKS.shift so it stays on the beat grid.
 const S = MARKS.shift;
 const STAGE_OUT = 19.75 + S;
-const rateAt = (t) => (MARKS.ramps.find(([a, b]) => t >= a && t < b) ?? [0, 0, 1])[2];
 [[16, AM, 4], [20, F, 2], [22, C, 2], [24, G, 2], [26, AM, STAGE_OUT - 26]].forEach(([t, n, d]) => voice.pad(t, n, d, 1, 1500));
 voice.pad(20 + S, F, 1.25, 1, 1300);
 voice.pad(21.25 + S, G, 1.25, 1, 1300);
@@ -330,12 +584,153 @@ for (let t = 20 + S; t < 22.5 + S; t += BEAT) {
 for (let t = 20 + S; t < 22.5 + S; t += BEAT / 2) voice.bass(t, t < 21.25 + S ? 29 : 31, BEAT / 2, 0.7, 900);
 
 // ------------------------------------------------------------------ cues
+// Sounds of the world play through the speed ramps like tape, slowed or sped
+// up with the picture; the ramp cues are the transition itself and are not.
+target = fx;
 for (const cue of CUES) {
   const fn = voice[cue.type];
   if (!fn) throw new Error(`No voice for cue ${cue.type}`);
+  speed = cue.type === 'slowmo' || cue.type === 'ffwd' ? 1 : vari(cue.t);
   if (cue.type === 'riser') fn(cue.t, cue.dur);
+  else if (cue.type in stage) fn(cue.t, cue.v ?? 1, { ...cue, pan: cue.target ? panOf(cue.target, cue.k) : 0 });
   else fn(cue.t, cue.v ?? 1);
 }
+speed = 1;
+
+// ----------------------------------------------------------- moving targets
+// Sampled in stage time like the picture (see swingAngle in reel.js), so the
+// ramps stretch and squeeze them too. Targets are found by kind and timed from
+// EVENTS, so a stage without one of them simply has no such sound.
+const EV = MARKS.events;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const STAGE_OUT_ST = stageOf(MARKS.stageEnd + 0.9); // stage time as the stage scene leaves
+
+// The swinger: a soft whoosh through the bottom of every swing, loudest where
+// it moves fastest, and a pivot creak at each turnaround, both dying away with
+// the damping; it follows the target across the stereo field. It is the shot
+// until the shooter leaves its area, then sits back and fades out.
+const SWINGER = keyOf('swinger');
+if (SWINGER) {
+  const { theta0, period, damping } = MARKS.swinger;
+  const rel = EV.swingerRelease;
+  const w0 = (2 * Math.PI) / period;
+  const theta = (tau) => theta0 * Math.cos(w0 * tau) * Math.exp(-damping * tau);
+  const omega = (tau) => theta0 * Math.exp(-damping * tau) * (-w0 * Math.sin(w0 * tau) - damping * Math.cos(w0 * tau));
+  const move = EV.moves.find(([a, , from]) => from === TARGETS[SWINGER].from && a > rel);
+  const [leave, away] = move ?? [Infinity, Infinity];
+  const end = Math.min(away + 2, STAGE_OUT_ST);
+  const focus = (st) => (st < leave ? 1 : st < away ? 1 - 0.65 * ((st - leave) / (away - leave)) : 0.35 * clamp((end - st) / (end - away)));
+  const base = panOf(SWINGER);
+  const panAt = (st) => base + 0.4 * Math.sin(theta(st - rel));
+  const t0 = videoOf(rel);
+  const t1 = videoOf(end);
+  const bp = svf(1.1);
+  const lp = svf(0.7);
+  place(t0, t1 - t0, (t) => {
+    const T = t0 + t;
+    const st = stageOf(T);
+    const s = Math.abs(omega(st - rel)) / (theta0 * w0);
+    const k = vari(T);
+    const x = bp(noise(), (280 + 1500 * s) * k, 'band') + lp(noise(), 240 * k) * 0.6;
+    return x * s * s * focus(st) * Math.min(1, t / 0.08);
+  }, { gain: 0.2, pan: (t) => panAt(stageOf(t0 + t)), send: 0.35 });
+  let prev = omega(0.001);
+  for (let tau = 0.002; rel + tau < end; tau += 0.001) {
+    const o = omega(tau);
+    if (Math.sign(o) !== Math.sign(prev)) {
+      const T = videoOf(rel + tau);
+      speed = vari(T);
+      voice.creak(T - 0.12 / speed, (Math.abs(theta(tau)) / theta0) * focus(rel + tau), { pan: panAt(rel + tau) });
+      speed = 1;
+    }
+    prev = o;
+  }
+}
+
+// The mover: its cable yanks the carriage free with a clank at moverRelease,
+// then it runs along the rail at constant speed through EVENTS.mover — a low
+// rumble, the wheels' whirr and a tick at each rail joint, slowed and lowered
+// with the picture in slow motion — and hits the buffer with a thud. It crosses
+// from left to right as the shooter sees it (see moverOffset), and so does its sound.
+const MOVER = keyOf('mover');
+if (MOVER && EV.mover) {
+  const { start, dur } = EV.mover;
+  const panAt = (st) => panOf(MOVER) + 0.3 * (2 * clamp((st - start) / dur) - 1);
+  const tr = videoOf(EV.moverRelease ?? start);
+  speed = vari(tr);
+  voice.carriage(tr, 1, { pan: panAt(start) });
+  const t0 = videoOf(start);
+  const t1 = videoOf(start + dur);
+  const lp = svf(0.6);
+  const bp = svf(0.9);
+  const rs = svf(0.08);
+  let hum = 0;
+  let wheel = 0;
+  let joint = 0;
+  place(t0, t1 - t0, (t) => {
+    const T = t0 + t;
+    const k = vari(T);
+    const st = stageOf(T);
+    hum += (55 * k) / SR;
+    wheel += (21 * k) / SR;
+    const j = Math.floor((st - start) / 0.17);
+    const click = j !== joint ? 1 : 0;
+    joint = j;
+    const whirr = bp(noise(), 820 * k, 'band') * (0.7 + 0.3 * Math.sin(2 * Math.PI * wheel));
+    const x = lp(noise(), 150 * k) * 1.4 + whirr * 0.6 + Math.sin(2 * Math.PI * hum) * 0.25 + rs(click, 2100 * k, 'band') * 0.5;
+    return x * Math.min(1, t / 0.15, (t1 - T) / 0.015);
+  }, { gain: 0.16, pan: (t) => panAt(stageOf(t0 + t)), send: 0.25 });
+  speed = vari(t1);
+  voice.buffer(t1, 1, { pan: panAt(start + dur) });
+  speed = 1;
+}
+
+// Camera cuts: a soft swish through each move, swinging left or right in turn
+// and kept clear of the next shot (starting earlier instead of running into it).
+(MARKS.cuts ?? []).forEach(([at, dur, rig], i) => {
+  const next = SHOTS.find((s) => s.t > at)?.t ?? Infinity;
+  const end = Math.min(at + dur + 0.1, next - 0.035);
+  const start = Math.min(at - 0.04, end - 0.3);
+  voice.cut(start, rig === 'overview' ? 0.9 : 0.75, { dur: end - start, pan: i % 2 ? 0.35 : -0.35 });
+});
+
+// --------------------------------------------------------------- music bus
+// Tape stops into slow motion: in the last moments before each slow ramp the
+// music is read back slower and slower (deeper the slower the ramp), then
+// picks up again at the new tempo.
+for (const [a, , rate] of MARKS.ramps) {
+  if (rate >= 1) continue;
+  const n = Math.round((0.22 + 0.25 * (1 - rate)) * SR);
+  const floor = rate ** 1.5;
+  const i1 = Math.round(a * SR);
+  const i0 = i1 - n;
+  for (const ch of [...music.dry, ...music.wet]) {
+    const src = ch.slice(i0, i1 + 1);
+    let pos = 0;
+    for (let i = 0; i < n; i++) {
+      const p = i / n;
+      const j = Math.floor(pos);
+      const fade = Math.min(1, (n - i) / (0.012 * SR));
+      ch[i0 + i] = (src[j] + (src[j + 1] - src[j]) * (pos - j)) * (1 - 0.35 * p * p) * fade;
+      pos += 1 - (1 - floor) * p * p;
+    }
+    for (let i = 0; i < 0.03 * SR; i++) ch[i1 + i] *= i / (0.03 * SR);
+  }
+}
+// Duck the music a little under every shot so the shots punch through.
+{
+  const g = new Float32Array(N).fill(1);
+  for (const s of SHOTS) {
+    const i0 = Math.round((s.t - 0.005) * SR);
+    for (let i = 0; i < 0.6 * SR && i0 + i < N; i++) {
+      const u = i / SR - 0.005;
+      g[i0 + i] = Math.min(g[i0 + i], 1 - 0.3 * (u < 0 ? 1 + u / 0.005 : Math.exp(-u / 0.14)));
+    }
+  }
+  for (const ch of [...music.dry, ...music.wet]) for (let k = 0; k < N; k++) ch[k] *= g[k];
+}
+const dry = [0, 1].map((c) => music.dry[c].map((x, k) => x + fx.dry[c][k]));
+const wet = [0, 1].map((c) => music.wet[c].map((x, k) => x + fx.wet[c][k]));
 
 // ------------------------------------------------------------------ reverb
 // Freeverb-style: parallel damped combs into series allpasses, per channel.
