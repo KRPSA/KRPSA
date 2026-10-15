@@ -248,6 +248,165 @@ try {
   /* Use Korean. */
 }
 setLanguage(initialLanguage);
+
+// Native disclosures remain expanded without JavaScript; enhance them by viewport.
+(() => {
+  const header = document.querySelector(".header");
+  const navigation = document.querySelector(".header-navigation");
+  const moreSports = document.querySelector(".more-sports-details");
+  let frame;
+  let updateCurrentSection = () => {};
+
+  function scheduleSectionUpdate() {
+    if (frame !== undefined) return;
+    frame = requestAnimationFrame(() => {
+      frame = undefined;
+      updateCurrentSection();
+    });
+  }
+
+  function enhanceDisclosure(details, query) {
+    if (!details) return null;
+    const compact = matchMedia(query);
+    const summary = details.querySelector("summary");
+    let hiddenSummaryHadFocus = false;
+    summary?.addEventListener("focusout", (event) => {
+      hiddenSummaryHadFocus =
+        details === navigation && !compact.matches && !event.relatedTarget;
+    });
+
+    function applyViewport() {
+      const focused = document.activeElement;
+      const hidingFocusedContent =
+        compact.matches &&
+        details.contains(focused) &&
+        focused !== summary;
+      details.open = !compact.matches;
+      if (hidingFocusedContent) summary?.focus({ preventScroll: true });
+      // Desktop navigation hides its summary, so keep keyboard focus visible.
+      if (
+        !compact.matches &&
+        details === navigation &&
+        (focused === summary || hiddenSummaryHadFocus)
+      ) {
+        details.querySelector("nav a")?.focus({ preventScroll: true });
+      }
+      hiddenSummaryHadFocus = false;
+      scheduleSectionUpdate();
+    }
+
+    compact.addEventListener("change", applyViewport);
+    details.addEventListener("toggle", () => {
+      if (details === navigation && !compact.matches && !details.open) {
+        details.open = true;
+      }
+      scheduleSectionUpdate();
+    });
+    applyViewport();
+    return compact;
+  }
+
+  const compactNavigation = enhanceDisclosure(
+    navigation,
+    "(max-width: 850px)",
+  );
+  enhanceDisclosure(moreSports, "(max-width: 700px)");
+
+  if (header && navigation && compactNavigation) {
+    const summary = navigation.querySelector("summary");
+    function closeNavigation(restoreFocus = false) {
+      if (!compactNavigation.matches || !navigation.open) return;
+      navigation.open = false;
+      if (restoreFocus) summary?.focus({ preventScroll: true });
+      scheduleSectionUpdate();
+    }
+
+    navigation.querySelector("nav")?.addEventListener("click", (event) => {
+      if (event.target.closest("a")) closeNavigation();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (
+        event.key === "Escape" &&
+        compactNavigation.matches &&
+        navigation.open
+      ) {
+        event.preventDefault();
+        closeNavigation(true);
+      }
+    });
+    document.addEventListener("pointerdown", (event) => {
+      if (!header.contains(event.target)) closeNavigation();
+    });
+    document.addEventListener("focusin", (event) => {
+      if (!header.contains(event.target)) closeNavigation();
+    });
+  }
+
+  // Subpages already identify their active page and keep that announcement link.
+  if (
+    !header ||
+    !document.querySelector(".hero") ||
+    header.querySelector('nav [aria-current="page"]')
+  ) {
+    return;
+  }
+
+  const sectionLinks = [...header.querySelectorAll("nav a")]
+    .map((link) => {
+      const href = link.getAttribute("href") || "";
+      const id =
+        link.dataset.i18n === "navAnnouncements"
+          ? "announcements"
+          : href.startsWith("#")
+            ? href.slice(1)
+            : "";
+      const section = document.getElementById(id);
+      return section ? { link, section } : null;
+    })
+    .filter(Boolean)
+    .sort((first, second) => {
+      if (first.section === second.section) return 0;
+      return first.section.compareDocumentPosition(second.section) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+        ? -1
+        : 1;
+    });
+
+  updateCurrentSection = () => {
+    const marker = Math.max(0, header.getBoundingClientRect().bottom) + 24;
+    let current = null;
+    for (const entry of sectionLinks) {
+      if (entry.section.getBoundingClientRect().top <= marker) current = entry;
+    }
+    const pageHeight = Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight,
+    );
+    if (Math.ceil(scrollY + innerHeight) >= pageHeight - 2) {
+      current =
+        sectionLinks.find(({ section }) => section.id === "contact") ||
+        sectionLinks.at(-1);
+    }
+    for (const entry of sectionLinks) {
+      if (entry === current) entry.link.setAttribute("aria-current", "location");
+      else entry.link.removeAttribute("aria-current");
+    }
+  };
+
+  window.addEventListener("scroll", scheduleSectionUpdate, { passive: true });
+  window.addEventListener("resize", scheduleSectionUpdate, { passive: true });
+  window.addEventListener("load", scheduleSectionUpdate);
+  document.addEventListener("languagechange", scheduleSectionUpdate);
+  if ("ResizeObserver" in window) {
+    const observer = new ResizeObserver(scheduleSectionUpdate);
+    observer.observe(header);
+    const main = document.querySelector("main");
+    if (main) observer.observe(main);
+  }
+  document.fonts?.ready.then(scheduleSectionUpdate);
+  scheduleSectionUpdate();
+})();
+
 const year = document.getElementById("year");
 if (year) year.textContent = new Date().getFullYear();
 
