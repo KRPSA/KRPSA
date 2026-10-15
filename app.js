@@ -135,6 +135,11 @@ Object.assign(english, {
   photoTreatment: "Displayed with responsive cropping and tonal adjustments.",
 });
 Object.assign(english, {
+  reelLabel: "IPSC IN MOTION — Practical shooting in 28 seconds",
+  reelSkip: "Show photos →",
+  reelReplay: "Watch it in 28 seconds ▶",
+});
+Object.assign(english, {
   navAnnouncements: "Notices",
   latestTitle: "The latest.<br>From our community.",
   latestBody:
@@ -521,35 +526,73 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
       : "아이디를 직접 복사해 주세요: ipsckorea";
 });
 
-// Pause autoplay for reduced motion, hidden tabs and an offscreen hero.
+// The hero slider: the "IPSC in Motion" reel first, then the photographs.
+// Autoplay pauses for reduced motion, hidden tabs and an offscreen hero.
 (() => {
   const hero = document.querySelector(".hero");
   const photos = [...document.querySelectorAll(".hero-photo")];
-  const buttons = [...document.querySelectorAll("[data-slide]")];
   const toggle = document.querySelector(".slideshow-toggle");
   const counter = document.querySelector(".slide-counter");
   const controls = document.querySelector(".slideshow-controls");
   if (!hero || !photos.length || !toggle || !counter || !controls) return;
+  const figure = hero.querySelector(".hero-reel");
+  const reelButton = controls.querySelector('[data-slide="reel"]');
+  const soundButton = controls.querySelector(".slideshow-sound");
+  let reel = null;
+  // The reel needs a reasonably current canvas; older browsers keep the photos.
+  const capable =
+    "fonts" in document &&
+    typeof CanvasRenderingContext2D !== "undefined" &&
+    "roundRect" in CanvasRenderingContext2D.prototype &&
+    "findLastIndex" in Array.prototype;
+  if (figure && window.KRPSAReel && capable) {
+    try {
+      reel = window.KRPSAReel.player(figure);
+    } catch {
+      reel = null;
+    }
+  }
+  if (!reel) {
+    reelButton?.remove();
+    figure?.remove();
+  } else {
+    hero.classList.add("has-reel");
+    soundButton.hidden = false;
+    document.querySelector("[data-reel-play]")?.removeAttribute("hidden");
+  }
+  const buttons = [...controls.querySelectorAll("[data-slide]")];
+  const slides = [...(reel ? ["reel"] : []), ...photos];
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  let index = 0;
+  // With reduced motion, start on the first photograph and do not autoplay.
+  let index = reel && !reduced.matches ? 0 : slides.indexOf(photos[0]);
   let paused = reduced.matches;
   let inView = true;
   let timer;
-  const ready = (i) => photos[i]?.complete && photos[i].naturalWidth > 0;
+  const isReel = (i) => slides[i] === "reel";
+  const ready = (i) =>
+    isReel(i) || (slides[i]?.complete && slides[i].naturalWidth > 0);
 
   function render() {
     const en = document.documentElement.lang === "en";
-    photos.forEach((photo, i) =>
-      photo.classList.toggle("is-active", i === index),
+    hero.classList.toggle("is-reel", isReel(index));
+    photos.forEach((photo) =>
+      photo.classList.toggle("is-active", photo === slides[index]),
     );
     buttons.forEach((button, i) => {
       button.setAttribute("aria-pressed", String(i === index));
+      const photo = photos.indexOf(slides[i]) + 1;
       button.setAttribute(
         "aria-label",
-        en ? `Show photo ${i + 1}` : `사진 ${i + 1} 보기`,
+        isReel(i)
+          ? en
+            ? "Watch IPSC in Motion"
+            : "IPSC 영상 보기"
+          : en
+            ? `Show photo ${photo}`
+            : `사진 ${photo} 보기`,
       );
     });
-    counter.textContent = `${String(index + 1).padStart(2, "0")} / ${String(photos.length).padStart(2, "0")}`;
+    counter.textContent = `${String(index + 1).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`;
     toggle.textContent = paused ? "▶" : "Ⅱ";
     toggle.setAttribute(
       "aria-label",
@@ -563,33 +606,62 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
     );
     controls.setAttribute(
       "aria-label",
-      en ? "Hero photo slideshow" : "대문 사진 슬라이드쇼",
+      en ? "Hero slideshow" : "대문 슬라이드쇼",
     );
+    if (reel) {
+      soundButton.hidden = !isReel(index);
+      soundButton.setAttribute("aria-pressed", String(reel.sound));
+      soundButton.setAttribute(
+        "aria-label",
+        en
+          ? reel.sound
+            ? "Mute the reel"
+            : "Play the reel with sound"
+          : reel.sound
+            ? "사운드 끄기"
+            : "사운드 켜고 보기",
+      );
+      figure
+        .querySelector("[data-reel-chapters]")
+        ?.setAttribute("aria-label", en ? "Reel chapters" : "영상 챕터");
+    }
+  }
+
+  function advance() {
+    for (let step = 1; step < slides.length; step++) {
+      const next = (index + step) % slides.length;
+      if (ready(next)) {
+        go(next);
+        return;
+      }
+    }
+  }
+
+  function go(next, { restart = true } = {}) {
+    const wasReel = isReel(index);
+    index = next;
+    if (reel && isReel(index) && (!wasReel || restart)) reel.seek(0);
+    render();
+    schedule();
   }
 
   function schedule() {
     clearTimeout(timer);
-    if (paused || document.hidden || !inView) return;
-    timer = setTimeout(() => {
-      for (let step = 1; step < photos.length; step++) {
-        const next = (index + step) % photos.length;
-        if (ready(next)) {
-          index = next;
-          break;
-        }
-      }
-      render();
-      schedule();
-    }, 6000);
+    const active = !paused && !document.hidden && inView;
+    if (reel) {
+      if (isReel(index) && active) reel.play();
+      else reel.pause();
+    }
+    if (!active || isReel(index)) return;
+    timer = setTimeout(advance, 6000);
   }
 
   buttons.forEach((button, i) =>
     button.addEventListener("click", () => {
       if (!ready(i)) return;
-      index = i;
-      paused = true;
-      render();
-      schedule();
+      // Choosing the reel plays it; choosing a photograph holds it.
+      paused = !isReel(i);
+      go(i);
     }),
   );
   toggle.addEventListener("click", () => {
@@ -599,12 +671,50 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
   });
   controls.addEventListener("keydown", (event) => {
     if (!["ArrowRight", "ArrowLeft"].includes(event.key)) return;
+    if (!event.target.matches("[data-slide]")) return;
     event.preventDefault();
     const direction = event.key === "ArrowRight" ? 1 : -1;
-    const next = (index + direction + photos.length) % photos.length;
+    const next = (index + direction + slides.length) % slides.length;
     buttons[next].focus();
     buttons[next].click();
   });
+  if (reel) {
+    reel.on("ended", () => {
+      if (!paused) advance();
+    });
+    reel.on("select", () => {
+      paused = false;
+      if (!isReel(index)) go(slides.indexOf("reel"), { restart: false });
+      else {
+        render();
+        schedule();
+      }
+    });
+    reel.on("sound", render);
+    soundButton.addEventListener("click", () => {
+      reel.setSound(!reel.sound);
+      if (reel.sound && paused) {
+        paused = false;
+        schedule();
+      }
+      render();
+    });
+    figure.querySelector(".hero-reel-skip")?.addEventListener("click", () => {
+      paused = true;
+      reel.setSound(false);
+      go(slides.indexOf(photos[0]));
+    });
+    document.querySelectorAll("[data-reel-play]").forEach((link) =>
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        hero.scrollIntoView({
+          behavior: reduced.matches ? "auto" : "smooth",
+        });
+        paused = false;
+        go(slides.indexOf("reel"));
+      }),
+    );
+  }
   document.addEventListener("visibilitychange", schedule);
   document.addEventListener("languagechange", render);
   reduced.addEventListener("change", () => {

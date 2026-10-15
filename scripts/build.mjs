@@ -197,7 +197,7 @@ export async function buildSite(root = ROOT) {
   const dist = path.join(root, 'dist');
   await rm(dist, { recursive: true, force: true });
   await mkdir(path.join(dist, 'announcements'), { recursive: true });
-  await Promise.all(['assets', 'style.css', 'announcements.css', 'app.js'].map((name) => cp(path.join(root, name), path.join(dist, name), { recursive: true })));
+  await Promise.all(['assets', 'style.css', 'announcements.css', 'app.js', 'reel.js'].map((name) => cp(path.join(root, name), path.join(dist, name), { recursive: true })));
   // Preserve a custom GitHub Pages domain and other existing public metadata.
   for (const name of ['CNAME', 'robots.txt', 'favicon.ico']) {
     try { await cp(path.join(root, name), path.join(dist, name)); }
