@@ -94,7 +94,7 @@
       sub: { ko: "1~4초 후 신호음", en: "Beep in 1–4 s" },
     },
     {
-      t: 7.6,
+      t: 6.9,
       ko: "조준기",
       en: "Sights",
       sub: { ko: "아이언 사이트 vs 옵틱", en: "Iron sights vs optic" },
@@ -204,21 +204,21 @@
     ],
     [
       6.9,
-      7.75,
+      7.9,
       "시간을 멈추고, 사수의 눈으로.",
       "Freeze the clock. See it through the shooter's eyes.",
     ],
     [
       8.1,
-      10.95,
-      "아이언 사이트는 가늠쇠에, 옵틱은 표적에 초점을 맞춥니다.",
-      "Iron sights: focus on the front sight. Optic: focus on the target.",
+      10.45,
+      "아이언 사이트 — 가늠자와 가늠쇠를 맞추고, 초점은 가늠쇠에.",
+      "Iron sights: line up rear and front, and focus on the front sight.",
     ],
     [
-      11.1,
+      10.55,
       12.85,
-      "조준기 종류에 따라 디비전도 달라집니다 — 프로덕션과 프로덕션 옵틱스.",
-      "Sights also set the division — Production or Production Optics.",
+      "옵틱 — 초점은 표적에. 디비전도 조준기에 따라 나뉩니다.",
+      "Optic: focus on the target. Divisions are split by sights, too.",
     ],
     [
       13.1,
@@ -287,18 +287,21 @@
     { t: BEEP, type: "drop" },
     { t: 6.32, type: "whoosh", v: 0.6 },
     { t: FREEZE, type: "freeze" },
-    // through the sights: push in, split, settle, focus, a pair, the divisions
-    { t: 7.25, type: "riser", dur: 0.5 },
-    { t: 7.8, type: "hit", v: 0.7 },
+    // line of sight, push in, split, settle, focus, a dry recoil, the divisions
+    { t: 6.95, type: "blip", v: 0.45 },
+    { t: 7.06, type: "tick", v: 0.45 },
+    { t: 7.25, type: "tick", v: 0.45 },
+    { t: 7.3, type: "blip", v: 0.6 },
+    { t: 7.45, type: "riser", dur: 0.5 },
+    { t: 8.0, type: "hit", v: 0.7 },
     { t: 9.22, type: "click", v: 0.7 },
     { t: 9.3, type: "blip", v: 0.6 },
     { t: 9.36, type: "blip", v: 0.5 },
-    { t: 9.6, type: "shot", v: 0.9 },
-    { t: 9.85, type: "shot", v: 0.9 },
-    { t: 10.2, type: "brass", v: 0.25 },
-    { t: 10.95, type: "whoosh", v: 0.5 },
-    { t: 11.25, type: "tick", v: 0.7 },
-    { t: 11.5, type: "tick", v: 0.7 },
+    { t: 9.72, type: "whoosh", v: 0.35 },
+    { t: 10.85, type: "whoosh", v: 0.5 },
+    { t: 11.15, type: "tick", v: 0.7 },
+    { t: 11.4, type: "tick", v: 0.7 },
+    { t: 12.28, type: "whoosh", v: 0.45 },
     { t: 12.78, type: "whoosh", v: 0.6 },
     { t: 13.0, type: "hit", v: 0.6 },
     ...[13.5, 13.75, 14.0].map((t) => ({ t, type: "blip", v: 0.55 })),
@@ -1727,7 +1730,7 @@
       let rot = lerp(1.25, 0, d);
       let s = 4.2;
       // push into the rear sight: the camera becomes the shooter's eye
-      const p = ease.inExpo(seg(t, 7.05, 7.85));
+      const p = ease.inExpo(seg(t, 7.42, 8.0));
       if (p > 0) {
         const [rx, ry] = [39, 2];
         const fx = x + (rx - GUN.cx) * s;
@@ -1777,7 +1780,11 @@
           const gp = gunPose(t - k * 0.018);
           drawGun({ ...gp, alpha: 0.12, fiber: 0, blue: 0 });
         }
-        drawGun({ ...pose, alpha: 1 - seg(t, 7.55, 7.85) });
+        drawGun({
+          ...pose,
+          alpha: 1 - seg(t, 7.82, 8.02),
+          fiber: 1 - seg(t, 6.88, 7.0),
+        });
       }
       // big timer that flies to the HUD
       const fly = ease.inOut3(seg(t, 6.42, 6.75));
@@ -1853,13 +1860,115 @@
       ctx.restore();
     }
 
+    // Line of sight: eye, rear sight, front sight and target on one red line.
+    function sceneLineOfSight(t) {
+      if (t < 6.9 || t > 7.7) return;
+      const o = gunPose(6.85);
+      const R = gunPoint(o, 39, 0.4);
+      const F = gunPoint(o, 211, 0.6);
+      const E = [R[0] - 300, R[1] - 2];
+      const T = [1760, R[1] + 6];
+      const tip = ease.inOut3(seg(t, 6.95, 7.28));
+      const fade = 1 - seg(t, 7.42, 7.62);
+      ctx.save();
+      ctx.globalAlpha = fade;
+      // eye
+      const ea = ease.out3(seg(t, 6.9, 7.05));
+      ctx.globalAlpha = fade * ea;
+      ctx.strokeStyle = C.white;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(E[0] - 32, E[1]);
+      ctx.quadraticCurveTo(E[0], E[1] - 26, E[0] + 32, E[1]);
+      ctx.quadraticCurveTo(E[0], E[1] + 26, E[0] - 32, E[1]);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(E[0] + 4, E[1], 9, 0, Math.PI * 2);
+      ctx.fillStyle = C.white;
+      ctx.fill();
+      ctx.globalAlpha = fade;
+      // the line, with a bright head
+      const x = lerp(E[0] + 36, T[0], tip);
+      const yAt = (px) => lerp(E[1], T[1], (px - E[0]) / (T[0] - E[0]));
+      if (tip > 0) {
+        line(E[0] + 36, yAt(E[0] + 36), x, yAt(x), C.red, 4);
+        if (tip < 1) {
+          const g = ctx.createRadialGradient(x, yAt(x), 0, x, yAt(x), 22);
+          g.addColorStop(0, "rgba(255,230,235,0.95)");
+          g.addColorStop(1, rgba(C.red, 0));
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(x, yAt(x), 22, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      // target glyph at the far end
+      const ta = ease.out3(seg(t, 7.18, 7.3));
+      if (ta > 0) {
+        ctx.save();
+        ctx.globalAlpha *= ta;
+        drawTarget(T[0], T[1] + 6 * 1.7, 1.7, { letters: 0 });
+        ctx.restore();
+      }
+      // nodes and labels as the line reaches each point
+      const lock = 1 - Math.abs(t - 7.3) / 0.05;
+      const lang = opt.lang === "en" ? "en" : "ko";
+      [
+        [R, "가늠자", "REAR SIGHT"],
+        [F, "가늠쇠", "FRONT SIGHT"],
+        [T, "표적", "TARGET"],
+      ].forEach(([P, ko, en], k) => {
+        if (x < P[0] - 2) return;
+        const at = 6.95 + 0.33 * ((P[0] - E[0]) / (T[0] - E[0]));
+        const pop = ease.outBack(seg(t, at, at + 0.15));
+        const ring = seg(t, at, at + 0.3);
+        ctx.strokeStyle = rgba(C.red, 1 - ring);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(P[0], P[1], 10 + ring * 24, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = lock > 0 ? C.white : C.red;
+        ctx.beginPath();
+        ctx.arc(P[0], P[1], 10 * pop, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = C.white;
+        ctx.beginPath();
+        ctx.arc(P[0], P[1], 4 * pop, 0, Math.PI * 2);
+        ctx.fill();
+        const la = ease.out3(seg(t, at, at + 0.2)) * (1 - seg(t, 7.36, 7.46));
+        ctx.save();
+        ctx.globalAlpha *= la;
+        const align = "center";
+        const lx = P[0];
+        const ly = k === 2 ? P[1] + 128 : P[1] - 40;
+        text(lang === "en" ? en : ko, lx, ly, {
+          size: lang === "en" ? 18 : 26,
+          weight: 700,
+          tracking: lang === "en" ? 2 : 0,
+          align,
+          family: lang === "en" ? SANS : KR,
+        });
+        if (lang !== "en")
+          text(en, lx, ly + 18, {
+            size: 12,
+            weight: 700,
+            tracking: 2,
+            color: C.dim,
+            align,
+          });
+        ctx.restore();
+      });
+      ctx.restore();
+    }
+
     // S3 — iron sights or an optic: the same shot pair through both.
     const SIGHT = {
-      t0: 7.6,
-      open: 7.95,
+      t0: 7.75,
+      open: 8.05,
       settle: 9.3,
-      shots: [9.6, 9.85],
-      zoom: 11.0,
+      recoil: 9.75, // a dry recoil cycle: the clock is frozen, nothing is fired
+      zoom: 10.9,
+      lower: 12.3,
       out: 12.75,
     };
     const canBlur = "filter" in CanvasRenderingContext2D.prototype;
@@ -1891,14 +2000,14 @@
       ctx.restore();
     }
 
-    // Recoil of the sight picture dt seconds after a shot: lift (px) and tilt.
+    // Recoil of the sight picture dt seconds into the cycle: lift (px) and tilt.
     function kick(dt) {
-      if (dt < 0 || dt > 0.3) return { lift: 0, tilt: 0 };
+      if (dt < 0 || dt > 0.5) return { lift: 0, tilt: 0 };
       const up =
-        dt < 0.035
-          ? ease.out3(dt / 0.035)
-          : 1 - ease.inOut3(clamp((dt - 0.035) / 0.2));
-      return { lift: up * 120, tilt: up * 0.035 };
+        dt < 0.07
+          ? ease.out3(dt / 0.07)
+          : 1 - ease.inOut3(clamp((dt - 0.07) / 0.42));
+      return { lift: up * 110, tilt: up * 0.03 };
     }
 
     // One first-person sight picture, centred on cx. kind: "iron" | "optic".
@@ -1915,12 +2024,12 @@
       let sy =
         Math.cos(t * 3.9 + (kind === "iron" ? 0.6 : 2.1)) * wob * 0.7 +
         (kind === "iron" ? (1 - settle) * 60 : 0);
-      let tilt = 0;
-      for (const at of SIGHT.shots) {
-        const k = kick(t - at);
-        sy -= k.lift;
-        tilt += k.tilt;
-      }
+      const rk = kick(t - SIGHT.recoil);
+      sy -= rk.lift;
+      const tilt = rk.tilt;
+      // at the end both guns lower out of frame, leaving two bare targets
+      const lowered = ease.in3(seg(t, SIGHT.lower, SIGHT.lower + 0.35));
+      sy += 760 * lowered;
       // the range behind: horizon glow, floor lines, the target on its stand
       const hz = 640;
       const sky = ctx.createLinearGradient(0, 160, 0, hz);
@@ -1937,7 +2046,6 @@
       ctx.translate(cx, 330);
       ctx.scale(zoom, zoom);
       ctx.translate(-cx, -330);
-      const holes = SIGHT.shots.filter((at) => t > at + 0.03);
       const drawRange = () => {
         line(
           cx - 80,
@@ -1956,26 +2064,14 @@
           4,
         );
         drawTarget(cx, tgtY, s, { letters: 0.9 });
-        holes.forEach((at, k) => {
-          ctx.fillStyle = "#120d08";
-          ctx.beginPath();
-          ctx.arc(cx + (k ? 9 : -6), aimY + (k ? -10 : 4), 6, 0, Math.PI * 2);
-          ctx.fill();
-        });
       };
       // iron sights: the eye focuses on the front sight, the target goes soft
-      soft(kind === "iron" ? 5 * settle + 1.5 : 0, drawRange);
+      soft(kind === "iron" ? (5 * settle + 1.5) * (1 - lowered) : 0, drawRange);
 
       ctx.save();
       ctx.translate(cx + sx, aimY + sy);
       ctx.rotate(tilt);
       ctx.scale(G, G);
-      const flash = SIGHT.shots.reduce(
-        (a, at) => Math.max(a, 1 - Math.abs(t - at - 0.015) / 0.04),
-        0,
-      );
-      if (flash > 0)
-        muzzleFlash(0, -60, 90, flash * 0.75, Math.round(t * 10), -Math.PI / 2);
       const metal = (y0, y1) => {
         const gr = ctx.createLinearGradient(0, y0, 0, y1);
         gr.addColorStop(0, "#3a3f46");
@@ -2046,25 +2142,23 @@
         // front post: equal height, equal light in the rear notch
         const align = settle;
         const px = lerp(26, 0, align);
-        const py =
-          lerp(30, 0, align) +
-          kick(t - SIGHT.shots[0]).lift * 0.12 +
-          kick(t - SIGHT.shots[1]).lift * 0.12;
-        ctx.fillStyle = "#1b1d21";
-        ctx.fillRect(px - 22, py, 44, 140);
-        ctx.fillStyle = "rgba(255,255,255,0.18)";
-        ctx.fillRect(px - 22, py, 3, 140);
-        const glow = ctx.createRadialGradient(px, py + 12, 0, px, py + 12, 46);
-        glow.addColorStop(0, rgba(C.red, 0.9));
-        glow.addColorStop(1, rgba(C.red, 0));
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(px, py + 12, 46, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#ff5a6e";
-        ctx.beginPath();
-        ctx.arc(px, py + 12, 11, 0, Math.PI * 2);
-        ctx.fill();
+        // under recoil the post climbs out of the notch, then settles back
+        const postLift = (dt) => kick(dt).lift * 1.15;
+        const py = lerp(30, 0, align) - postLift(t - SIGHT.recoil);
+        const post = (y, a) => {
+          ctx.fillStyle = `rgba(27,29,33,${a})`;
+          ctx.fillRect(px - 22, y, 44, 150);
+          ctx.fillStyle = `rgba(255,255,255,${0.55 * a})`;
+          ctx.fillRect(px - 22, y, 44, 3);
+          ctx.fillStyle = `rgba(255,255,255,${0.16 * a})`;
+          ctx.fillRect(px - 22, y, 3, 150);
+        };
+        [3, 2, 1].forEach((k) => {
+          const d = t - SIGHT.recoil - k * 0.03;
+          if (d > 0 && d < 0.5)
+            post(lerp(30, 0, align) - postLift(d), 0.1 * (4 - k));
+        });
+        post(py, 1);
         slide();
         // rear sight block with its square notch
         ctx.fillStyle = metal(0, 150);
@@ -2128,11 +2222,10 @@
         // the dot rides with the gun; its track shows the recoil
         const dx = cx + sx;
         const dy = aimY + sy;
-        SIGHT.shots.forEach((at) => {
-          const dt = t - at;
-          if (dt < 0 || dt > 0.45) return;
-          const top = aimY - kick(Math.min(dt, 0.035)).lift;
-          ctx.strokeStyle = rgba(C.red, 0.55 * (1 - dt / 0.45));
+        const dt = t - SIGHT.recoil;
+        if (dt > 0 && dt < 0.6) {
+          const top = aimY - kick(Math.min(dt, 0.07)).lift;
+          ctx.strokeStyle = rgba(C.red, 0.55 * (1 - dt / 0.6));
           ctx.lineWidth = 6;
           ctx.lineCap = "round";
           ctx.beginPath();
@@ -2140,7 +2233,7 @@
           ctx.lineTo(cx + 4, top);
           ctx.stroke();
           ctx.lineCap = "butt";
-        });
+        }
         const glow = ctx.createRadialGradient(dx, dy, 0, dx, dy, 30);
         glow.addColorStop(0, rgba(C.red, 0.85));
         glow.addColorStop(1, rgba(C.red, 0));
@@ -2157,7 +2250,7 @@
       // focus brackets: where the eye goes
       const fa =
         ease.outBack(seg(t, SIGHT.settle - 0.1, SIGHT.settle + 0.25)) *
-        (1 - seg(t, SIGHT.zoom, SIGHT.zoom + 0.3));
+        (1 - seg(t, SIGHT.lower - 0.1, SIGHT.lower + 0.08));
       if (fa > 0) {
         const [bx, by, bw, bh] =
           kind === "iron"
@@ -2267,8 +2360,8 @@
         [
           (W * 3) / 4,
           "PRODUCTION OPTICS",
-          "슬라이드 장착 광학 조준기",
-          "Slide-mounted optic",
+          "프로덕션 목록 권총 + 슬라이드 장착 옵틱",
+          "Production-list handgun + slide-mounted optic",
         ],
       ];
       chips.forEach(([cx, name, ko, en], k) => {
@@ -2281,7 +2374,7 @@
         ctx.scale(lerp(0.85, 1, clamp(p)), lerp(0.85, 1, clamp(p)));
         const w = 520;
         ctx.fillStyle = "rgba(10,12,15,0.86)";
-        ctx.strokeStyle = k ? C.red : "rgba(255,255,255,0.5)";
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.roundRect(-w / 2, -58, w, 116, 10);
@@ -2309,6 +2402,25 @@
         });
         ctx.restore();
       });
+      // neither side is "the" optics division
+      ctx.save();
+      ctx.globalAlpha *=
+        ease.out3(seg(t, SIGHT.zoom + 0.8, SIGHT.zoom + 1.1)) * (1 - out);
+      text(
+        lang === "en"
+          ? "Optics and Open also allow optics"
+          : "옵틱스 · 오픈 디비전도 옵틱 허용",
+        (W * 3) / 4,
+        896,
+        {
+          size: 15,
+          weight: 600,
+          color: C.dim,
+          align: "center",
+          family: lang === "en" ? SANS : KR,
+        },
+      );
+      ctx.restore();
       ctx.restore();
     }
 
@@ -3511,11 +3623,11 @@
         ctx.fillStyle = `rgba(${rgb},${a * (1 - d / dur) ** 2})`;
         ctx.fillRect(0, 0, W, H);
       }
-      // freeze: desaturate everything below
-      if (t >= FREEZE && t < 8.0) {
+      // freeze: a short monochrome beat, cleared before the red line of sight
+      if (t >= FREEZE && t < 6.98) {
         ctx.save();
         ctx.globalCompositeOperation = "saturation";
-        ctx.fillStyle = `rgba(128,128,128,${1 - seg(t, 7.6, 8.0)})`;
+        ctx.fillStyle = `rgba(128,128,128,${1 - seg(t, 6.86, 6.98)})`;
         ctx.fillRect(0, 0, W, H);
         ctx.restore();
       }
@@ -3548,6 +3660,7 @@
       else if (t < 2.14) wipe(t, 1.84, 2.14, sceneDVC, sceneCommands);
       else sceneCommands(t);
       sceneBeep(t);
+      sceneLineOfSight(t);
       sceneSights(t);
       sceneTargets(t);
       sceneStage(t);
