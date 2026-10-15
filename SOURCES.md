@@ -59,6 +59,12 @@ Per user request, the current slideshow contains only KRPSA members: meggi-match
 - The Regional Director card currently reuses `assets/meggi-match.jpg`, attributed in the Wontaek Lim section above. On 2026-10-15 the owner's requested Slack portrait URL redirected to the “Sign in to KRAFTON Enterprise | Slack” page, not an image response. The cloud browser does not share the owner's authenticated desktop session, so the exact requested replacement remains unavailable.
 - Markdown announcement dates are publication metadata for this site update, not training/event dates. Initial notices describe the owner-requested course renewal and the already published KakaoTalk training/membership contact. No event dates or prices were invented.
 
+## Automatic language selection
+
+- GeoJS's official [source README](https://github.com/jloh/geojs) documents full CORS support and its public production API. Its [country endpoint documentation](https://github.com/jloh/geojs-io/blob/master/content/docs/v1/endpoints/country.md) documents `https://get.geojs.io/v1/ip/country` without an IP argument as a plain-text response containing only the requesting visitor's two-letter country code. These official sources were retrieved with TLS verification intact.
+- The site uses this country-only endpoint for first-visit language selection, with a browser-language fallback and a short timeout. Explicit KO/EN choices always take priority. The site does not request precise location or store IP addresses. The third-party API necessarily receives the connection's IP address to determine its country.
+- The development environment's proxy currently rejects live requests to `get.geojs.io` with CONNECT 403. The documented API contract and simulated browser responses can be validated here; live service reachability remains unverified until the environment's saved network configuration is applied.
+
 ## 2026-10-15 IPSC in Motion reel
 
 `reel.js` draws a 28-second explainer that plays as the first hero slide (and renders to video with `scripts/reel-render.mjs`). Everything is drawn in code: no third-party footage, photographs or logos other than the KRPSA crest. The pistol is a vector illustration made for the reel (see below); CZ and Shadow 2 are trademarks of Česká zbrojovka and are named only to identify the pistol. The stage, shot times, splits and score are an illustrative demonstration, not a real match result. The soundtrack is synthesised by `scripts/reel-audio.mjs` from the reel's cue sheet (no samples).

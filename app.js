@@ -182,7 +182,40 @@ const koreanAlts = {
   directorAlt: "실용사격 대회에 참가한 임원택",
 };
 
-function setLanguage(requestedLanguage) {
+function readStoredLanguage() {
+  try {
+    const language = localStorage.getItem("krpsa-language");
+    return language === "ko" || language === "en" ? language : null;
+  } catch {
+    return null;
+  }
+}
+
+function getBrowserLanguage() {
+  const preferredLanguage = navigator.languages?.[0] || navigator.language || "";
+  return /^ko(?:-|$)/i.test(preferredLanguage) ? "ko" : "en";
+}
+
+// ISO country codes plus Kosovo, as used by IP country databases. Unknown
+// placeholders (such as XX) must retain the browser-language fallback.
+const countryCodes = new Set(
+  "AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW".split(" "),
+);
+
+function parseCountry(value) {
+  const country = typeof value === "string" ? value.trim() : "";
+  return countryCodes.has(country) ? country : null;
+}
+
+function readCachedCountry() {
+  try {
+    return parseCountry(sessionStorage.getItem("krpsa-country"));
+  } catch {
+    return null;
+  }
+}
+
+function setLanguage(requestedLanguage, { remember = false } = {}) {
   const language = requestedLanguage === "en" ? "en" : "ko";
   document.documentElement.lang = language;
   const status = document.getElementById("copy-status");
@@ -235,24 +268,82 @@ function setLanguage(requestedLanguage) {
   const descriptionCopy =
     language === "en" ? pageCopy.descriptionEn : pageCopy.descriptionKo;
   if (description && descriptionCopy) description.content = descriptionCopy;
-  try {
-    localStorage.setItem("krpsa-language", language);
-  } catch {
-    /* Storage is optional. */
+  if (remember) {
+    try {
+      localStorage.setItem("krpsa-language", language);
+    } catch {
+      /* The language controls also work when storage is unavailable. */
+    }
   }
   document.dispatchEvent(new Event("languagechange"));
 }
 
+const storedLanguage = readStoredLanguage();
+const cachedCountry = storedLanguage ? null : readCachedCountry();
+let languageChosen = storedLanguage !== null;
+let countryLookup = null;
+
 document.querySelectorAll("[data-lang]").forEach((element) => {
-  element.addEventListener("click", () => setLanguage(element.dataset.lang));
+  element.addEventListener("click", () => {
+    languageChosen = true;
+    countryLookup?.abort();
+    setLanguage(element.dataset.lang, { remember: true });
+  });
 });
-let initialLanguage = "ko";
-try {
-  initialLanguage = localStorage.getItem("krpsa-language") || "ko";
-} catch {
-  /* Use Korean. */
+// Only an explicit choice is persistent; automatic defaults can change later.
+// Apply the browser fallback immediately, without blocking the page on a request.
+setLanguage(
+  storedLanguage ||
+    (cachedCountry ? (cachedCountry === "KR" ? "ko" : "en") : getBrowserLanguage()),
+);
+
+// GeoJS documents CORS and a plain-text country-only endpoint. No location
+// permission is requested, and only the country code is cached for this tab.
+async function detectCountryLanguage() {
+  if (
+    languageChosen ||
+    cachedCountry ||
+    typeof fetch !== "function" ||
+    typeof AbortController !== "function"
+  ) {
+    return;
+  }
+  const controller = new AbortController();
+  countryLookup = controller;
+  const timeout = setTimeout(() => controller.abort(), 1200);
+  try {
+    const response = await fetch("https://get.geojs.io/v1/ip/country", {
+      mode: "cors",
+      credentials: "omit",
+      referrerPolicy: "no-referrer",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) return;
+    const country = parseCountry(await response.text());
+    if (!country || controller.signal.aborted || languageChosen) return;
+    // A choice saved in another tab during the request also takes precedence.
+    const currentPreference = readStoredLanguage();
+    if (currentPreference) {
+      languageChosen = true;
+      setLanguage(currentPreference);
+      return;
+    }
+    try {
+      sessionStorage.setItem("krpsa-country", country);
+    } catch {
+      /* Detection also works when session storage is unavailable. */
+    }
+    const language = country === "KR" ? "ko" : "en";
+    if (document.documentElement.lang !== language) setLanguage(language);
+  } catch {
+    /* Offline, blocked or slow lookups leave the immediate fallback intact. */
+  } finally {
+    clearTimeout(timeout);
+    if (countryLookup === controller) countryLookup = null;
+  }
 }
-setLanguage(initialLanguage);
+void detectCountryLanguage();
 
 // Native disclosures remain expanded without JavaScript; enhance them by viewport.
 (() => {

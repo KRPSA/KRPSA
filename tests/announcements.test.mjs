@@ -163,9 +163,9 @@ async function fixture(t, { empty = false } = {}) {
   const root = await temporaryDirectory(t);
   await mkdir(path.join(root, 'assets'));
   await mkdir(path.join(root, 'announcements'));
-  const homepage = `<!doctype html><html><head></head><body><header class="header"><a class="brand" href="#"><svg><image href="assets/logo.png"></image></svg></a><nav><a href="#training">Training</a><a href="announcements/">News</a></nav><a href="https://example.com/">External</a></header><main>${LATEST_START}${LATEST_END}</main><footer><a class="brand" href="#">Home</a><a class="back-top" href="#">Top</a></footer></body></html>`;
+  const homepage = `<!doctype html><html><head><link rel="icon" type="image/png" href="assets/krpsa-logo.png"></head><body><header class="header"><a class="brand" href="#"><svg><image href="assets/logo.png"></image></svg></a><nav><a href="#training">Training</a><a href="announcements/">News</a></nav><a href="https://example.com/">External</a></header><main>${LATEST_START}${LATEST_END}</main><footer><a class="brand" href="#">Home</a><a class="back-top" href="#">Top</a></footer></body></html>`;
   await writeFile(path.join(root, 'index.html'), homepage);
-  await Promise.all(['style.css', 'announcements.css', 'app.js', 'reel.js', 'assets/logo.png', 'assets/kr.svg'].map((name) => writeFile(path.join(root, name), 'fixture')));
+  await Promise.all(['style.css', 'announcements.css', 'app.js', 'reel.js', 'assets/logo.png', 'assets/krpsa-logo.png', 'assets/kr.svg'].map((name) => writeFile(path.join(root, name), 'fixture')));
   await writeFile(path.join(root, 'CNAME'), 'ipsckorea.co.kr\n');
   await writeFile(path.join(root, 'private.txt'), 'must not be deployed');
   if (!empty) {
@@ -183,6 +183,10 @@ test('full build creates latest three, complete archive, detail pages and correc
   const [home, archive, detail] = await Promise.all(['index.html', 'announcements/index.html', 'announcements/notice-4/index.html'].map((name) => readFile(path.join(result.dist, name), 'utf8')));
   assert.equal((home.match(/class="announcement-card"/g) || []).length, 3);
   assert.equal((archive.match(/class="announcement-card"/g) || []).length, 4);
+  assert.match(home, /<link rel="icon" type="image\/png" href="assets\/krpsa-logo\.png">/);
+  assert.match(archive, /<link rel="icon" type="image\/png" href="\.\.\/assets\/krpsa-logo\.png">/);
+  assert.match(detail, /<link rel="icon" type="image\/png" href="\.\.\/\.\.\/assets\/krpsa-logo\.png">/);
+  assert.equal(await readFile(path.join(result.dist, 'assets', 'krpsa-logo.png'), 'utf8'), 'fixture');
   assert.match(home, /announcements\/notice-4\/[\s\S]*announcements\/notice-3\/[\s\S]*announcements\/notice-2\//);
   assert.doesNotMatch(home + archive + detail, /Notice 5/);
   assert.match(archive, /href="\.\.\/#training"/);
