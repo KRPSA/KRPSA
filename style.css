@@ -3080,6 +3080,8 @@ html[lang="en"] .latest-announcements-heading h2 {
   transition:
     opacity 0.8s ease,
     visibility 0s linear 0.8s;
+  /* Top edge of the chapter rail, measured from the bottom of the figure. */
+  --reel-rail-top: 64px;
 }
 .hero.has-reel .hero-reel {
   display: block;
@@ -3088,6 +3090,14 @@ html[lang="en"] .latest-announcements-heading h2 {
   opacity: 1;
   visibility: visible;
   transition: opacity 0.8s ease;
+}
+/* A reel that is fading out no longer takes clicks. */
+.hero:not(.is-reel) .hero-reel {
+  pointer-events: none;
+}
+/* The figure takes focus only from the "watch" link, to start Tab there. */
+.hero-reel:focus {
+  outline: none;
 }
 .hero-slides,
 .hero-shade,
@@ -3105,6 +3115,11 @@ html[lang="en"] .latest-announcements-heading h2 {
     opacity 0.5s ease,
     visibility 0s linear 0.5s;
 }
+/* The page's h1 stays in the accessibility tree behind the reel; the copy's
+   opacity keeps it invisible and the reel above it takes the clicks. */
+.hero.is-reel .hero-copy h1 {
+  visibility: visible;
+}
 .hero-reel-stage {
   position: absolute;
   top: 50%;
@@ -3119,19 +3134,49 @@ html[lang="en"] .latest-announcements-heading h2 {
   width: 100%;
   height: 100%;
 }
+/* The caption sits just above the chapter rail: in the frame's bottom band
+   when the stage fills the hero, in the letterbox below it when there is
+   room. (100cqh is the figure's height, 56.25cqw the stage's.) */
 .hero-reel-caption {
   position: absolute;
   right: 30%;
-  bottom: 12.5%;
+  bottom: calc(var(--reel-rail-top) + 14px - (100cqh - 56.25cqw) / 2);
   left: 5%;
   display: grid;
   gap: 0.8cqi;
+  isolation: isolate;
+}
+/* A local scrim keeps the caption readable over bright scene art. */
+.hero-reel-caption::before {
+  content: "";
+  position: absolute;
+  inset: -1.2cqi -4cqi -1.2cqi -5cqi;
+  z-index: -1;
+  background: linear-gradient(90deg, #0a0c0fd9 55%, #0a0c0f00);
+  filter: blur(0.8cqi);
+  pointer-events: none;
 }
 .hero-reel-label {
   font-size: max(10px, 0.66cqi);
   font-weight: 700;
   letter-spacing: 0.22em;
   color: #8b8f97;
+}
+@media (min-width: 701px) {
+  /* Over the picture the caption is a single row: the label steps aside
+     while a line is showing (it still names the figure for screen readers)
+     and comes back only after a pause, so it never flickers between lines. */
+  .hero-reel-label {
+    transition: visibility 0s linear 0.35s;
+  }
+  .hero-reel-caption:has(.hero-reel-line:not(:empty)) .hero-reel-label {
+    visibility: hidden;
+    transition: none;
+  }
+  /* The scrim then backs the line's grid row only. */
+  .hero-reel-caption:has(.hero-reel-line:not(:empty))::before {
+    grid-row: 2;
+  }
 }
 .hero-reel-line {
   display: block;
@@ -3312,6 +3357,9 @@ html[lang="en"] .latest-announcements-heading h2 {
   display: none;
 }
 @media (max-width: 1000px) {
+  .hero-reel {
+    --reel-rail-top: 118px;
+  }
   .hero-reel-rail {
     right: 4%;
     bottom: 84px;
@@ -3342,6 +3390,10 @@ html[lang="en"] .latest-announcements-heading h2 {
     left: 22px;
     gap: 10px;
   }
+  /* Below the stage the caption already has a dark background. */
+  .hero-reel-caption::before {
+    display: none;
+  }
   .hero-reel-line {
     padding-left: 12px;
     font-size: 18px;
@@ -3353,5 +3405,53 @@ html[lang="en"] .latest-announcements-heading h2 {
   }
   .hero.is-reel .slideshow-controls {
     bottom: 99px;
+  }
+}
+/* The hero keeps its min-height for the photographs, which can run past a
+   short window. The reel, its rail and the controls fit the part of the hero
+   that is on screen below the sticky header (88px, 80px at 850px and less). */
+@media (min-width: 701px) {
+  .hero.is-reel {
+    background: #0a0c0f;
+  }
+  .hero-reel {
+    bottom: auto;
+    height: min(100%, calc(100vh - 88px));
+    height: min(100%, calc(100svh - 88px));
+  }
+  .hero.is-reel .slideshow-controls {
+    bottom: calc(18px + max(0px, 100% - (100vh - 88px)));
+    bottom: calc(18px + max(0px, 100% - (100svh - 88px)));
+  }
+}
+@media (min-width: 701px) and (max-width: 850px) {
+  .hero-reel {
+    height: min(100%, calc(100vh - 80px));
+    height: min(100%, calc(100svh - 80px));
+  }
+  .hero.is-reel .slideshow-controls {
+    bottom: calc(18px + max(0px, 100% - (100vh - 80px)));
+    bottom: calc(18px + max(0px, 100% - (100svh - 80px)));
+  }
+}
+/* Landscape phones: the stage sits at the top, with the chapters and the
+   controls in one row below it. */
+@media (min-width: 701px) and (max-width: 1000px) and (max-height: 500px) {
+  .hero-reel-stage {
+    top: 0;
+    width: min(100cqw, (100cqh - 68px) * 16 / 9);
+    transform: translateX(-50%);
+  }
+  .hero-reel-caption {
+    right: 4%;
+    bottom: 6%;
+    left: 4%;
+  }
+  .hero-reel-line {
+    font-size: 13px;
+  }
+  .hero-reel-rail {
+    right: calc(4% + 372px);
+    bottom: 26px;
   }
 }
