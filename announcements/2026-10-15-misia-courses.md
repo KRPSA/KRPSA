@@ -1,0 +1,36 @@
+---
+title: "MISIA 핸드건 교육 과정 개편 안내"
+titleEn: "Introducing the renewed MISIA handgun courses"
+date: "2026-10-15"
+category: "교육 안내"
+categoryEn: "Training"
+summary: "Safety, Competition, Pro Shooter. 새롭게 정비한 MISIA 핸드건 교육 과정을 소개합니다."
+summaryEn: "Discover the renewed MISIA Handgun Safety, Competition and Pro Shooter courses."
+slug: "misia-courses"
+---
+
+KRPSA의 핸드건 교육 과정이 새롭게 정비되었습니다. 기존 교육 명칭을 변경하고, 심화 과정인 **MISIA Handgun Pro Shooter Course**를 추가합니다.
+
+## MISIA 소개
+
+**MISIA**(Main International Shooting Instructors Association)는 IPSC 스포츠 사격 교육의 국제 기준과 강사 인증 체계를 발전시키는 국제 단체입니다. 실용사격 선수의 안전 교육을 세계적으로 표준화하고 지속적으로 개선하는 것을 목표로 합니다. 자세한 소개는 [MISIA 공식 홈페이지](https://www.misia.world/)에서 확인하실 수 있습니다.
+
+## 새롭게 만나는 교육 과정
+
+| 기존 안내 | 개편된 과정 |
+| --- | --- |
+| Safety Course | **MISIA Handgun Safety Course** |
+| Live Fire | **MISIA Handgun Competition Course** |
+| 신규 심화 과정 | **MISIA Handgun Pro Shooter Course** |
+
+**MISIA Handgun Safety Course**는 핸드건 교육의 안전 과정이며, **MISIA Handgun Competition Course**는 경기 과정입니다. 더 심화된 교육을 원하는 분들을 위한 **MISIA Handgun Pro Shooter Course**도 함께 안내합니다.
+
+실용사격을 처음 접하는 분들을 위한 **Action Air 입문 안내**도 홈페이지에서 확인하실 수 있습니다. 자신에게 맞는 시작점과 과정별 참가 조건은 협회에 문의해 주세요.
+
+## 자세한 안내와 문의
+
+- [KRPSA 카페의 교육 과정 안내](https://cafe.naver.com/ipsckor/908)
+- [MISIA 공식 홈페이지](https://www.misia.world/)
+- [KRPSA 홈페이지 교육 안내](../../#training)
+
+교육 일정, 장소, 비용과 참가 조건은 카카오톡 **ipsckorea**로 문의해 주세요.

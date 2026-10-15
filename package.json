@@ -1,0 +1,17 @@
+{
+  "name": "krpsa-website",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "KRPSA bilingual website and Markdown announcements",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test",
+    "start": "npm run build && node scripts/serve.mjs"
+  },
+  "dependencies": {
+    "markdown-it": "15.0.2",
+    "yaml": "2.9.1"
+  }
+}

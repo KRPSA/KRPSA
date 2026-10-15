@@ -1,21 +1,82 @@
 # KRPSA — Korea Practical Shooting Association
 
-KRPSA bilingual Korean/English association landing page. Includes Handgun and Action Air introductions, handgun divisions, other IPSC disciplines, a three-stage beginner training guide, and KakaoTalk membership inquiries.
+대한민국 실용사격 협회 KRPSA의 한국어·영어 홈페이지입니다. 협회 소개, IPSC 종목, Action Air 입문과 MISIA 핸드건 교육 과정, 공지사항, 교육·입회 문의를 제공합니다.
 
-## Structure
+## 개발 및 미리보기
 
-- `index.html`: page content and Korean text
-- `style.css`: responsive layout and slideshow styling
-- `app.js`: English translations, language toggle, photo slideshow and contact ID copy
-- `assets/`: logos, Korean flag and KRPSA member photos
-- `SOURCES.md`: source references and photo attribution
+Node.js **22 이상**이 필요합니다. GitHub Pages는 Node.js 24를 사용합니다.
 
-No build step or dependencies are required. Serve the repository root locally, for example with `python -m http.server 8080`.
+```sh
+npm ci
+npm test
+npm start
+```
 
-## Deployment
+`npm start`는 정적 사이트를 빌드한 뒤 개발 서버의 `8080` 포트에서 제공합니다. 다른 포트는 `PORT=8081 npm start`로 지정할 수 있습니다. 파일을 수정한 뒤에는 `npm run build`를 실행하고 브라우저를 새로고침하세요. 개발 서버를 실행 중이라면 별도 터미널에서 빌드하면 됩니다.
 
-The existing `.github/workflows/pages.yml` publishes the repository root to GitHub Pages when changes reach `main`.
+`index.html`을 직접 열거나 저장소 루트를 서버로 제공하면 생성된 공지사항이 반영되지 않습니다. 항상 **`dist/`를 미리보기·배포**하세요. 서버 실행 없이 빌드만 하려면 `npm run build`를 사용합니다.
 
-## Photos
+## 공지사항 작성
 
-The slideshow contains four KRPSA member/team photos: Wontaek Lim and the EHC/EEO 2026 delegation. Photo source links are also included in the footer.
+**`announcements/` 폴더에 Markdown 파일 하나를 추가하면 됩니다.** 별도의 글 목록이나 JavaScript 파일을 수정할 필요가 없습니다.
+
+1. `announcements/_template.md`를 `announcements/2026-10-15-your-announcement.md`처럼 복사합니다.
+2. 맨 위 YAML 메타데이터와 아래 Markdown 본문을 작성합니다.
+3. 게시하려면 `draft: false`로 변경하거나 `draft` 항목을 삭제합니다.
+4. `npm test && npm run build`로 확인합니다. `main`에 반영되면 GitHub Actions가 자동으로 빌드·배포합니다.
+
+```markdown
+---
+title: "공지사항 제목"
+date: "2026-10-15"
+summary: "메인 화면과 전체 목록에 표시할 짧은 요약입니다."
+category: "교육 안내"
+slug: "your-announcement"
+draft: false
+---
+
+첫 문단에 핵심 내용을 작성합니다.
+
+## 자세한 안내
+
+- 안내 사항
+- [관련 링크](https://www.misia.world/)
+```
+
+| 항목 | 설명 |
+| --- | --- |
+| `title` | 필수. 공지 제목, 최대 180자 |
+| `date` | 필수. 게시 날짜, `"YYYY-MM-DD"` 형식의 실제 날짜 |
+| `summary` | 필수. 메인·목록에 표시할 요약, 최대 300자 |
+| `category` | 선택. 기본값 `안내` |
+| `slug` | 선택. 글 주소에 사용할 소문자 영문·숫자·하이픈. 생략하면 파일명에서 날짜 접두사를 제외한 이름을 사용 |
+| `draft` | 선택. `true`이면 메인·목록·상세 페이지에서 모두 제외. 기본값 `false` |
+| `titleEn`, `summaryEn`, `categoryEn` | 선택. 영어 모드의 제목·요약·분류. 생략하면 한국어를 그대로 표시 |
+
+날짜가 같으면 `slug` 오름차순으로 정렬합니다. 메인에는 **최신 3개**, `/announcements/`에는 **전체 공지**, `/announcements/글주소/`에는 본문이 표시됩니다. 미래 날짜는 예약 게시 기능이 아니므로, 아직 공개하지 않을 글에는 반드시 `draft: true`를 지정하세요. 처음 제공되는 두 공지의 날짜는 웹사이트 공지 게시 날짜이며 교육 일정이 아닙니다.
+
+`README.md`, `template.md`, `_`로 시작하는 파일과 하위 폴더는 글로 처리하지 않습니다. 잘못된 날짜, 중복 주소, 누락·오타 메타데이터, YAML 중복 키는 빌드를 실패시켜 잘못된 게시를 방지합니다. `draft` 글도 메타데이터를 검증합니다.
+
+본문은 한국어로 제공됩니다. 페이지 메뉴와 제목·요약은 한·영 전환을 지원하며, 본문 언어는 한국어로 명시합니다. 제목은 메타데이터에서 생성하므로 본문의 소제목은 `##`부터 작성하는 것을 권장합니다. 표, 목록, 인용, 코드, 링크와 이미지를 사용할 수 있습니다. 이미지는 `assets/`에 추가하고 `![설명](../../assets/사진.jpg)`로 참조하세요. 홈페이지 섹션 링크는 `[교육 안내](../../#training)`처럼 작성합니다. 원시 HTML은 실행되지 않고 텍스트로 표시되며, `javascript:`, `data:`, `file:` 등 안전하지 않은 링크는 허용하지 않습니다.
+
+## 파일 구조
+
+- `index.html`: 홈페이지와 모든 페이지가 공유하는 헤더·푸터
+- `style.css`: 홈페이지와 공통 반응형 스타일
+- `app.js`: 한·영 전환, 사진 슬라이드, 카카오톡 ID 복사
+- `announcements/*.md`: 공지사항 원문
+- `announcements.css`: 최신 공지·전체 목록·상세 페이지 스타일
+- `scripts/build.mjs`: Markdown 검증, 목록 정렬, 정적 HTML 생성
+- `scripts/serve.mjs`: 빌드 결과 미리보기 서버
+- `tests/`: 빌드·콘텐츠 검증 및 보안 회귀 검사
+- `assets/`: 로고, 태극기 및 협회 사진
+- `SOURCES.md`: 출처 및 사진 저작자 안내
+- `dist/`: 생성된 배포 결과. Git에 저장하지 않습니다.
+
+홈페이지의 `<!-- latest-announcements:start -->`와 `<!-- latest-announcements:end -->` 사이에는 빌드할 때 최신 글 목록이 삽입됩니다. 헤더·푸터 변경은 전체 공지와 상세 페이지에 함께 반영되고, 상대 링크를 다시 계산하므로 프로젝트 경로를 사용하는 GitHub Pages에서도 동작합니다. 본문과 목록은 JavaScript 없이도 읽을 수 있습니다.
+
+## 배포
+
+`.github/workflows/pages.yml`은 `main` 변경 또는 수동 실행 시 `npm ci`, `npm test`, `npm run build`를 실행하고 `dist/`만 GitHub Pages에 배포합니다. 저장소 Pages 설정의 배포 원본은 **GitHub Actions**여야 합니다. 기존 `CNAME`이 있으면 빌드 결과에도 복사합니다.
+
+프로필 사진과 경기 사진의 출처는 `SOURCES.md` 및 사이트 하단에 기록합니다. 공지사항에 일정·가격·자격 조건을 추가할 때는 협회의 확인된 정보를 사용하세요.
