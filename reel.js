@@ -75,7 +75,7 @@
 
   // The stage: a long course (IPSC: at most 32 rounds, and no more than 9
   // scoring hits from any one location) over
-  // three shooting areas. Everything is defined in stage time — milliseconds on
+  // four shooting areas. Everything is defined in stage time — milliseconds on
   // the shot timer — and RAMPS map it to video time, so the runs between areas
   // play fast and the swinger and the mover play slow.
   const AREAS = {
@@ -382,47 +382,36 @@
       "철판은 넘어져야 득점. 노슛과 미스는 각 −10점.",
       "Steel must fall to score. No-shoots and misses cost 10.",
     ],
-    [
-      16.1,
-      vt(2300) - 0.14,
-      "프리스타일 — 해법은 선수가 정합니다.",
-      "Freestyle: every competitor solves the stage their own way.",
-    ],
+    [16.1, vt(2300) - 0.14, "프리스타일 스테이지.", "A freestyle stage."],
     [
       vt(2300) + 0.16,
       vt(3450) - 0.08,
-      "포퍼를 넘기면 스윙 타겟이 움직이기 시작합니다.",
-      "Drop the popper and the swinger starts to move.",
+      "포퍼가 스윙 타겟을 풀어 줍니다.",
+      "The popper releases the swinger.",
     ],
     [
       vt(3480) + 0.19,
       vt(7460) - 0.03,
-      "이동 중에도 총구는 180° 안에 — 포트 너머엔 철판 두 장과 표적.",
-      "On the move the muzzle stays inside the 180°. Then plates and paper, through a port.",
+      "이동 중에도 총구는 180° 안 — 다음은 포트.",
+      "Muzzle inside the 180°, then through the port.",
     ],
     [
-      vt(7460) + 0.27,
+      vt(7460) + 0.12,
       vt(10300) - 0.08,
-      "15발 소진 — 이동하며 재장전.",
-      "Fifteen rounds gone: reload on the move.",
+      "탄창이 비면 — 이동하며 재장전.",
+      "Empty: reload on the move.",
     ],
     [
       vt(10300) + 0.22,
-      vt(11250) + 0.48,
-      "포퍼 하나가 드롭 터너와 무버를 함께 작동시킵니다.",
-      "One popper starts both the drop turner and the mover.",
-    ],
-    [
-      vt(11250) + 0.78,
       vt(12050),
-      "무버는 바리케이드 사이를 지날 때 쏩니다.",
-      "Hit the mover as it crosses the gap.",
+      "포퍼 하나가 드롭 터너와 무버를 함께 작동.",
+      "One popper starts the turner and the mover.",
     ],
     [
       vt(12050) + 0.3,
       STAGE_END + 0.55,
-      "마지막 한 발에 타이머가 멈춥니다.",
-      "The last shot stops the clock.",
+      "마지막 포지션 — 마지막 발에 타이머가 멈춥니다.",
+      "Last position. The last shot stops the clock.",
     ],
     [
       20.1 + SHIFT,
@@ -3070,7 +3059,10 @@
         -Math.cos(th) * SWING.L,
         0,
       ]);
-      return { pivot, centre, th, right };
+      // the paper's own axes turn with the arm (up2 points along it to the pivot)
+      const r2 = add(mul(right, Math.cos(th)), mul(UP, Math.sin(th)));
+      const up2 = add(mul(right, -Math.sin(th)), mul(UP, Math.cos(th)));
+      return { pivot, centre, th, right, r2, up2 };
     }
     // Drop turner: edge-on until released, turns to face the shooter, then away.
     function turnerAngle(st) {
@@ -3100,6 +3092,7 @@
       return add([tg.pos[0], 1.24, tg.pos[2]], mul(right, moverOffset(st)));
     }
 
+    const IMPACT = 0.045; // s from the shot to the bullet arriving (the audio uses 40–50 ms)
     // Where a shot lands, in world space, at stage time st (moving targets carry their holes).
     function hitWorld(s, st = s.st) {
       const tg = TARGETS[s.target];
@@ -3114,15 +3107,7 @@
         ]);
       if (tg.kind === "swinger") {
         const p = swingerPose(st);
-        const ax = [Math.cos(p.th), Math.sin(p.th)];
-        return add(
-          p.centre,
-          add(mul(right, s.hit[0] * ax[0] - s.hit[1] * -ax[1]), [
-            0,
-            -(s.hit[0] * ax[1] + s.hit[1] * ax[0]),
-            0,
-          ]),
-        );
+        return add(add(p.centre, mul(p.r2, s.hit[0])), mul(p.up2, -s.hit[1]));
       }
       if (tg.kind === "turner") {
         const { n } = targetFrame(s.target);
@@ -3200,7 +3185,7 @@
         const side = cross(UP, dir);
         const pos = add(
           sp,
-          add(add(mul(dir, -6.2), mul(side, 1.6)), [0, 4.6, 0]),
+          add(add(mul(dir, -6.2), mul(side, -1.6)), [0, 4.6, 0]),
         );
         return [pos, lerp3(fc, [wp[0], 1.0, wp[2]], 0.35), 31, 0];
       },
@@ -3230,10 +3215,10 @@
         push: 0.8,
         from: 11.1,
         to: 12.2,
-        side: -0.4,
+        side: 0.5,
         height: 1.3,
         lookY: 1.2,
-        fov: 38,
+        fov: 34,
         roll: 0.03,
       }),
       overview() {
@@ -3277,9 +3262,23 @@
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
+    // the shot-timer panel and the slide-cycle picture-in-picture
+    let hudLive = false;
+    const HUD_RECTS = [
+      [W - 96 - 334, 34, W - 96 + 34, 640],
+      [86, 158, 526, 408],
+    ];
     function label3(cam, p, str, color = "rgba(255,255,255,0.75)", size = 13) {
       const q = project(cam, p);
       if (q[2] < 0.5) return;
+      if (
+        hudLive &&
+        HUD_RECTS.some(
+          ([x0, y0, x1, y1]) =>
+            q[0] > x0 - 40 && q[0] < x1 + 40 && q[1] > y0 && q[1] < y1 + 10,
+        )
+      )
+        return;
       text(str, q[0], q[1], {
         size,
         weight: 800,
@@ -3296,8 +3295,9 @@
       const leave = ease.in3(seg(t, STAGE_END + 0.45, STAGE_END + 0.9));
       ctx.save();
       ctx.translate((1 - enter) * W * 1.1, 0);
-      ctx.globalAlpha = 1 - leave * 0.85;
+      ctx.globalAlpha = 1 - leave;
       const cam = stageCamera(t, st);
+      hudLive = t > 16.05 && t < STAGE_END + 0.6;
       for (let x = -12; x <= 12; x++)
         seg3(
           cam,
@@ -3500,11 +3500,11 @@
           cam.pov,
         );
         const clipped =
-          dt < 0.08 &&
+          dt < IMPACT + 0.035 &&
           clipSeg(
             cam,
-            add(muzzle, mul(sub(hit, muzzle), clamp(dt / 0.06 - 0.5))),
-            add(muzzle, mul(sub(hit, muzzle), clamp(dt / 0.06))),
+            add(muzzle, mul(sub(hit, muzzle), clamp(dt / IMPACT - 0.5))),
+            add(muzzle, mul(sub(hit, muzzle), clamp(dt / IMPACT))),
           );
         if (clipped) {
           const A = project(cam, clipped[0]);
@@ -3519,18 +3519,24 @@
           ctx.lineTo(B[0], B[1]);
           ctx.stroke();
           const M = project(cam, muzzle);
+          // sized by distance, so a far shooter's flash doesn't swallow their head
+          const flash = clamp((0.12 * cam.focal) / M[2], 10, 50);
           if (M[2] > 0.3)
             muzzleFlash(
               M[0],
               M[1],
-              50 * (1 - dt / 0.08),
+              flash * (1 - dt / 0.08),
               1 - dt / 0.08,
               s.i * 13 + 5,
               Math.atan2(B[1] - M[1], B[0] - M[0]),
             );
         }
-        if (dt > 0.05) {
-          const P = project(cam, add(hit, [0, 0.42 + dt * 0.45, 0]));
+        if (dt > IMPACT) {
+          // the pop rides with a moving target
+          const P = project(
+            cam,
+            add(hitWorld(s, st), [0, 0.42 + dt * 0.45, 0]),
+          );
           if (P[2] < 0.5) return;
           // a follow-up hit on the same target lifts this pop instead of stacking on it
           P[1] -= SHOTS.filter(
@@ -3559,14 +3565,15 @@
           ctx.restore();
         }
       });
-      if (cam.pov > 0.02) {
-        const aim = project(cam, workPoint(st));
+      const gunIn = seg(cam.pov, 0.9, 1); // the last metre or so into the eyes
+      const aim = project(cam, workPoint(st));
+      if (gunIn > 0 && aim[2] > 0.5) {
         const last = [...SHOTS].reverse().find((s) => st >= s.st);
         ctx.save();
-        ctx.globalAlpha *= ease.out3(cam.pov);
+        ctx.globalAlpha *= ease.out3(gunIn);
         povGun(
           aim[0],
-          aim[1] + 6 + (1 - cam.pov) * 520,
+          aim[1] + 6 + (1 - gunIn) * 520,
           0.34,
           last ? st - last.st : 9,
         );
@@ -3583,7 +3590,7 @@
       // a panel behind the shot timer, the shot list and the totals
       const x1 = W - 96;
       const y0 = 236;
-      ctx.fillStyle = "rgba(10,12,15,0.74)";
+      ctx.fillStyle = "rgba(10,12,15,0.9)";
       ctx.strokeStyle = "rgba(255,255,255,0.1)";
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -3699,7 +3706,7 @@
       const py = 168;
       ctx.save();
       ctx.globalAlpha = la;
-      ctx.fillStyle = "rgba(10,12,15,0.78)";
+      ctx.fillStyle = "rgba(10,12,15,0.9)";
       ctx.strokeStyle = reloading ? C.red : "rgba(255,255,255,0.16)";
       ctx.lineWidth = reloading ? 2 : 1;
       ctx.beginPath();
@@ -3747,12 +3754,15 @@
       const tg = TARGETS[key];
       const { n, right } = targetFrame(key);
       const hitsOf = (k) =>
-        SHOTS.filter((s) => s.target === k && st >= s.st + 0.02);
+        SHOTS.filter((s) => s.target === k && st >= s.st + IMPACT);
       const flashOf = (k, sub) =>
         SHOTS.filter(
           (s) => s.target === k && (sub === undefined || s.hit === sub),
         ).reduce(
-          (a, s) => Math.max(a, 1 - Math.abs(st - s.st - 0.04) / 0.1),
+          (a, s) =>
+            st < s.st + IMPACT
+              ? a
+              : Math.max(a, 1 - (st - s.st - IMPACT) / 0.12),
           0,
         );
       const paper = (centre, r2, up2, noShoot, flash) => {
@@ -3889,8 +3899,7 @@
           "rgba(150,155,165,0.7)",
           2,
         );
-        const r2 = add(mul(right, Math.cos(p.th)), mul(UP, -Math.sin(p.th)));
-        const up2 = add(mul(right, Math.sin(p.th)), mul(UP, Math.cos(p.th)));
+        const { r2, up2 } = p;
         seg3(
           cam,
           p.pivot,
@@ -3952,7 +3961,7 @@
         for (let k = 0; k < 2; k++) {
           const s = SHOTS.find((x) => x.target === key && x.hit === k);
           const fall = s
-            ? ease.in3(seg(st, s.st + 0.02, s.st + 0.25)) * 1.5
+            ? ease.in3(seg(st, s.st + IMPACT, s.st + 0.28)) * 1.5
             : 0;
           const hinge = add(platePos(k), [0, -0.15, 0]);
           const up2 = add(mul(UP, Math.cos(fall)), mul(back, Math.sin(fall)));
@@ -3989,8 +3998,8 @@
               at(u1, 2.0, 0.45),
               at(u0, 2.0, 0.45),
             ],
-            "rgba(22,25,31,0.97)",
-            "rgba(255,255,255,0.22)",
+            "#2c323c",
+            "rgba(255,255,255,0.45)",
           );
         });
         label3(cam, at(0, 2.3, 0.45), "MOVER");
