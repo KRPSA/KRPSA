@@ -237,6 +237,25 @@
   const END_HOLD = 0.8; // RANGE IS CLEAR holds this long before the end card
   const DURATION = Math.ceil(28 + SHIFT + END_HOLD); // the end card holds to a whole second
   const vt = (ms) => videoOfStage(ms);
+  // The swinger's pendulum and the camera cuts [video s, blend s, rig]; both
+  // are shared with scripts/reel-audio.mjs through MARKS.
+  const SWING = {
+    L: 1.05,
+    pivot: 2.45,
+    theta0: 1.15,
+    period: 1.5,
+    damping: 0.18,
+  };
+  const CUTS = [
+    [vt(2420), 0.5, "swinger"],
+    [vt(3480) - 0.08, 0.32, "high"],
+    [vt(5150), 0.4, "pov"],
+    [vt(7500), 0.35, "high"],
+    [vt(10120), 0.4, "drone"],
+    [vt(11120), 0.42, "mover"],
+    [vt(12000), 0.45, "drone"],
+    [STAGE_END + 0.12, 0.6, "overview"],
+  ];
 
   // Stage time (ms) shown by the shot timer at video time t.
   function stageMs(t) {
@@ -3032,14 +3051,13 @@
 
     // Swinger: a paper target on a pendulum, held aside until the popper
     // releases it, then swinging past a barrier that hides its rest position.
-    const SWING = { L: 1.05, pivot: 2.45, theta0: 1.15, period: 1.5 };
     function swingAngle(st) {
       const tau = st - EVENTS.swingerRelease;
       if (tau < 0) return SWING.theta0;
       return (
         SWING.theta0 *
         Math.cos(((2 * Math.PI) / SWING.period) * tau) *
-        Math.exp(-0.18 * tau)
+        Math.exp(-SWING.damping * tau)
       );
     }
     function swingerPose(st) {
@@ -3219,19 +3237,10 @@
         roll: 0.03,
       }),
       overview() {
-        return [[-0.4, 15, -7.4], [-0.4, 0, 5.0], 54, 0];
+        // centred on the whole course, areas A to D
+        return [[1.2, 16, -8.2], [1.2, 0, 4.8], 54, 0];
       },
     };
-    const CUTS = [
-      [vt(2420), 0.5, "swinger"],
-      [vt(3480) - 0.08, 0.32, "high"],
-      [vt(5150), 0.4, "pov"],
-      [vt(7500), 0.35, "high"],
-      [vt(10120), 0.4, "drone"],
-      [vt(11120), 0.42, "mover"],
-      [vt(12000), 0.45, "drone"],
-      [STAGE_END + 0.12, 0.6, "overview"],
-    ];
     function stageCamera(t, st) {
       let [pos, look, fov, roll] = RIGS.drone(st);
       let pov = 0; // how much of the view is the shooter's own eyes
@@ -4780,23 +4789,11 @@
       shift: SHIFT,
       ramps: RAMPS.map(([a, b, rate]) => [vt(a), vt(b), rate]),
       // For scripts/reel-audio.mjs, which samples the moving targets in stage
-      // time: the stage clock at `resume` (s) and EVENTS (stage s), read as
-      // they are. `swinger` mirrors SWING/swingAngle and `cuts` mirrors CUTS
-      // [video s, blend s, rig] in the S5 scene code in create(): keep them in
-      // step with it.
+      // time: the stage clock at `resume` (s) and EVENTS (stage s).
       stageStart: FREEZE_MS / 1000,
       events: EVENTS,
-      swinger: { theta0: 1.15, period: 1.5, damping: 0.18 },
-      cuts: [
-        [vt(2420), 0.5, "swinger"],
-        [vt(3480) - 0.08, 0.32, "high"],
-        [vt(5150), 0.4, "pov"],
-        [vt(7500), 0.35, "high"],
-        [vt(10120), 0.4, "drone"],
-        [vt(11120), 0.42, "mover"],
-        [vt(12100), 0.4, "drone"],
-        [STAGE_END + 0.12, 0.6, "overview"],
-      ],
+      swinger: SWING,
+      cuts: CUTS,
     },
     create,
   };

@@ -8,7 +8,8 @@
 // quietly setting the reel in system fallback fonts; pass --allow-fallback-fonts
 // to render anyway.
 //
-// Requires Playwright (`npm i --no-save playwright`, or a global install) and ffmpeg.
+// Requires Playwright (`npm i --no-save playwright && npx playwright install chromium`,
+// or a global install), ffmpeg and curl.
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
