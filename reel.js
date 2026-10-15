@@ -9,7 +9,6 @@
 
   const W = 1920;
   const H = 1080;
-  const DURATION = 28;
 
   // ---------------------------------------------------------------- utilities
   const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -74,6 +73,154 @@
   const RESUME = 16.0; // ...and resumes here
   const FREEZE_MS = 800;
 
+  // The stage: a long course (27 rounds; IPSC long courses allow up to 32) over
+  // three shooting areas. Everything is defined in stage time — milliseconds on
+  // the shot timer — and RAMPS map it to video time, so the runs between areas
+  // play fast and the swinger and the Texas Star play slow.
+  const AREAS = {
+    A: {
+      pos: [-7, 0, 0],
+      box: [
+        [-8.1, -1.0],
+        [-5.9, 1.0],
+      ],
+    },
+    B: {
+      pos: [-1.0, 0, 2.1],
+      box: [
+        [-2.0, 1.25],
+        [0.0, 2.85],
+      ],
+    },
+    C: {
+      pos: [5.4, 0, 1.0],
+      box: [
+        [4.4, 0.0],
+        [6.4, 2.0],
+      ],
+    },
+  };
+  const TARGETS = {
+    T1: { kind: "paper", pos: [-9.2, 0, 6.6], from: "A" },
+    T2: { kind: "paper", pos: [-7.3, 0, 7.6], from: "A" },
+    NS1: { kind: "noshoot", pos: [-6.98, 0, 7.12], from: "A" },
+    P1: { kind: "popper", pos: [-5.6, 0, 8.6], from: "A" },
+    SW: { kind: "swinger", pos: [-3.9, 0, 9.4], from: "A" },
+    RACK: { kind: "rack", pos: [-1.0, 0, 10.4], from: "B" },
+    T3: { kind: "paper", pos: [0.5, 0, 8.4], from: "B" },
+    STAR: { kind: "star", pos: [3.4, 0, 10.0], from: "C" },
+    P2: { kind: "popper", pos: [6.3, 0, 8.6], from: "C" },
+    DT: { kind: "turner", pos: [7.8, 0, 9.6], from: "C" },
+    T4: { kind: "paper", pos: [6.8, 0, 6.2], from: "C" },
+    T5: { kind: "paper", pos: [8.8, 0, 6.9], from: "C" },
+  };
+  const ZONE_POINTS = { A: 5, C: 3, D: 1, S: 5 }; // Minor (Production); S = steel
+  const PAPER_KINDS = ["paper", "swinger", "turner"];
+  const STEEL_COUNT = { popper: 1, rack: 6, star: 5 };
+  const MAX_POINTS = Object.values(TARGETS).reduce(
+    (sum, tg) =>
+      sum +
+      (PAPER_KINDS.includes(tg.kind) ? 10 : (STEEL_COUNT[tg.kind] ?? 0) * 5),
+    0,
+  );
+  // [stage ms, target, zone, hit (paper: metres right/down of centre; steel: plate index)]
+  const SHOTS = [
+    [1050, "T1", "A", [-0.02, -0.06]],
+    [1300, "T1", "A", [0.03, 0.02]],
+    [1620, "T2", "A", [-0.04, -0.04]],
+    [1880, "T2", "C", [-0.12, 0.1]],
+    [2260, "P1", "S", 0],
+    [3100, "SW", "A", [0.01, -0.05]],
+    [3360, "SW", "C", [0.1, 0.08]],
+    ...[0, 1, 2, 3, 4, 5].map((k) => [5750 + k * 200, "RACK", "S", k]),
+    [7050, "T3", "A", [0.02, -0.03]],
+    [7290, "T3", "A", [-0.03, 0.03]],
+    [10300, "STAR", "S", 0],
+    [10720, "STAR", "S", 1],
+    [11180, "STAR", "S", 4],
+    [11660, "STAR", "S", 2],
+    [12160, "STAR", "S", 3],
+    [12620, "P2", "S", 0],
+    [13000, "DT", "A", [0.0, -0.04]],
+    [13240, "DT", "A", [0.03, 0.03]],
+    [13700, "T4", "A", [-0.02, -0.05]],
+    [13930, "T4", "A", [0.03, 0.01]],
+    [14300, "T5", "A", [0.01, -0.03]],
+    [14540, "T5", "D", [0.19, 0.2]],
+  ].map(([ms, target, zone, hit], i, list) => ({
+    ms,
+    st: ms / 1000,
+    target,
+    zone,
+    hit,
+    i,
+    split: i ? ms - list[i - 1][0] : ms,
+    points: ZONE_POINTS[zone],
+  }));
+  const MAG = 15; // Production: at most 15 rounds in a magazine at the start signal
+  // Stage-time events (seconds).
+  const EVENTS = {
+    swingerRelease: 2.34,
+    reload: [7.29, 7.45, 8.15, 8.55], // slide lock, magazine out, new magazine in, slide forward
+    turnerRelease: 12.7,
+    moves: [
+      [3.48, 5.5, "A", "B"],
+      [7.38, 10.18, "B", "C"],
+    ],
+  };
+  // [from ms, to ms, playback rate]: slow motion below 1, fast forward above.
+  const RAMPS = [
+    [2850, 3450, 0.45],
+    [3480, 5500, 2.8],
+    [7380, 10180, 2.0],
+    [10250, 12300, 0.8],
+  ];
+  function videoOfStage(ms) {
+    let v = RESUME;
+    let cur = FREEZE_MS;
+    for (const [a, b, r] of RAMPS) {
+      if (ms <= a) return v + (ms - cur) / 1000;
+      v += (a - cur) / 1000;
+      if (ms <= b) return v + (ms - a) / 1000 / r;
+      v += (b - a) / 1000 / r;
+      cur = b;
+    }
+    return v + (ms - cur) / 1000;
+  }
+  function stageOfVideo(t) {
+    let v = RESUME;
+    let cur = FREEZE_MS;
+    for (const [a, b, r] of RAMPS) {
+      const va = v + (a - cur) / 1000;
+      if (t <= va) return cur + (t - v) * 1000;
+      const vb = va + (b - a) / 1000 / r;
+      if (t <= vb) return a + (t - va) * 1000 * r;
+      v = vb;
+      cur = b;
+    }
+    return cur + (t - v) * 1000;
+  }
+  const rateAt = (ms) =>
+    (RAMPS.find(([a, b]) => ms >= a && ms < b) ?? [0, 0, 1])[2];
+  SHOTS.forEach((s) => (s.t = videoOfStage(s.ms)));
+  const STAGE_POINTS = SHOTS.reduce((sum, s) => sum + s.points, 0);
+  const STAGE_MS = SHOTS[SHOTS.length - 1].ms;
+  const STAGE_TIME = Math.round(STAGE_MS / 10) / 100; // a shot timer shows hundredths
+  const HIT_FACTOR = STAGE_POINTS / STAGE_TIME;
+  const STAGE_END = SHOTS[SHOTS.length - 1].t; // video time of the last shot
+  // Everything after the stage moves later by SHIFT (kept on the 0.5 s beat grid).
+  const SHIFT = Math.ceil((STAGE_END + 0.6 - 20) * 2) / 2;
+  const DURATION = 28 + SHIFT;
+  const vt = (ms) => videoOfStage(ms);
+
+  // Stage time (ms) shown by the shot timer at video time t.
+  function stageMs(t) {
+    if (t < BEEP) return 0;
+    if (t < FREEZE) return (t - BEEP) * 1000;
+    if (t < RESUME) return FREEZE_MS;
+    return Math.min(stageOfVideo(t), STAGE_MS);
+  }
+
   const CHAPTERS = [
     {
       t: 0,
@@ -109,67 +256,26 @@
       t: RESUME,
       ko: "스테이지",
       en: "The stage",
-      sub: { ko: "프리스타일 · 180°", en: "Freestyle · 180°" },
+      sub: { ko: "롱 코스 · 무빙 타겟", en: "Long course · moving targets" },
     },
     {
-      t: 20,
+      t: 20 + SHIFT,
       ko: "히트 팩터",
       en: "Hit factor",
       sub: { ko: "점수 ÷ 시간", en: "Points ÷ time" },
     },
     {
-      t: 22.5,
+      t: 22.5 + SHIFT,
       ko: "레인지 클리어",
       en: "Range is clear",
       sub: { ko: "안전 확인", en: "Safety checks" },
     },
   ];
 
-  // The stage run. Stage times are integer milliseconds, so the shot timer, the
-  // splits and the hit factor are all derived from the same numbers.
-  const TARGETS = {
-    T1: { kind: "paper", pos: [-3.7, 0, 5.2], from: "A" },
-    T2: { kind: "paper", pos: [-1.8, 0, 6.0], from: "A" },
-    P1: { kind: "popper", pos: [-0.6, 0, 6.8], from: "A" },
-    T3: { kind: "paper", pos: [1.4, 0, 6.2], from: "B" },
-    NS: { kind: "noshoot", pos: [2.45, 0, 5.75], from: "B" },
-    T4: { kind: "paper", pos: [3.5, 0, 5.4], from: "B" },
-    P2: { kind: "plate", pos: [4.7, 0, 6.9], from: "B" },
-  };
-  const ZONE_POINTS = { A: 5, C: 3, D: 1, S: 5 }; // Minor (Production); S = steel
-  const SHOTS = [
-    { ms: 1050, target: "T1", zone: "A", hit: [-0.02, -0.06] },
-    { ms: 1300, target: "T1", zone: "A", hit: [0.03, 0.02] },
-    { ms: 1675, target: "T2", zone: "A", hit: [0.01, -0.03] },
-    { ms: 1925, target: "T2", zone: "C", hit: [-0.11, 0.12] },
-    { ms: 2300, target: "P1", zone: "S", hit: [0, 0.7] },
-    { ms: 3175, target: "T3", zone: "A", hit: [0.02, -0.02] },
-    { ms: 3425, target: "T3", zone: "A", hit: [-0.03, 0.04] },
-    { ms: 3800, target: "T4", zone: "A", hit: [0.0, -0.05] },
-    { ms: 4050, target: "T4", zone: "D", hit: [0.18, 0.21] },
-    { ms: 4425, target: "P2", zone: "S", hit: [0, 0] },
-  ].map((s, i, list) => ({
-    ...s,
-    i,
-    t: RESUME + (s.ms - FREEZE_MS) / 1000,
-    split: i ? s.ms - list[i - 1].ms : s.ms,
-    points: ZONE_POINTS[s.zone],
-  }));
-  const STAGE_POINTS = SHOTS.reduce((sum, s) => sum + s.points, 0);
-  const STAGE_MS = SHOTS[SHOTS.length - 1].ms;
-  const STAGE_TIME = Math.round(STAGE_MS / 10) / 100; // a shot timer shows hundredths
-  const HIT_FACTOR = STAGE_POINTS / STAGE_TIME;
-  const MAG = 15; // Production: at most 15 rounds in a magazine at the start signal
-  const MOVE = [17.5, 18.25]; // shooting area A → B
-
-  // Stage time (ms) shown by the shot timer at video time t.
-  function stageMs(t) {
-    if (t < BEEP) return 0;
-    if (t < FREEZE) return (t - BEEP) * 1000;
-    if (t < RESUME) return FREEZE_MS;
-    return Math.min(FREEZE_MS + (t - RESUME) * 1000, STAGE_MS);
-  }
   const fmt2 = (ms) => (Math.round(ms / 10) / 100).toFixed(2);
+  // width of a digits() string in units of its size
+  const timeWidth = (str) =>
+    [...str].reduce((w, ch) => w + (ch === "." || ch === " " ? 0.3 : 0.62), 0);
 
   const CAPTIONS = [
     [
@@ -234,31 +340,55 @@
     ],
     [
       16.1,
-      17.85,
-      "프리스타일 — 스테이지를 푸는 방법은 선수가 정합니다.",
-      "Freestyle — every competitor solves the stage their own way.",
+      vt(2300) - 0.14,
+      "프리스타일 — 해법은 선수가 정합니다.",
+      "Freestyle: every competitor solves the stage their own way.",
     ],
     [
-      17.95,
-      19.85,
-      "이동 중에도 총구는 언제나 180° 안전 범위 안에.",
-      "On the move, the muzzle stays inside the 180°.",
+      vt(2300) + 0.16,
+      vt(3450) - 0.08,
+      "포퍼를 넘기면 스윙 타겟이 움직이기 시작합니다.",
+      "Drop the popper and the swinger starts to move.",
     ],
     [
-      20.1,
-      22.35,
-      "점수 ÷ 시간 = 히트 팩터. 가장 높은 히트 팩터가 이깁니다.",
-      "Points ÷ time = hit factor. The highest hit factor wins.",
+      vt(3480) + 0.19,
+      vt(7290) - 0.03,
+      "이동 중에도 총구는 180° 안에 — 포트 너머엔 플레이트 랙.",
+      "On the move the muzzle stays inside the 180°. Then a plate rack, through a port.",
     ],
     [
-      22.6,
-      24.35,
+      vt(7290) + 0.27,
+      vt(10250) - 0.08,
+      "15발 소진 — 이동하며 재장전.",
+      "Fifteen rounds gone: reload on the move.",
+    ],
+    [
+      vt(10250) + 0.22,
+      vt(12620) - 0.27,
+      "텍사스 스타 — 철판이 떨어질 때마다 별이 돌아갑니다.",
+      "Texas Star: every plate that falls sets it spinning.",
+    ],
+    [
+      vt(12620) + 0.03,
+      STAGE_END + 0.55,
+      "드롭 터너는 단 한 번 나타납니다. 마지막 한 발에 타이머가 멈춥니다.",
+      "The drop turner shows itself once. The last shot stops the clock.",
+    ],
+    [
+      20.1 + SHIFT,
+      22.35 + SHIFT,
+      "점수 ÷ 시간 = 히트 팩터. 스테이지는 가장 높은 히트 팩터가 이깁니다.",
+      "Points ÷ time = hit factor. The highest hit factor wins the stage.",
+    ],
+    [
+      22.6 + SHIFT,
+      24.35 + SHIFT,
       "끝까지 안전하게 — 언로드, 쇼 클리어, 해머 다운.",
       "Safe to the very end — unload, show clear, hammer down.",
     ],
     [
-      24.7,
-      27.2,
+      24.7 + SHIFT,
+      27.2 + SHIFT,
       "1976년 시작된 IPSC, 2026년 50주년.",
       "IPSC, founded in 1976 — fifty years in 2026.",
     ],
@@ -320,28 +450,39 @@
         : []),
       { t: s.t + 0.32 + (s.i % 3) * 0.04, type: "brass", v: 0.25 },
     ]),
-    { t: 19.95, type: "whoosh", v: 0.8 },
+    // the moving targets, the reload and the speed ramps
+    { t: vt(EVENTS.swingerRelease * 1000), type: "clank", v: 0.7 },
+    { t: vt(EVENTS.reload[1] * 1000), type: "clank", v: 0.45 },
+    { t: vt(EVENTS.reload[2] * 1000), type: "click", v: 0.9 },
+    { t: vt(EVENTS.reload[3] * 1000), type: "slide", v: 0.8 },
+    { t: vt(EVENTS.turnerRelease * 1000), type: "clank", v: 0.7 },
+    ...RAMPS.map(([ms, , rate]) => ({
+      t: vt(ms),
+      type: "whoosh",
+      v: rate > 1 ? 0.65 : 0.4,
+    })),
+    { t: 19.95 + SHIFT, type: "whoosh", v: 0.8 },
     ...Array.from({ length: 9 }, (_, i) => ({
-      t: 20.05 + i * 0.045,
+      t: 20.05 + SHIFT + i * 0.045,
       type: "tick",
       v: 0.3,
     })),
-    { t: 20.5, type: "hit", v: 0.7 },
+    { t: 20.5 + SHIFT, type: "hit", v: 0.7 },
     ...Array.from({ length: 10 }, (_, i) => ({
-      t: 20.55 + i * 0.045,
+      t: 20.55 + SHIFT + i * 0.045,
       type: "tick",
       v: 0.3,
     })),
-    { t: 21.0, type: "hit", v: 1 },
-    ...[21.5, 21.75, 22.0].map((t) => ({ t, type: "blip", v: 0.5 })),
-    { t: 22.5, type: "stab", v: 0.8 },
-    { t: 22.62, type: "slide", v: 0.6 },
-    { t: 22.75, type: "clank", v: 0.6 },
-    { t: 23.25, type: "stab", v: 0.8 },
-    { t: 23.32, type: "slide", v: 0.8 },
-    { t: 23.47, type: "click", v: 0.9 },
-    { t: 24.0, type: "stab", v: 1 },
-    { t: 24.5, type: "logo" },
+    { t: 21.0 + SHIFT, type: "hit", v: 1 },
+    ...[21.5, 21.75, 22.0].map((t) => ({ t: t + SHIFT, type: "blip", v: 0.5 })),
+    { t: 22.5 + SHIFT, type: "stab", v: 0.8 },
+    { t: 22.62 + SHIFT, type: "slide", v: 0.6 },
+    { t: 22.75 + SHIFT, type: "clank", v: 0.6 },
+    { t: 23.25 + SHIFT, type: "stab", v: 0.8 },
+    { t: 23.32 + SHIFT, type: "slide", v: 0.8 },
+    { t: 23.47 + SHIFT, type: "click", v: 0.9 },
+    { t: 24.0 + SHIFT, type: "stab", v: 1 },
+    { t: 24.5 + SHIFT, type: "logo" },
   ];
 
   // ------------------------------------------------------------------- shapes
@@ -1121,11 +1262,40 @@
     ];
     const norm = (a) => mul(a, 1 / (Math.hypot(a[0], a[1], a[2]) || 1));
     const UP = [0, 1, 0];
-    function camera(pos, look, fov) {
+    function camera(pos, look, fov, roll = 0) {
       const f = norm(sub(look, pos));
-      const r = norm(cross(UP, f));
-      const u = cross(f, r);
+      let r = norm(cross(UP, f));
+      let u = cross(f, r);
+      if (roll) {
+        const c = Math.cos(roll);
+        const s = Math.sin(roll);
+        [r, u] = [add(mul(r, c), mul(u, s)), sub(mul(u, c), mul(r, s))];
+      }
       return { pos, f, r, u, focal: H / 2 / Math.tan((fov * Math.PI) / 360) };
+    }
+    // Clip a segment against the near plane; null when it is wholly behind.
+    function clipSeg(cam, a, b, near = 0.3) {
+      const za = dot(sub(a, cam.pos), cam.f);
+      const zb = dot(sub(b, cam.pos), cam.f);
+      if (za < near && zb < near) return null;
+      if (za < near) a = add(a, mul(sub(b, a), (near - za) / (zb - za)));
+      else if (zb < near) b = add(b, mul(sub(a, b), (near - zb) / (za - zb)));
+      return [a, b];
+    }
+    // Clip a polygon against the near plane so close cameras can pass by it.
+    function clipNear(cam, pts, near = 0.3) {
+      const depth = (p) => dot(sub(p, cam.pos), cam.f);
+      if (pts.every((p) => depth(p) >= near)) return pts;
+      const out = [];
+      pts.forEach((a, k) => {
+        const b = pts[(k + 1) % pts.length];
+        const za = depth(a);
+        const zb = depth(b);
+        if (za >= near) out.push(a);
+        if (za >= near !== zb >= near)
+          out.push(add(a, mul(sub(b, a), (near - za) / (zb - za))));
+      });
+      return out;
     }
     function project(cam, p) {
       const d = sub(p, cam.pos);
@@ -1150,6 +1320,8 @@
       line(A[0], A[1], B[0], B[1], color, width);
     }
     function poly3(cam, pts, fill, stroke, width = 1.5) {
+      pts = clipNear(cam, pts);
+      if (pts.length < 2) return;
       ctx.beginPath();
       pts.forEach((p, k) => {
         const q = project(cam, p);
@@ -1305,7 +1477,7 @@
     }
 
     function hud(t) {
-      const a = 1 - seg(t, 26.6, 27.2);
+      const a = 1 - seg(t, DURATION - 1.4, DURATION - 0.8);
       if (a <= 0) return;
       ctx.save();
       ctx.globalAlpha = a * ease.out3(seg(t, 0.1, 0.6));
@@ -1320,14 +1492,14 @@
       }
       // stage brief / shot timer
       if (t < BEEP) {
-        text("STAGE 01 — SHORT COURSE", W - 96, 92, {
+        text("STAGE 01 — LONG COURSE", W - 96, 92, {
           size: 14,
           weight: 700,
           tracking: 2,
           align: "right",
         });
         text(
-          `${SHOTS.length} ROUNDS · ${8 * 5 + 2 * 5} POINTS · COMSTOCK`,
+          `${SHOTS.length} ROUNDS · ${MAX_POINTS} POINTS · COMSTOCK`,
           W - 96,
           116,
           { size: 12, weight: 600, tracking: 2, color: C.dim, align: "right" },
@@ -1372,9 +1544,9 @@
 
     // The shot timer, as it sits in the top-right corner after the beep.
     function timerHud(t) {
-      if (t < 6.52 || t > 20.4) return;
+      if (t < 6.52 || t > 20.4 + SHIFT) return;
       const ms = stageMs(t);
-      const a = (t < 6.8 ? 1 : 1) * (1 - seg(t, 19.95, 20.0));
+      const a = (t < 6.8 ? 1 : 1) * (1 - seg(t, 19.95 + SHIFT, 20.0 + SHIFT));
       if (a <= 0) return;
       ctx.save();
       ctx.globalAlpha = a;
@@ -2010,6 +2182,112 @@
       return { lift: up * 110, tilt: up * 0.03 };
     }
 
+    const metal = (y0, y1) => {
+      const gr = ctx.createLinearGradient(0, y0, 0, y1);
+      gr.addColorStop(0, "#3a3f46");
+      gr.addColorStop(0.15, "#1d2024");
+      gr.addColorStop(1, "#0d0e10");
+      return gr;
+    };
+    // The pistol from behind (origin: top of the rear notch): slide, then the
+    // shooter's two-handed grip.
+    function rearSlide(rim = 0.1) {
+      const hands = ctx.createLinearGradient(0, 260, 0, 980);
+      hands.addColorStop(0, "#1a1c20");
+      hands.addColorStop(1, "rgba(14,15,18,0.92)");
+      ctx.fillStyle = hands;
+      ctx.beginPath();
+      ctx.moveTo(-150, 300);
+      ctx.quadraticCurveTo(-250, 330, -330, 560);
+      ctx.lineTo(-470, 980);
+      ctx.lineTo(470, 980);
+      ctx.lineTo(330, 560);
+      ctx.quadraticCurveTo(250, 330, 150, 300);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255,255,255,${rim})`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // thumbs forward along the frame
+      ctx.fillStyle = "#202328";
+      [-1, 1].forEach((side) => {
+        ctx.beginPath();
+        ctx.ellipse(side * 150, 360, 46, 120, side * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = metal(150, 420);
+      ctx.beginPath();
+      ctx.moveTo(-170, 150);
+      ctx.lineTo(170, 150);
+      ctx.lineTo(176, 420);
+      ctx.lineTo(-176, 420);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255,255,255,${rim + 0.02})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      for (let k = 0; k < 8; k++) {
+        line(
+          -160 + k * 2,
+          190 + k * 26,
+          -148 + k * 2,
+          190 + k * 26,
+          "rgba(0,0,0,0.6)",
+          6,
+        );
+        line(
+          160 - k * 2,
+          190 + k * 26,
+          148 - k * 2,
+          190 + k * 26,
+          "rgba(0,0,0,0.6)",
+          6,
+        );
+      }
+      ctx.fillStyle = "#16181b";
+      ctx.beginPath();
+      ctx.roundRect(-34, 250, 68, 120, 20);
+      ctx.fill();
+    }
+    function frontPost(px, y, a = 1) {
+      ctx.fillStyle = `rgba(27,29,33,${a})`;
+      ctx.fillRect(px - 22, y, 44, 150);
+      ctx.fillStyle = `rgba(255,255,255,${0.55 * a})`;
+      ctx.fillRect(px - 22, y, 44, 3);
+      ctx.fillStyle = `rgba(255,255,255,${0.16 * a})`;
+      ctx.fillRect(px - 22, y, 3, 150);
+    }
+    function rearSight() {
+      // rear sight block with its square notch
+      ctx.fillStyle = metal(0, 150);
+      ctx.beginPath();
+      ctx.moveTo(-270, 0);
+      ctx.lineTo(-38, 0);
+      ctx.lineTo(-38, 64);
+      ctx.lineTo(38, 64);
+      ctx.lineTo(38, 0);
+      ctx.lineTo(270, 0);
+      ctx.lineTo(250, 150);
+      ctx.lineTo(-250, 150);
+      ctx.closePath();
+      ctx.fill();
+      line(-270, 1, -38, 1, "rgba(255,255,255,0.3)", 2);
+      line(38, 1, 270, 1, "rgba(255,255,255,0.3)", 2);
+    }
+    // The stage seen through the shooter's eyes: sights on the point being
+    // worked, lifting with each shot.
+    function povGun(x, y, G, dt) {
+      const rk = kick(dt);
+      ctx.save();
+      ctx.translate(x, y - rk.lift * G * 1.4);
+      ctx.rotate(rk.tilt);
+      ctx.scale(G, G);
+      frontPost(0, -rk.lift * 0.5);
+      rearSlide(0.32);
+      rearSight();
+      ctx.restore();
+    }
+
     // One first-person sight picture, centred on cx. kind: "iron" | "optic".
     function sightView(t, kind, cx, zoom) {
       const aimY = 430; // the A zone centre sits here when the sights are on
@@ -2072,72 +2350,6 @@
       ctx.translate(cx + sx, aimY + sy);
       ctx.rotate(tilt);
       ctx.scale(G, G);
-      const metal = (y0, y1) => {
-        const gr = ctx.createLinearGradient(0, y0, 0, y1);
-        gr.addColorStop(0, "#3a3f46");
-        gr.addColorStop(0.15, "#1d2024");
-        gr.addColorStop(1, "#0d0e10");
-        return gr;
-      };
-      // slide, seen from behind, then the shooter's two-handed grip
-      const slide = () => {
-        const hands = ctx.createLinearGradient(0, 260, 0, 980);
-        hands.addColorStop(0, "#1a1c20");
-        hands.addColorStop(1, "rgba(14,15,18,0.92)");
-        ctx.fillStyle = hands;
-        ctx.beginPath();
-        ctx.moveTo(-150, 300);
-        ctx.quadraticCurveTo(-250, 330, -330, 560);
-        ctx.lineTo(-470, 980);
-        ctx.lineTo(470, 980);
-        ctx.lineTo(330, 560);
-        ctx.quadraticCurveTo(250, 330, 150, 300);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.1)";
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        // thumbs forward along the frame
-        ctx.fillStyle = "#202328";
-        [-1, 1].forEach((side) => {
-          ctx.beginPath();
-          ctx.ellipse(side * 150, 360, 46, 120, side * 0.12, 0, Math.PI * 2);
-          ctx.fill();
-        });
-        ctx.fillStyle = metal(150, 420);
-        ctx.beginPath();
-        ctx.moveTo(-170, 150);
-        ctx.lineTo(170, 150);
-        ctx.lineTo(176, 420);
-        ctx.lineTo(-176, 420);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.12)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        for (let k = 0; k < 8; k++) {
-          line(
-            -160 + k * 2,
-            190 + k * 26,
-            -148 + k * 2,
-            190 + k * 26,
-            "rgba(0,0,0,0.6)",
-            6,
-          );
-          line(
-            160 - k * 2,
-            190 + k * 26,
-            148 - k * 2,
-            190 + k * 26,
-            "rgba(0,0,0,0.6)",
-            6,
-          );
-        }
-        ctx.fillStyle = "#16181b";
-        ctx.beginPath();
-        ctx.roundRect(-34, 250, 68, 120, 20);
-        ctx.fill();
-      };
       if (kind === "iron") {
         // front post: equal height, equal light in the rear notch
         const align = settle;
@@ -2145,40 +2357,18 @@
         // under recoil the post climbs out of the notch, then settles back
         const postLift = (dt) => kick(dt).lift * 1.15;
         const py = lerp(-52, 0, align) - postLift(t - SIGHT.recoil);
-        const post = (y, a) => {
-          ctx.fillStyle = `rgba(27,29,33,${a})`;
-          ctx.fillRect(px - 22, y, 44, 150);
-          ctx.fillStyle = `rgba(255,255,255,${0.55 * a})`;
-          ctx.fillRect(px - 22, y, 44, 3);
-          ctx.fillStyle = `rgba(255,255,255,${0.16 * a})`;
-          ctx.fillRect(px - 22, y, 3, 150);
-        };
         [3, 2, 1].forEach((k) => {
           const d = t - SIGHT.recoil - k * 0.03;
           if (d > 0 && d < 0.5)
-            post(lerp(-52, 0, align) - postLift(d), 0.1 * (4 - k));
+            frontPost(px, lerp(-52, 0, align) - postLift(d), 0.1 * (4 - k));
         });
-        post(py, 1);
-        slide();
-        // rear sight block with its square notch
-        ctx.fillStyle = metal(0, 150);
-        ctx.beginPath();
-        ctx.moveTo(-270, 0);
-        ctx.lineTo(-38, 0);
-        ctx.lineTo(-38, 64);
-        ctx.lineTo(38, 64);
-        ctx.lineTo(38, 0);
-        ctx.lineTo(270, 0);
-        ctx.lineTo(250, 150);
-        ctx.lineTo(-250, 150);
-        ctx.closePath();
-        ctx.fill();
-        line(-270, 1, -38, 1, "rgba(255,255,255,0.3)", 2);
-        line(38, 1, 270, 1, "rgba(255,255,255,0.3)", 2);
+        frontPost(px, py);
+        rearSlide();
+        rearSight();
       } else {
         // a slide-mounted red dot: the eye stays on the target, the housing goes soft
         soft(2.5 * settle, () => {
-          slide();
+          rearSlide();
           ctx.fillStyle = metal(-140, 150);
           ctx.beginPath();
           ctx.moveTo(-200, 150);
@@ -2693,119 +2883,351 @@
       }
     }
 
-    // S5 — the stage run in 3D.
-    const AREA = {
-      A: {
-        pos: [-2.5, 0, 0.1],
-        box: [
-          [-3.5, -0.8],
-          [-1.5, 1.0],
-        ],
-      },
-      B: {
-        pos: [2.5, 0, 0.9],
-        box: [
-          [1.5, 0.0],
-          [3.5, 1.8],
-        ],
-      },
-    };
+    // S5 — the long course in 3D, driven by stage time (seconds) so speed ramps
+    // slow or speed up every motion together.
     const lerp3 = (a, b, p) => [
       lerp(a[0], b[0], p),
       lerp(a[1], b[1], p),
       lerp(a[2], b[2], p),
     ];
-    function shooterPos(t) {
-      const p = ease.inOut3(seg(t, MOVE[0], MOVE[1]));
-      const a = AREA.A.pos;
-      const b = AREA.B.pos;
-      const c = [0, 0, 1.1];
-      const u = 1 - p;
-      return [
-        u * u * a[0] + 2 * u * p * c[0] + p * p * b[0],
-        0,
-        u * u * a[2] + 2 * u * p * c[2] + p * p * b[2],
-      ];
+    const WALL_B = {
+      z: 3.4,
+      x: [-2.7, 0.7],
+      h: 2.1,
+      port: [
+        [-1.55, 0.9],
+        [-0.45, 1.75],
+      ],
+    };
+    const CTRL = { AB: [-4.6, 0, 1.7], BC: [2.4, 0, 0.4] };
+    function moveAt(st) {
+      return EVENTS.moves.find(([a, b]) => st >= a && st <= b);
+    }
+    function shooterPos(st) {
+      let pos = AREAS.A.pos;
+      for (const [a, b, from, to] of EVENTS.moves) {
+        if (st < a) break;
+        const p = ease.inOut3(seg(st, a, b));
+        const A = AREAS[from].pos;
+        const B = AREAS[to].pos;
+        const c = CTRL[from + to];
+        const u = 1 - p;
+        pos = [
+          u * u * A[0] + 2 * u * p * c[0] + p * p * B[0],
+          0,
+          u * u * A[2] + 2 * u * p * c[2] + p * p * B[2],
+        ];
+      }
+      return pos;
     }
     function targetFrame(key) {
       const tg = TARGETS[key];
-      const from = AREA[tg.from].pos;
+      const from = AREAS[tg.from].pos;
       const n = norm([from[0] - tg.pos[0], 0, from[2] - tg.pos[2]]);
       return { n, right: cross(n, UP) };
     }
-    function aimPoint(key) {
-      const tg = TARGETS[key];
-      const h = tg.kind === "popper" ? 0.7 : tg.kind === "plate" ? 1.0 : 1.24;
-      return [tg.pos[0], h, tg.pos[2]];
+
+    // Swinger: a paper target on a pendulum, held aside until the popper
+    // releases it, then swinging past a barrier that hides its rest position.
+    const SWING = { L: 1.05, pivot: 2.45, theta0: 1.15, period: 1.5 };
+    function swingAngle(st) {
+      const tau = st - EVENTS.swingerRelease;
+      if (tau < 0) return SWING.theta0;
+      return (
+        SWING.theta0 *
+        Math.cos(((2 * Math.PI) / SWING.period) * tau) *
+        Math.exp(-0.18 * tau)
+      );
     }
-    // The point the shooter is working on: swings from target to target.
-    function workPoint(t) {
-      let k = SHOTS.findIndex((s) => s.t >= t - 0.06);
+    function swingerPose(st) {
+      const tg = TARGETS.SW;
+      const { right } = targetFrame("SW");
+      const th = swingAngle(st);
+      const pivot = [tg.pos[0], SWING.pivot, tg.pos[2]];
+      const centre = add(add(pivot, mul(right, Math.sin(th) * SWING.L)), [
+        0,
+        -Math.cos(th) * SWING.L,
+        0,
+      ]);
+      return { pivot, centre, th, right };
+    }
+    // Drop turner: edge-on until released, turns to face the shooter, then away.
+    function turnerAngle(st) {
+      const r = EVENTS.turnerRelease;
+      if (st < r) return Math.PI / 2;
+      if (st < r + 0.3)
+        return lerp(Math.PI / 2, 0, ease.out3(seg(st, r, r + 0.3)));
+      if (st < r + 0.85) return 0;
+      return lerp(0, -Math.PI / 2, ease.inOut3(seg(st, r + 0.85, r + 1.4)));
+    }
+    // Texas Star: five plates on a free hub. Removing plates unbalances it, so it
+    // spins; integrated from the first hit with a fixed step for determinism.
+    const STAR = { hub: 1.62, r: 0.56, plate: 0.1 };
+    const starHits = SHOTS.filter((s) => s.target === "STAR");
+    function starState(st) {
+      const gone = new Set();
+      let phi = 0;
+      let w = 0;
+      const dt = 1 / 240;
+      let tt = starHits[0].st;
+      if (st > tt) {
+        for (; tt < st; tt += dt) {
+          starHits.forEach((h) => tt >= h.st + 0.02 && gone.add(h.hit));
+          let torque = 0;
+          let n = 0;
+          for (let k = 0; k < 5; k++) {
+            if (gone.has(k)) continue;
+            torque -= Math.cos(phi + Math.PI / 2 + (k * 2 * Math.PI) / 5);
+            n++;
+          }
+          const alpha = (9.81 / STAR.r) * (torque / (n + 0.8)) - 0.9 * w;
+          w += alpha * dt;
+          phi += w * dt;
+        }
+      }
+      starHits.forEach((h) => st >= h.st + 0.02 && gone.add(h.hit));
+      return { phi, gone };
+    }
+    function starPlate(state, k) {
+      const tg = TARGETS.STAR;
+      const { right } = targetFrame("STAR");
+      const a = state.phi + Math.PI / 2 + (k * 2 * Math.PI) / 5;
+      return add(
+        add([tg.pos[0], STAR.hub, tg.pos[2]], mul(right, Math.cos(a) * STAR.r)),
+        [0, Math.sin(a) * STAR.r, 0],
+      );
+    }
+    function rackPlate(k) {
+      const tg = TARGETS.RACK;
+      const { right } = targetFrame("RACK");
+      return add([tg.pos[0], 1.12, tg.pos[2]], mul(right, -0.75 + k * 0.3));
+    }
+
+    // Where a shot lands, in world space, at stage time st (moving targets carry their holes).
+    function hitWorld(s, st = s.st) {
+      const tg = TARGETS[s.target];
+      if (tg.kind === "popper") return [tg.pos[0], 0.7, tg.pos[2]];
+      if (tg.kind === "rack") return rackPlate(s.hit);
+      if (tg.kind === "star") return starPlate(starState(s.st), s.hit);
+      const { right } = targetFrame(s.target);
+      if (tg.kind === "swinger") {
+        const p = swingerPose(st);
+        const ax = [Math.cos(p.th), Math.sin(p.th)];
+        return add(
+          p.centre,
+          add(mul(right, s.hit[0] * ax[0] - s.hit[1] * -ax[1]), [
+            0,
+            -(s.hit[0] * ax[1] + s.hit[1] * ax[0]),
+            0,
+          ]),
+        );
+      }
+      if (tg.kind === "turner") {
+        const { n } = targetFrame(s.target);
+        const psi = turnerAngle(st);
+        const r2 = add(mul(right, Math.cos(psi)), mul(n, -Math.sin(psi)));
+        return add(add([tg.pos[0], 1.24, tg.pos[2]], mul(r2, s.hit[0])), [
+          0,
+          -s.hit[1],
+          0,
+        ]);
+      }
+      return add(add([tg.pos[0], 1.24, tg.pos[2]], mul(right, s.hit[0])), [
+        0,
+        -s.hit[1],
+        0,
+      ]);
+    }
+    // The point being worked on: swings from shot to shot, tracking moving targets.
+    function workPoint(st) {
+      let k = SHOTS.findIndex((s) => s.st >= st - 0.06);
       if (k < 0) k = SHOTS.length - 1;
-      const cur = aimPoint(SHOTS[k].target);
-      const prev = k > 0 ? aimPoint(SHOTS[k - 1].target) : [-2.6, 1.1, 5.6];
-      const from = k > 0 ? SHOTS[k - 1].t : RESUME;
+      const cur = hitWorld(SHOTS[k], Math.max(st, SHOTS[k].st - 0.3));
+      const prev = k > 0 ? hitWorld(SHOTS[k - 1]) : [-8.2, 1.1, 6.8];
+      const from = k > 0 ? SHOTS[k - 1].st : 0.8;
       return lerp3(
         prev,
         cur,
-        ease.inOut3(seg(t, from + 0.05, SHOTS[k].t - 0.04)),
+        ease.inOut3(seg(st, from + 0.05, SHOTS[k].st - 0.04)),
       );
     }
-    function aimDir(t) {
-      const sp = shooterPos(t);
-      // While moving, the muzzle stays pointed downrange.
-      const moving = ease.inOut3(env(t, MOVE[0], MOVE[1], 0.12, 0.12));
-      const d = norm(sub(workPoint(t), [sp[0], 1.4, sp[2]]));
+    function aimDir(st) {
+      const sp = shooterPos(st);
+      // On the move the muzzle stays pointed downrange.
+      const m = moveAt(st);
+      const moving = m ? ease.inOut3(env(st, m[0], m[1], 0.15, 0.15)) : 0;
+      const d = norm(sub(workPoint(st), [sp[0], 1.4, sp[2]]));
       return norm(lerp3(d, [0, -0.35, 1], moving));
     }
-    function stageCamera(t) {
-      const sp = shooterPos(t);
-      const wp = workPoint(t);
-      const otsPos = [sp[0] + 0.7, 3.0, sp[2] - 4.4];
-      const otsLook = [lerp(sp[0], wp[0], 0.78), 0.95, wp[2]];
-      const b =
-        ease.inOut3(seg(t, 15.9, 16.5)) *
-        (1 - ease.inOut3(seg(t, 19.7, 20.15)));
-      return camera(
-        lerp3([0.6, 9.5, -4.6], otsPos, b),
-        lerp3([0.6, 0, 3.8], otsLook, b),
-        lerp(50, 33, b),
-      );
+    // Camera: rigs blended at cut points in video time — a drone behind the
+    // shooter, close-ups on the moving targets in slow motion, a high tracking
+    // shot on the runs and a look through the port.
+    const FOCUS = Object.fromEntries(
+      Object.keys(AREAS).map((name) => {
+        const list = Object.values(TARGETS).filter((tg) => tg.from === name);
+        const mean = (k) =>
+          list.reduce((sum, tg) => sum + tg.pos[k], 0) / list.length;
+        return [name, [mean(0), 1.0, mean(2)]];
+      }),
+    );
+    function focusAt(st) {
+      let f = FOCUS.A;
+      for (const [a, b, , to] of EVENTS.moves)
+        if (st > a) f = lerp3(f, FOCUS[to], ease.inOut3(seg(st, a, b)));
+      return f;
+    }
+    // A static close-up that pushes in slowly across [from, to] (stage time).
+    function closeUp(key, o) {
+      const tg = TARGETS[key];
+      const { n, right } = targetFrame(key);
+      return (st) => {
+        const d = o.dist - o.push * ease.inOut3(seg(st, o.from, o.to));
+        const pos = add(
+          add(tg.pos, mul(n, d)),
+          add(mul(right, o.side), [0, o.height, 0]),
+        );
+        return [pos, [tg.pos[0], o.lookY, tg.pos[2]], o.fov, o.roll];
+      };
+    }
+    const RIGS = {
+      drone(st) {
+        const sp = shooterPos(st);
+        const fc = focusAt(st);
+        const wp = workPoint(st);
+        const dir = norm([fc[0] - sp[0], 0, fc[2] - sp[2]]);
+        const side = cross(UP, dir);
+        const pos = add(
+          sp,
+          add(add(mul(dir, -6.2), mul(side, 1.6)), [0, 4.6, 0]),
+        );
+        return [pos, lerp3(fc, [wp[0], 1.0, wp[2]], 0.35), 31, 0];
+      },
+      high(st) {
+        const sp = shooterPos(st);
+        return [add(sp, [0.4, 9.5, -5.8]), add(sp, [0, 0, 3.4]), 44, 0];
+      },
+      swinger: closeUp("SW", {
+        dist: 4.6,
+        push: 0.9,
+        from: 2.4,
+        to: 3.5,
+        side: -0.9,
+        height: 1.8,
+        lookY: 1.7,
+        fov: 34,
+        roll: -0.04,
+      }),
+      // the shooter's eyes, looking through the port
+      pov(st) {
+        const sp = shooterPos(st);
+        const wp = workPoint(st);
+        return [[sp[0], 1.65, sp[2] + 0.05], lerp3(FOCUS.B, wp, 0.6), 32, 0];
+      },
+      star: closeUp("STAR", {
+        dist: 5.0,
+        push: 1.0,
+        from: 10.1,
+        to: 12.4,
+        side: -0.6,
+        height: 1.4,
+        lookY: 1.55,
+        fov: 36,
+        roll: 0.035,
+      }),
+      overview() {
+        return [[-0.4, 15, -7.4], [-0.4, 0, 5.0], 54, 0];
+      },
+    };
+    const CUTS = [
+      [vt(2420), 0.5, "swinger"],
+      [vt(3480) - 0.08, 0.32, "high"],
+      [vt(5150), 0.4, "pov"],
+      [vt(7330), 0.35, "high"],
+      [vt(10100), 0.42, "star"],
+      [vt(12380), 0.4, "drone"],
+      [STAGE_END + 0.12, 0.6, "overview"],
+    ];
+    function stageCamera(t, st) {
+      let [pos, look, fov, roll] = RIGS.drone(st);
+      let pov = 0; // how much of the view is the shooter's own eyes
+      const blend = ([p2, l2, f2, r2], p, rig) => {
+        pos = lerp3(pos, p2, p);
+        look = lerp3(look, l2, p);
+        fov = lerp(fov, f2, p);
+        roll = lerp(roll, r2, p);
+        pov = lerp(pov, rig === "pov" ? 1 : 0, p);
+      };
+      for (const [at, dur, rig] of CUTS) {
+        const p = ease.inOut3(seg(t, at, at + dur));
+        if (p <= 0) break;
+        blend(RIGS[rig](st), p, rig);
+      }
+      // the stage opens on the overview
+      const e = 1 - ease.inOut3(seg(t, 15.9, 16.55));
+      if (e > 0) blend(RIGS.overview(), e, "overview");
+      return { ...camera(pos, look, fov, roll), pov };
+    }
+    function polyHole3(cam, outer, inner, fill, stroke) {
+      ctx.beginPath();
+      [outer, inner].forEach((pts) => {
+        clipNear(cam, pts).forEach((p, k) => {
+          const q = project(cam, p);
+          if (k) ctx.lineTo(q[0], q[1]);
+          else ctx.moveTo(q[0], q[1]);
+        });
+        ctx.closePath();
+      });
+      ctx.fillStyle = fill;
+      ctx.fill("evenodd");
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    function label3(cam, p, str, color = "rgba(255,255,255,0.75)", size = 13) {
+      const q = project(cam, p);
+      if (q[2] < 0.5) return;
+      text(str, q[0], q[1], {
+        size,
+        weight: 800,
+        tracking: 1.5,
+        align: "center",
+        color,
+      });
     }
 
     function sceneStage(t) {
-      if (t < 15.7 || t > 20.4) return;
+      if (t < 15.7 || t > STAGE_END + 1.2) return;
+      const st = stageOfVideo(Math.max(t, RESUME)) / 1000;
       const enter = ease.out3(seg(t, 15.7, 16.05));
-      const leave = ease.in3(seg(t, 19.7, 20.2));
+      const leave = ease.in3(seg(t, STAGE_END + 0.45, STAGE_END + 0.9));
       ctx.save();
       ctx.translate((1 - enter) * W * 1.1, 0);
       ctx.globalAlpha = 1 - leave * 0.85;
-      const cam = stageCamera(t);
-      // ground grid and the backstop
-      for (let x = -9; x <= 9; x++)
+      const cam = stageCamera(t, st);
+      for (let x = -12; x <= 12; x++)
         seg3(
           cam,
-          [x, 0, -4],
-          [x, 0, 12],
+          [x, 0, -5],
+          [x, 0, 13],
           x === 0 ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.05)",
           1,
         );
-      for (let z = -4; z <= 12; z++)
-        seg3(cam, [-9, 0, z], [9, 0, z], "rgba(255,255,255,0.05)", 1);
+      for (let z = -5; z <= 13; z++)
+        seg3(cam, [-12, 0, z], [12, 0, z], "rgba(255,255,255,0.05)", 1);
       poly3(
         cam,
         [
-          [-10, 0, 9.4],
-          [10, 0, 9.4],
-          [10, 2.6, 10.8],
-          [-10, 2.6, 10.8],
+          [-13, 0, 11.6],
+          [13, 0, 11.6],
+          [13, 2.8, 13],
+          [-13, 2.8, 13],
         ],
         "rgba(255,255,255,0.025)",
         "rgba(255,255,255,0.08)",
         1,
       );
-      // shooting areas with fault lines
-      Object.entries(AREA).forEach(([name, ar]) => {
+      // shooting areas
+      Object.entries(AREAS).forEach(([name, ar]) => {
         const [[x0, z0], [x1, z1]] = ar.box;
         poly3(
           cam,
@@ -2819,18 +3241,13 @@
           C.red,
           3,
         );
-        const lp = project(cam, [x0 + 0.08, 0, z1 + 0.3]);
-        text(`AREA ${name}`, lp[0], lp[1], {
-          size: 13,
-          weight: 800,
-          tracking: 2,
-          color: C.red,
-        });
+        label3(cam, [x0 + 0.5, 0, z0 - 0.35], `AREA ${name}`, C.red);
       });
-      // the 180° rule
-      const fanA = env(t, 16.2, 17.3, 0.3, 0.4) + env(t, 17.45, 18.7, 0.2, 0.4);
+      // the 180° rule, shown while moving
+      const m = moveAt(st);
+      const fanA = m ? env(st, m[0], m[1], 0.25, 0.3) : 0;
+      const sp = shooterPos(st);
       if (fanA > 0) {
-        const sp = shooterPos(t);
         const pts = [sp];
         for (let k = 0; k <= 36; k++) {
           const a = (k / 36) * Math.PI;
@@ -2844,72 +3261,159 @@
         ctx.globalAlpha *= fanA;
         poly3(cam, pts, rgba(C.red, 0.16), rgba(C.red, 0.9), 2);
         const lp = project(cam, [sp[0] - 1.25, 0, sp[2] + 1.25]);
-        text("180°", lp[0], lp[1], {
-          size: 30,
-          weight: 800,
-          align: "center",
-          color: C.red,
-        });
+        if (lp[2] > 0.5)
+          text("180°", lp[0], lp[1], {
+            size: 30,
+            weight: 800,
+            align: "center",
+            color: C.red,
+          });
         ctx.restore();
       }
-      // movement trail
-      if (t > MOVE[0]) {
-        ctx.save();
-        ctx.setLineDash([6, 8]);
-        ctx.beginPath();
-        const end = Math.min(t, MOVE[1]);
-        for (let k = 0; k <= 30; k++) {
-          const q = project(cam, shooterPos(lerp(MOVE[0], end, k / 30)));
-          if (k) ctx.lineTo(q[0], q[1]);
-          else ctx.moveTo(q[0], q[1]);
+      // the route so far
+      ctx.save();
+      ctx.setLineDash([6, 8]);
+      EVENTS.moves.forEach(([a, b]) => {
+        if (st <= a) return;
+        for (let k = 0; k < 30; k++) {
+          const p0 = shooterPos(lerp(a, Math.min(st, b), k / 30));
+          const p1 = shooterPos(lerp(a, Math.min(st, b), (k + 1) / 30));
+          seg3(cam, p0, p1, "rgba(255,255,255,0.5)", 2);
         }
-        ctx.strokeStyle = "rgba(255,255,255,0.55)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-      }
+      });
+      ctx.setLineDash([]);
+      ctx.restore();
 
       // objects, far to near
       const objects = [];
-      const wall = [
-        [0, 0, 1.6],
-        [0, 0, 4.4],
-        [0, 1.9, 4.4],
-        [0, 1.9, 1.6],
-      ];
       objects.push({
-        z: project(cam, [0, 1, 3])[2],
-        draw: () =>
-          poly3(cam, wall, "rgba(18,21,26,0.97)", "rgba(255,255,255,0.22)"),
+        z: project(cam, [WALL_B.x[0] / 2 + WALL_B.x[1] / 2, 1, WALL_B.z])[2],
+        draw: () => {
+          const [x0, x1] = WALL_B.x;
+          const [[px0, py0], [px1, py1]] = WALL_B.port;
+          polyHole3(
+            cam,
+            [
+              [x0, 0, WALL_B.z],
+              [x1, 0, WALL_B.z],
+              [x1, WALL_B.h, WALL_B.z],
+              [x0, WALL_B.h, WALL_B.z],
+            ],
+            [
+              [px0, py0, WALL_B.z],
+              [px1, py0, WALL_B.z],
+              [px1, py1, WALL_B.z],
+              [px0, py1, WALL_B.z],
+            ],
+            "#232831",
+            "rgba(255,255,255,0.3)",
+          );
+          for (let y = 0.3; y < WALL_B.h; y += 0.3) {
+            const cutA = y > py0 && y < py1;
+            seg3(
+              cam,
+              [x0, y, WALL_B.z],
+              [cutA ? px0 : x1, y, WALL_B.z],
+              "rgba(255,255,255,0.05)",
+              1,
+            );
+            if (cutA)
+              seg3(
+                cam,
+                [px1, y, WALL_B.z],
+                [x1, y, WALL_B.z],
+                "rgba(255,255,255,0.05)",
+                1,
+              );
+          }
+          poly3(
+            cam,
+            [
+              [px0, py0, WALL_B.z],
+              [px1, py0, WALL_B.z],
+              [px1, py1, WALL_B.z],
+              [px0, py1, WALL_B.z],
+            ],
+            null,
+            rgba(C.red, 0.8),
+            2.5,
+          );
+          label3(cam, [(px0 + px1) / 2, py1 + 0.12, WALL_B.z], "PORT");
+        },
       });
-      Object.entries(TARGETS).forEach(([key, tg]) => {
+      Object.keys(TARGETS).forEach((key) => {
+        const tg = TARGETS[key];
         objects.push({
           z: project(cam, add(tg.pos, [0, 1, 0]))[2],
-          draw: () => drawStageTarget(cam, key, t),
+          draw: () => drawStageTarget(cam, key, st),
         });
       });
-      const sp = shooterPos(t);
-      objects.push({
-        z: project(cam, add(sp, [0, 1, 0]))[2],
-        draw: () => drawShooter(cam, t),
+      if (cam.pov < 0.98)
+        objects.push({
+          z: project(cam, add(sp, [0, 1, 0]))[2],
+          draw: () => {
+            ctx.save();
+            ctx.globalAlpha *= 1 - ease.in3(cam.pov);
+            drawShooter(cam, st);
+            ctx.restore();
+          },
+        });
+      objects
+        .filter((o) => o.z > 0.5)
+        .sort((a, b) => b.z - a.z)
+        .forEach((o) => o.draw());
+
+      // activators: a popper releasing a moving target
+      [
+        ["P1", "SW", EVENTS.swingerRelease],
+        ["P2", "DT", EVENTS.turnerRelease],
+      ].forEach(([from, to, at]) => {
+        const a = env(st, at - 0.05, at + 0.9, 0.15, 0.35);
+        if (a <= 0) return;
+        const A = project(cam, add(TARGETS[from].pos, [0, 0.4, 0]));
+        const B = project(cam, add(TARGETS[to].pos, [0, 1.6, 0]));
+        if (A[2] < 0.5 || B[2] < 0.5) return;
+        const p = ease.out3(seg(st, at - 0.05, at + 0.2));
+        ctx.save();
+        ctx.globalAlpha *= a;
+        ctx.setLineDash([8, 6]);
+        line(A[0], A[1], lerp(A[0], B[0], p), lerp(A[1], B[1], p), C.red, 2.5);
+        ctx.setLineDash([]);
+        const mx = (A[0] + B[0]) / 2;
+        const my = (A[1] + B[1]) / 2 - 14;
+        text(opt.lang === "en" ? "ACTIVATES" : "작동", mx, my, {
+          size: 14,
+          weight: 800,
+          tracking: opt.lang === "en" ? 2 : 0,
+          align: "center",
+          color: C.red,
+          family: opt.lang === "en" ? SANS : KR,
+        });
+        ctx.restore();
       });
-      objects.sort((a, b) => b.z - a.z).forEach((o) => o.draw());
 
       // tracers and score pops
       SHOTS.forEach((s) => {
-        const dt = t - s.t;
+        const dt = st - s.st;
         if (dt < 0 || dt > 0.9) return;
-        const sp0 = shooterPos(s.t);
-        const muzzle = add([sp0[0], 1.4, sp0[2]], mul(aimDir(s.t), 0.72));
+        const sp0 = shooterPos(s.st);
         const hit = hitWorld(s);
-        if (dt < 0.08) {
-          const p = dt / 0.06;
-          const A = project(
+        const eye = [sp0[0], 1.65, sp0[2] + 0.05];
+        const muzzle = lerp3(
+          add([sp0[0], 1.4, sp0[2]], mul(aimDir(s.st), 0.72)),
+          add(add(eye, mul(norm(sub(hit, eye)), 0.75)), [0, -0.035, 0]),
+          cam.pov,
+        );
+        const clipped =
+          dt < 0.08 &&
+          clipSeg(
             cam,
-            add(muzzle, mul(sub(hit, muzzle), clamp(p - 0.5))),
+            add(muzzle, mul(sub(hit, muzzle), clamp(dt / 0.06 - 0.5))),
+            add(muzzle, mul(sub(hit, muzzle), clamp(dt / 0.06))),
           );
-          const B = project(cam, add(muzzle, mul(sub(hit, muzzle), clamp(p))));
+        if (clipped) {
+          const A = project(cam, clipped[0]);
+          const B = project(cam, clipped[1]);
           const g = ctx.createLinearGradient(A[0], A[1], B[0], B[1]);
           g.addColorStop(0, "rgba(255,200,120,0)");
           g.addColorStop(1, "rgba(255,240,200,1)");
@@ -2920,28 +3424,30 @@
           ctx.lineTo(B[0], B[1]);
           ctx.stroke();
           const M = project(cam, muzzle);
-          muzzleFlash(
-            M[0],
-            M[1],
-            50 * (1 - dt / 0.08),
-            1 - dt / 0.08,
-            s.i * 13 + 5,
-            Math.atan2(B[1] - M[1], B[0] - M[0]),
-          );
+          if (M[2] > 0.3)
+            muzzleFlash(
+              M[0],
+              M[1],
+              50 * (1 - dt / 0.08),
+              1 - dt / 0.08,
+              s.i * 13 + 5,
+              Math.atan2(B[1] - M[1], B[0] - M[0]),
+            );
         }
         if (dt > 0.05) {
           const P = project(cam, add(hit, [0, 0.42 + dt * 0.45, 0]));
+          if (P[2] < 0.5) return;
           const pa = ease.out3(seg(dt, 0.05, 0.15)) * (1 - seg(dt, 0.55, 0.9));
           ctx.save();
           ctx.globalAlpha *= pa;
-          const label = s.zone === "S" ? "+5 STEEL" : `+${s.points} ${s.zone}`;
-          const w = layout(label, font(800, 22), 1).width + 20;
+          const lbl = s.zone === "S" ? "+5" : `+${s.points} ${s.zone}`;
+          const w = layout(lbl, font(800, 22), 1).width + 20;
           const hot = s.zone === "A" || s.zone === "S";
           ctx.fillStyle = hot ? C.red : "rgba(255,255,255,0.92)";
           ctx.beginPath();
           ctx.roundRect(P[0] - w / 2, P[1] - 30, w, 38, 4);
           ctx.fill();
-          text(label, P[0], P[1] - 4, {
+          text(lbl, P[0], P[1] - 4, {
             size: 22,
             weight: 800,
             tracking: 1,
@@ -2951,48 +3457,89 @@
           ctx.restore();
         }
       });
+      if (cam.pov > 0.02) {
+        const aim = project(cam, workPoint(st));
+        const last = [...SHOTS].reverse().find((s) => st >= s.st);
+        ctx.save();
+        ctx.globalAlpha *= ease.out3(cam.pov);
+        povGun(
+          aim[0],
+          aim[1] + 6 + (1 - cam.pov) * 520,
+          0.34,
+          last ? st - last.st : 9,
+        );
+        ctx.restore();
+      }
       ctx.restore();
 
-      // shot timer list, points, rounds
-      const la = ease.out3(seg(t, 16.0, 16.3)) * (1 - seg(t, 19.7, 19.95));
+      const la =
+        ease.out3(seg(t, 16.0, 16.3)) *
+        (1 - seg(t, STAGE_END + 0.45, STAGE_END + 0.7));
       if (la <= 0) return;
       ctx.save();
       ctx.globalAlpha = la;
+      // a panel behind the shot timer, the shot list and the totals
       const x1 = W - 96;
-      text("SHOT", x1 - 300, 214, {
+      const y0 = 236;
+      ctx.fillStyle = "rgba(10,12,15,0.74)";
+      ctx.strokeStyle = "rgba(255,255,255,0.1)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(x1 - 324, 44, 348, y0 + 44 + 8 * 32 + 10 + 84 - 44, 6);
+      ctx.fill();
+      ctx.stroke();
+      // speed ramp badge under the shot timer
+      const rate = rateAt(st * 1000);
+      if (rate !== 1 && st < STAGE_TIME) {
+        const label =
+          rate > 1 ? `▶▶  ×${rate.toFixed(1)}` : `SLOW ×${rate.toFixed(2)}`;
+        const w = layout(label, font(800, 14), 2).width + 24;
+        ctx.fillStyle = rate > 1 ? "rgba(255,255,255,0.14)" : rgba(C.red, 0.9);
+        ctx.beginPath();
+        ctx.roundRect(W - 96 - w, 166, w, 28, 4);
+        ctx.fill();
+        text(label, W - 96 - w / 2, 185, {
+          size: 14,
+          weight: 800,
+          tracking: 2,
+          align: "center",
+        });
+      }
+      // shot list (last eight), points and rounds
+      text("SHOT", x1 - 300, y0, {
         size: 12,
         weight: 700,
         tracking: 2,
         color: C.dim,
       });
-      text("TIME", x1 - 170, 214, {
+      text("TIME", x1 - 170, y0, {
         size: 12,
         weight: 700,
         tracking: 2,
         color: C.dim,
         align: "right",
       });
-      text("SPLIT", x1 - 70, 214, {
+      text("SPLIT", x1 - 70, y0, {
         size: 12,
         weight: 700,
         tracking: 2,
         color: C.dim,
         align: "right",
       });
-      line(x1 - 300, 226, x1, 226, "rgba(255,255,255,0.2)", 1);
-      SHOTS.forEach((s, k) => {
-        if (t < s.t) return;
-        const y = 258 + k * 34;
-        const p = ease.out3(seg(t, s.t, s.t + 0.12));
+      line(x1 - 300, y0 + 12, x1, y0 + 12, "rgba(255,255,255,0.2)", 1);
+      const fired = SHOTS.filter((s) => st >= s.st);
+      const shown = fired.slice(-8);
+      shown.forEach((s, row) => {
+        const y = y0 + 44 + row * 32;
+        const p = ease.out3(seg(st, s.st, s.st + 0.12));
         ctx.save();
-        ctx.globalAlpha *= p;
-        ctx.translate((1 - p) * 30, 0);
-        digits(String(k + 1).padStart(2, "0"), x1 - 300, y, 20, {
+        ctx.globalAlpha *= row === shown.length - 1 ? p : 1;
+        digits(String(s.i + 1).padStart(2, "0"), x1 - 300, y, 20, {
           color: C.dim,
           weight: 600,
         });
         digits(fmt2(s.ms), x1 - 170, y, 20, { align: "right", weight: 700 });
-        digits(k ? fmt2(s.split) : "—", x1 - 70, y, 20, {
+        digits(s.i ? fmt2(s.split) : "—", x1 - 70, y, 20, {
           align: "right",
           weight: 500,
           color: C.dim,
@@ -3005,8 +3552,7 @@
         });
         ctx.restore();
       });
-      const fired = SHOTS.filter((s) => t >= s.t);
-      const ry = 258 + SHOTS.length * 34 + 24;
+      const ry = y0 + 44 + 8 * 32 + 10;
       line(x1 - 300, ry - 20, x1, ry - 20, "rgba(255,255,255,0.2)", 1);
       text("POINTS", x1 - 300, ry + 10, {
         size: 12,
@@ -3015,85 +3561,143 @@
         color: C.dim,
       });
       digits(
-        String(fired.reduce((a, s) => a + s.points, 0)).padStart(2, "0"),
+        String(fired.reduce((a, s) => a + s.points, 0)).padStart(3, "0"),
         x1,
         ry + 14,
         34,
         { align: "right", weight: 800 },
       );
+      const [rl0, , , rl3] = EVENTS.reload;
+      const reloading = st >= rl0 && st < rl3;
+      const inMag = st >= rl3 ? MAG - (fired.length - MAG) : MAG - fired.length;
       text("ROUNDS", x1 - 300, ry + 56, {
         size: 12,
         weight: 700,
         tracking: 2,
         color: C.dim,
       });
-      digits(
-        `${String(MAG - fired.length).padStart(2, "0")}/15`,
-        x1,
-        ry + 58,
-        26,
-        { align: "right", weight: 700, color: C.dim },
-      );
+      if (reloading)
+        text("RELOAD", x1, ry + 58, {
+          size: 22,
+          weight: 800,
+          tracking: 2,
+          align: "right",
+          color: C.red,
+        });
+      else
+        digits(`${String(inMag).padStart(2, "0")}/15`, x1, ry + 58, 26, {
+          align: "right",
+          weight: 700,
+          color: C.dim,
+        });
+      ctx.restore();
 
-      // the slide cycling, picture-in-picture
+      // the slide cycling and the reload, picture-in-picture
       const px = 96;
       const py = 168;
+      ctx.save();
+      ctx.globalAlpha = la;
       ctx.fillStyle = "rgba(10,12,15,0.78)";
-      ctx.strokeStyle = "rgba(255,255,255,0.16)";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = reloading ? C.red : "rgba(255,255,255,0.16)";
+      ctx.lineWidth = reloading ? 2 : 1;
       ctx.beginPath();
       ctx.roundRect(px, py, 420, 230, 6);
       ctx.fill();
       ctx.stroke();
-      text("SLIDE CYCLE", px + 20, py + 32, {
+      text(reloading ? "RELOAD" : "SLIDE CYCLE", px + 20, py + 32, {
         size: 12,
-        weight: 700,
+        weight: 800,
         tracking: 2.4,
-        color: C.dim,
+        color: reloading ? C.red : C.dim,
       });
-      const last = [...SHOTS].reverse().find((s) => t >= s.t);
-      const rc = last ? recoil(t - last.t) : { slide: 0, flip: 0 };
+      const last = [...SHOTS].reverse().find((s) => st >= s.st);
+      const rc =
+        last && !reloading ? recoil(st - last.st) : { slide: 0, flip: 0 };
       const go = { x: px + 214, y: py + 124, s: 1.1, rot: rc.flip };
+      const [, rOut, rIn, rFwd] = EVENTS.reload;
+      let slide = rc.slide;
+      let mag = null;
+      if (reloading) {
+        slide = 27 * (1 - ease.in3(seg(st, rFwd - 0.06, rFwd)));
+        if (st < rIn - 0.35) {
+          const d = seg(st, rOut, rOut + 0.4);
+          mag = { dx: -d * 12, dy: d * d * 260, rot: d * 0.5 };
+        } else {
+          const d = 1 - ease.out3(seg(st, rIn - 0.35, rIn));
+          mag = { dx: 0, dy: d * 120, rot: 0 };
+        }
+      }
       ctx.save();
       ctx.beginPath();
       ctx.roundRect(px, py, 420, 230, 6);
       ctx.clip();
-      drawGun({ ...go, slide: rc.slide, fiber: 0.9 });
-      if (last && t - last.t < 0.05) {
+      drawGun({ ...go, slide, mag, fiber: 0.9 });
+      if (last && !reloading && st - last.st < 0.05) {
         const [mx, my] = gunPoint(go, GUN.muzzle[0], GUN.muzzle[1]);
-        muzzleFlash(mx + 10, my, 54, 1 - (t - last.t) / 0.05, last.i * 3 + 1);
+        muzzleFlash(mx + 10, my, 54, 1 - (st - last.st) / 0.05, last.i * 3 + 1);
       }
       ctx.restore();
-      SHOTS.forEach((s) => brass(go, t - s.t, s.i * 7 + 3));
+      SHOTS.forEach((s) => brass(go, st - s.st, s.i * 7 + 3));
       ctx.restore();
     }
 
-    function hitWorld(s) {
-      const tg = TARGETS[s.target];
-      if (tg.kind === "popper") return [tg.pos[0], 0.7, tg.pos[2]];
-      if (tg.kind === "plate") return [tg.pos[0], 1.0, tg.pos[2]];
-      const { right } = targetFrame(s.target);
-      return add(add([tg.pos[0], 1.24, tg.pos[2]], mul(right, s.hit[0])), [
-        0,
-        -s.hit[1],
-        0,
-      ]);
-    }
-
-    function drawStageTarget(cam, key, t) {
+    function drawStageTarget(cam, key, st) {
       const tg = TARGETS[key];
       const { n, right } = targetFrame(key);
-      const hits = SHOTS.filter((s) => s.target === key && t >= s.t + 0.04);
-      const flash = SHOTS.filter((s) => s.target === key).reduce(
-        (a, s) => Math.max(a, 1 - Math.abs(t - s.t - 0.06) / 0.12),
-        0,
-      );
-      if (tg.kind === "paper" || tg.kind === "noshoot") {
-        const c = [tg.pos[0], 1.24, tg.pos[2]];
+      const hitsOf = (k) =>
+        SHOTS.filter((s) => s.target === k && st >= s.st + 0.02);
+      const flashOf = (k, sub) =>
+        SHOTS.filter(
+          (s) => s.target === k && (sub === undefined || s.hit === sub),
+        ).reduce(
+          (a, s) => Math.max(a, 1 - Math.abs(st - s.st - 0.04) / 0.1),
+          0,
+        );
+      const paper = (centre, r2, up2, noShoot, flash) => {
         const toW = (u, v) =>
-          add(add(c, mul(right, u / 100)), [0, -v / 100, 0]);
-        // stand
-        [-0.17, 0.17].forEach((u) =>
+          add(add(centre, mul(r2, u / 100)), mul(up2, -v / 100));
+        poly3(
+          cam,
+          TGT.outer.pts.map(([u, v]) => toW(u, v)),
+          noShoot ? "#e9ecef" : C.card,
+          noShoot ? "rgba(0,0,0,0.3)" : C.cardEdge,
+          1.5,
+        );
+        ctx.save();
+        ctx.setLineDash([3, 3]);
+        const zl = noShoot ? "rgba(0,0,0,0.15)" : "rgba(70,45,15,0.55)";
+        poly3(
+          cam,
+          TGT.c.pts.map(([u, v]) => toW(u, v)),
+          null,
+          zl,
+          1,
+        );
+        poly3(
+          cam,
+          TGT.a.pts.map(([u, v]) => toW(u, v)),
+          flash > 0 ? rgba(C.red, flash * 0.7) : null,
+          zl,
+          1,
+        );
+        ctx.restore();
+      };
+      const hole = (s) => {
+        const P = project(cam, hitWorld(s, st));
+        if (P[2] < 0.3) return;
+        ctx.fillStyle = "#120d08";
+        ctx.beginPath();
+        ctx.arc(
+          P[0],
+          P[1],
+          Math.max(2, (0.012 * cam.focal) / P[2]),
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      };
+      const stand = (x0, x1) =>
+        [x0, x1].forEach((u) =>
           seg3(
             cam,
             add([tg.pos[0], 0, tg.pos[2]], mul(right, u)),
@@ -3102,74 +3706,54 @@
             2,
           ),
         );
-        const outer = TGT.outer.pts.map(([u, v]) => toW(u, v));
-        const noShoot = tg.kind === "noshoot";
-        poly3(
-          cam,
-          outer,
-          noShoot ? "#e9ecef" : C.card,
-          noShoot ? "rgba(0,0,0,0.3)" : C.cardEdge,
-          1.5,
-        );
-        ctx.save();
-        ctx.setLineDash([3, 3]);
-        poly3(
-          cam,
-          TGT.c.pts.map(([u, v]) => toW(u, v)),
-          null,
-          noShoot ? "rgba(0,0,0,0.15)" : "rgba(70,45,15,0.55)",
-          1,
-        );
-        poly3(
-          cam,
-          TGT.a.pts.map(([u, v]) => toW(u, v)),
-          flash > 0 ? rgba(C.red, flash * 0.7) : null,
-          noShoot ? "rgba(0,0,0,0.15)" : "rgba(70,45,15,0.55)",
-          1,
-        );
-        ctx.setLineDash([]);
-        ctx.restore();
-        if (noShoot) {
-          const lp = project(cam, toW(0, -35));
-          text("NO-SHOOT", lp[0], lp[1], {
-            size: 12,
-            weight: 800,
-            tracking: 1.5,
-            align: "center",
-            color: "rgba(255,255,255,0.8)",
-          });
-        }
-        hits.forEach((s) => {
-          const P = project(cam, hitWorld(s));
-          ctx.fillStyle = "#120d08";
-          ctx.beginPath();
-          ctx.arc(
-            P[0],
-            P[1],
-            Math.max(2, (0.012 * cam.focal) / P[2]),
-            0,
-            Math.PI * 2,
-          );
-          ctx.fill();
-        });
-      } else if (tg.kind === "popper") {
-        const hit = SHOTS.find((s) => s.target === key);
-        const fall = ease.in3(seg(t, hit.t + 0.05, hit.t + 0.45)) * 1.45;
-        const base = [tg.pos[0], 0, tg.pos[2]];
-        const back = mul(n, -1);
-        const pts = POPPER.pts.map(([u, v]) => {
-          const h = -v / 100;
-          return add(
-            add(base, mul(right, u / 100)),
-            add(mul(UP, h * Math.cos(fall)), mul(back, h * Math.sin(fall))),
-          );
-        });
+      const steel = (pts, flash) =>
         poly3(
           cam,
           pts,
           flash > 0 ? "#ffffff" : C.steel,
           "rgba(0,0,0,0.35)",
           1.5,
+        );
+      const disc = (c, r2, up2, rad) => {
+        const pts = [];
+        for (let k = 0; k < 24; k++) {
+          const a = (k / 24) * Math.PI * 2;
+          pts.push(
+            add(
+              add(c, mul(r2, Math.cos(a) * rad)),
+              mul(up2, Math.sin(a) * rad),
+            ),
+          );
+        }
+        return pts;
+      };
+      const back = mul(n, -1);
+
+      if (tg.kind === "paper" || tg.kind === "noshoot") {
+        stand(-0.17, 0.17);
+        paper(
+          [tg.pos[0], 1.24, tg.pos[2]],
+          right,
+          UP,
+          tg.kind === "noshoot",
+          flashOf(key),
+        );
+        if (tg.kind === "noshoot")
+          label3(cam, [tg.pos[0], 1.68, tg.pos[2]], "NO-SHOOT");
+        hitsOf(key).forEach(hole);
+      } else if (tg.kind === "popper") {
+        const hit = SHOTS.find((s) => s.target === key);
+        const fall = ease.in3(seg(st, hit.st + 0.05, hit.st + 0.45)) * 1.45;
+        const base = [tg.pos[0], 0, tg.pos[2]];
+        steel(
+          POPPER.pts.map(([u, v]) => {
+            const h = -v / 100;
+            return add(
+              add(base, mul(right, u / 100)),
+              add(mul(UP, h * Math.cos(fall)), mul(back, h * Math.sin(fall))),
+            );
+          }),
+          flashOf(key),
         );
         poly3(
           cam,
@@ -3182,60 +3766,152 @@
           "#2a2e35",
           null,
         );
-      } else if (tg.kind === "plate") {
-        const hit = SHOTS.find((s) => s.target === key);
-        const fall = ease.in3(seg(t, hit.t + 0.05, hit.t + 0.35)) * 1.5;
+        label3(cam, [tg.pos[0], 1.05, tg.pos[2]], "POPPER");
+      } else if (tg.kind === "swinger") {
+        const p = swingerPose(st);
+        // frame, arm, target, then the barrier in front of its rest position
+        const top = [tg.pos[0], SWING.pivot + 0.12, tg.pos[2]];
+        [-1, 1].forEach((sd) =>
+          seg3(
+            cam,
+            add([tg.pos[0], 0, tg.pos[2] + 0.25], mul(right, sd * 1.35)),
+            add(top, add(mul(right, sd * 1.35), [0, 0, 0.25])),
+            "rgba(150,155,165,0.7)",
+            2,
+          ),
+        );
+        seg3(
+          cam,
+          add(top, add(mul(right, -1.35), [0, 0, 0.25])),
+          add(top, add(mul(right, 1.35), [0, 0, 0.25])),
+          "rgba(150,155,165,0.7)",
+          2,
+        );
+        const r2 = add(mul(right, Math.cos(p.th)), mul(UP, -Math.sin(p.th)));
+        const up2 = add(mul(right, Math.sin(p.th)), mul(UP, Math.cos(p.th)));
+        seg3(
+          cam,
+          p.pivot,
+          add(p.centre, mul(up2, 0.29)),
+          "rgba(200,205,212,0.9)",
+          3,
+        );
+        paper(p.centre, r2, up2, false, flashOf(key));
+        hitsOf(key).forEach(hole);
+        const bw = 0.42;
+        const bz = tg.pos[2] - 0.7;
+        poly3(
+          cam,
+          [
+            add([tg.pos[0], 0, bz], mul(right, -bw)),
+            add([tg.pos[0], 0, bz], mul(right, bw)),
+            add([tg.pos[0], 2.05, bz], mul(right, bw)),
+            add([tg.pos[0], 2.05, bz], mul(right, -bw)),
+          ],
+          "rgba(22,25,31,0.97)",
+          "rgba(255,255,255,0.22)",
+        );
+        label3(cam, [tg.pos[0], 2.75, tg.pos[2]], "SWINGER");
+      } else if (tg.kind === "turner") {
+        const psi = turnerAngle(st);
+        const r2 = add(mul(right, Math.cos(psi)), mul(n, -Math.sin(psi)));
         seg3(
           cam,
           [tg.pos[0], 0, tg.pos[2]],
-          [tg.pos[0], 0.9, tg.pos[2]],
-          "rgba(180,185,190,0.8)",
+          [tg.pos[0], 0.95, tg.pos[2]],
+          "rgba(150,155,165,0.8)",
           3,
         );
-        const hinge = [tg.pos[0], 0.9, tg.pos[2]];
-        const back = mul(n, -1);
-        const pts = [];
-        for (let k = 0; k < 28; k++) {
-          const a = (k / 28) * Math.PI * 2;
-          const u = Math.cos(a) * 0.1;
-          const v = 0.1 + Math.sin(a) * 0.1;
-          pts.push(
-            add(
-              add(hinge, mul(right, u)),
-              add(mul(UP, v * Math.cos(fall)), mul(back, v * Math.sin(fall))),
-            ),
+        if (Math.abs(Math.cos(psi)) > 0.04)
+          paper([tg.pos[0], 1.24, tg.pos[2]], r2, UP, false, flashOf(key));
+        else
+          seg3(
+            cam,
+            [tg.pos[0], 0.95, tg.pos[2]],
+            [tg.pos[0], 1.53, tg.pos[2]],
+            C.cardEdge,
+            3,
+          );
+        hitsOf(key).forEach((s) => Math.abs(Math.cos(psi)) > 0.2 && hole(s));
+        label3(cam, [tg.pos[0], 1.8, tg.pos[2]], "DROP TURNER");
+      } else if (tg.kind === "rack") {
+        const a = add([tg.pos[0], 0.98, tg.pos[2]], mul(right, -0.95));
+        const b = add([tg.pos[0], 0.98, tg.pos[2]], mul(right, 0.95));
+        seg3(cam, a, b, "rgba(170,175,185,0.9)", 4);
+        [a, b].forEach((p) =>
+          seg3(cam, p, [p[0], 0, p[2]], "rgba(170,175,185,0.9)", 3),
+        );
+        for (let k = 0; k < 6; k++) {
+          const s = SHOTS.find((x) => x.target === key && x.hit === k);
+          const fall = s
+            ? ease.in3(seg(st, s.st + 0.02, s.st + 0.25)) * 1.5
+            : 0;
+          const hinge = add(rackPlate(k), [0, -0.12, 0]);
+          const up2 = add(mul(UP, Math.cos(fall)), mul(back, Math.sin(fall)));
+          steel(
+            disc(add(hinge, mul(up2, 0.12)), right, up2, 0.1),
+            flashOf(key, k),
           );
         }
-        poly3(
+        label3(cam, [tg.pos[0], 1.55, tg.pos[2]], "PLATE RACK");
+      } else if (tg.kind === "star") {
+        const state = starState(st);
+        const hub = [tg.pos[0], STAR.hub, tg.pos[2]];
+        seg3(
           cam,
-          pts,
-          flash > 0 ? "#ffffff" : C.steel,
-          "rgba(0,0,0,0.35)",
-          1.5,
+          [tg.pos[0], 0, tg.pos[2] + 0.05],
+          [tg.pos[0], STAR.hub, tg.pos[2] + 0.05],
+          "rgba(170,175,185,0.9)",
+          4,
         );
+        for (let k = 0; k < 5; k++) {
+          const s = starHits.find((x) => x.hit === k);
+          const P = starPlate(state, k);
+          seg3(cam, hub, P, "rgba(190,195,205,0.95)", 3);
+          if (!state.gone.has(k)) steel(disc(P, right, UP, STAR.plate), 0);
+          else {
+            // the plate drops away from its arm
+            const d = st - s.st;
+            if (d < 0.7) {
+              const from = starPlate(starState(s.st), k);
+              const c = add(
+                from,
+                add(mul(back, d * 0.6), [0, -4.9 * d * d, 0]),
+              );
+              ctx.save();
+              ctx.globalAlpha *= 1 - d / 0.7;
+              steel(disc(c, right, UP, STAR.plate), flashOf(key, k));
+              ctx.restore();
+            }
+          }
+        }
+        const H0 = project(cam, hub);
+        if (H0[2] < 0.3) return;
+        ctx.fillStyle = "#2a2e35";
+        ctx.beginPath();
+        ctx.arc(
+          H0[0],
+          H0[1],
+          Math.max(3, (0.06 * cam.focal) / H0[2]),
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        label3(cam, [tg.pos[0], STAR.hub + 0.85, tg.pos[2]], "TEXAS STAR");
       }
-      const lp = project(cam, [
-        tg.pos[0],
-        tg.kind === "paper" || tg.kind === "noshoot"
-          ? 1.75
-          : tg.kind === "plate"
-            ? 1.35
-            : 1.05,
-        tg.pos[2],
-      ]);
-      if (tg.kind !== "noshoot")
-        text(key, lp[0], lp[1], {
-          size: 13,
-          weight: 800,
-          tracking: 1.5,
-          align: "center",
-          color: "rgba(255,255,255,0.7)",
-        });
+      if (/^T\d/.test(key))
+        label3(
+          cam,
+          [tg.pos[0], 1.78, tg.pos[2]],
+          key,
+          "rgba(255,255,255,0.5)",
+          12,
+        );
     }
 
-    function drawShooter(cam, t) {
-      const sp = shooterPos(t);
-      const dir = aimDir(t);
+    function drawShooter(cam, st) {
+      const sp = shooterPos(st);
+      const dir = aimDir(st);
       const face = norm([dir[0], 0, dir[2]]);
       const r = cross(UP, face);
       const at = (h, side, fwd = 0) =>
@@ -3250,10 +3926,13 @@
         ring.push([sp[0] + Math.cos(a) * 0.4, 0.01, sp[2] + Math.sin(a) * 0.4]);
       }
       poly3(cam, ring, rgba(C.white, 0.05), "rgba(255,255,255,0.35)", 1.5);
-      const step =
-        Math.sin(seg(t, MOVE[0], MOVE[1]) * Math.PI * 6) *
-        0.18 *
-        env(t, MOVE[0], MOVE[1], 0.1, 0.1);
+      // running strides while moving between areas
+      const m = moveAt(st);
+      const step = m
+        ? Math.sin(seg(st, m[0], m[1]) * Math.PI * 2 * (m[1] - m[0]) * 1.6) *
+          0.2 *
+          env(st, m[0], m[1], 0.12, 0.12)
+        : 0;
       const fill = (pts, smooth = false) => {
         const q = pts.map(P);
         ctx.beginPath();
@@ -3278,12 +3957,12 @@
       };
       // legs
       [-1, 1].forEach((side) => {
-        const st = side * step;
+        const stride = side * step;
         fill([
           at(0.98, side * 0.03),
           at(0.98, side * 0.19),
-          at(0.05, side * 0.2, st),
-          at(0.05, side * 0.08, st),
+          at(0.05, side * 0.2, stride),
+          at(0.05, side * 0.08, stride),
         ]);
       });
       // torso with rounded shoulders, leaning slightly into the gun
@@ -3364,15 +4043,15 @@
       const y = 600;
       const size = 150;
       // positions
-      const xP = 250;
-      const xDiv = 590;
-      const xT = 720;
-      const xEq = 1150;
-      const xHF = 1280;
+      const xP = 230;
+      const xDiv = 560;
+      const xT = 690;
+      const xEq = 1140;
+      const xHF = 1270;
       // time flies in from the HUD
       const fly = ease.inOut3(seg(t, 19.95, 20.35));
       const tsz = lerp(64, size, fly);
-      const tx = lerp(W - 96 - 2.16 * 64, xT, fly);
+      const tx = lerp(W - 96 - timeWidth(fmt2(STAGE_MS)) * 64, xT, fly);
       const ty = lerp(150, y, fly);
       digits(fmt2(STAGE_MS), tx, ty, tsz, { weight: 800 });
       // points roll
@@ -3380,7 +4059,13 @@
       const pts = Math.round(STAGE_POINTS * pp);
       ctx.save();
       ctx.globalAlpha *= ease.out3(seg(t, 20.0, 20.12));
-      digits(String(pts).padStart(2, "0"), xP, y, size, { weight: 800 });
+      digits(
+        String(pts).padStart(String(STAGE_POINTS).length, "0"),
+        xP,
+        y,
+        size,
+        { weight: 800 },
+      );
       ctx.restore();
       const lang = opt.lang;
       const labels = [
@@ -3669,7 +4354,7 @@
       const hits = [
         [BEEP, 0.45, 20],
         [RESUME, 0.3, 9],
-        [21.0, 0.3, 7],
+        [21.0 + SHIFT, 0.3, 7],
         [0.08, 0.2, 5],
         [0.58, 0.2, 5],
         [1.08, 0.2, 5],
@@ -3693,7 +4378,7 @@
         [BEEP, 0.16, "255,255,255", 1],
         [BEEP + 0.03, 0.6, "236,34,66", 0.35],
         [RESUME, 0.12, "255,255,255", 0.3],
-        [21.0, 0.18, "255,255,255", 0.14],
+        [21.0 + SHIFT, 0.18, "255,255,255", 0.14],
         [FREEZE, 0.25, "255,255,255", 0.35],
       ];
       for (const [at, dur, rgb, a] of flashes) {
@@ -3743,10 +4428,10 @@
       sceneSights(t);
       sceneTargets(t);
       sceneStage(t);
-      sceneHitFactor(t);
-      sceneClear(t);
+      sceneHitFactor(t - SHIFT);
+      sceneClear(t - SHIFT);
       if (t >= 12.75 && t <= 13.25) blinds(t, 12.75, 13.15);
-      sceneEnd(t);
+      sceneEnd(t - SHIFT);
       ctx.restore();
       timerHud(t);
       if (opt.captions) caption(t);
@@ -3974,6 +4659,14 @@
       hitFactor: HIT_FACTOR,
       rounds: SHOTS.length,
       magazine: MAG,
+      maxPoints: MAX_POINTS,
+      reload: EVENTS.reload[0],
+    },
+    MARKS: {
+      resume: RESUME,
+      stageEnd: STAGE_END,
+      shift: SHIFT,
+      ramps: RAMPS.map(([a, b, rate]) => [vt(a), vt(b), rate]),
     },
     create,
   };

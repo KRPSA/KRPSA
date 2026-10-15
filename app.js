@@ -135,9 +135,9 @@ Object.assign(english, {
   photoTreatment: "Displayed with responsive cropping and tonal adjustments.",
 });
 Object.assign(english, {
-  reelLabel: "IPSC IN MOTION — Practical shooting in 28 seconds",
+  reelLabel: "IPSC IN MOTION — Practical shooting in 37 seconds",
   reelSkip: "Show photos →",
-  reelReplay: "Watch it in 28 seconds ▶",
+  reelReplay: "Watch it in 37 seconds ▶",
 });
 Object.assign(english, {
   navAnnouncements: "Notices",

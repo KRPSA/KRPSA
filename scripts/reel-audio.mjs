@@ -9,7 +9,7 @@ import vm from 'node:vm';
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const sandbox = { window: {} };
 vm.runInNewContext(await readFile(new URL('reel.js', `file://${ROOT}`), 'utf8'), sandbox);
-const { CUES, DURATION } = sandbox.window.KRPSAReel;
+const { CUES, DURATION, MARKS } = sandbox.window.KRPSAReel;
 
 const SR = 48000;
 const N = Math.ceil((DURATION + 0.5) * SR);
@@ -290,10 +290,15 @@ const G = [55, 59, 62];
 voice.pad(0, AM, 6.0, 0.8, 700);
 voice.pad(6.0, AM, 2.0, 1, 1400);
 [[8, AM], [10, F], [12, C], [14, G]].forEach(([t, n]) => voice.pad(t, n, 2.0, 0.9, 600));
-voice.pad(16, AM, 4.0, 1, 1500);
-voice.pad(20, F, 1.25, 1, 1300);
-voice.pad(21.25, G, 1.25, 1, 1300);
-voice.pad(22.5, AM, 2.0, 0.7, 800);
+// The stage: its length comes from the shot list, and everything after it is
+// moved by MARKS.shift so it stays on the beat grid.
+const S = MARKS.shift;
+const STAGE_OUT = 19.75 + S;
+const rateAt = (t) => (MARKS.ramps.find(([a, b]) => t >= a && t < b) ?? [0, 0, 1])[2];
+[[16, AM, 4], [20, F, 2], [22, C, 2], [24, G, 2], [26, AM, STAGE_OUT - 26]].forEach(([t, n, d]) => voice.pad(t, n, d, 1, 1500));
+voice.pad(20 + S, F, 1.25, 1, 1300);
+voice.pad(21.25 + S, G, 1.25, 1, 1300);
+voice.pad(22.5 + S, AM, 2.0, 0.7, 800);
 
 for (let t = 2; t < 4; t += BEAT) voice.kick(t, 0.45);
 for (let t = 2; t < 5.75; t += BEAT / 2) voice.bass(t, 33, BEAT / 2, 0.7, 260 + (t - 2) * 120);
@@ -301,17 +306,28 @@ for (let t = 2; t < 5.75; t += BEAT / 4) voice.hat(t, (t * 4) % 2 < 1 ? 0.6 : 0.
 voice.kick(6.5, 0.9);
 for (let t = 8; t < 16; t += 1) voice.kick(t, 0.55);
 for (let t = 8; t < 16; t += 2) voice.bass(t, t < 10 ? 33 : t < 12 ? 29 : t < 14 ? 31 : 31, 1.8, 0.5, 300);
-for (let t = 16; t < 19.75; t += BEAT) {
+// Stage drums follow the speed ramps: half time in slow motion, sixteenth
+// hats while fast-forwarding.
+for (let t = 16; t < STAGE_OUT; t += BEAT) {
+  const rate = rateAt(t);
+  const beat = Math.round((t - 16) / BEAT);
+  if (rate < 1) {
+    if (beat % 2 === 0) voice.kick(t, 0.75);
+    if (beat % 4 === 2) voice.clap(t, 0.6);
+    voice.bass(t, 33, BEAT, 0.6, 500);
+    continue;
+  }
   voice.kick(t, 0.85);
   voice.hat(t + BEAT / 2, 0.8);
-  if (Math.round((t - 16) / BEAT) % 2 === 1) voice.clap(t, 0.8);
+  if (beat % 2 === 1) voice.clap(t, 0.8);
+  if (rate > 1) [0.25, 0.75].forEach((d) => voice.hat(t + BEAT * d, 0.45));
+  for (const d of [0, BEAT / 2]) voice.bass(t + d, beat % 8 < 4 ? 33 : 29, BEAT / 2, 0.85, rate > 1 ? 1800 : 1200);
 }
-for (let t = 16; t < 19.75; t += BEAT / 2) voice.bass(t, 33, BEAT / 2, 0.85, 1200);
-for (let t = 20; t < 22.5; t += BEAT) {
+for (let t = 20 + S; t < 22.5 + S; t += BEAT) {
   voice.kick(t, 0.7);
   voice.hat(t + BEAT / 2, 0.6);
 }
-for (let t = 20; t < 22.5; t += BEAT / 2) voice.bass(t, t < 21.25 ? 29 : 31, BEAT / 2, 0.7, 900);
+for (let t = 20 + S; t < 22.5 + S; t += BEAT / 2) voice.bass(t, t < 21.25 + S ? 29 : 31, BEAT / 2, 0.7, 900);
 
 // ------------------------------------------------------------------ cues
 for (const cue of CUES) {

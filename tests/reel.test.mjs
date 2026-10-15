@@ -16,7 +16,13 @@ test('the stage run follows IPSC Production scoring and the shot timer', () => {
   assert.equal(reel.STAGE.hitFactor, reel.STAGE.points / reel.STAGE.time);
   // Production: no more than 15 rounds in the magazine at the start signal.
   assert.equal(reel.STAGE.magazine, 15);
-  assert.ok(reel.SHOTS.length <= reel.STAGE.magazine);
+  // One reload: no more than a magazine's worth of shots on either side of it.
+  const beforeReload = reel.SHOTS.filter((shot) => shot.st <= reel.STAGE.reload).length;
+  assert.ok(beforeReload <= reel.STAGE.magazine);
+  assert.ok(reel.SHOTS.length - beforeReload <= reel.STAGE.magazine);
+  // IPSC long courses: at most 32 rounds.
+  assert.ok(reel.SHOTS.length <= 32);
+  assert.ok(reel.STAGE.points <= reel.STAGE.maxPoints);
   reel.SHOTS.forEach((shot, i) => {
     assert.ok(i === 0 || shot.ms > reel.SHOTS[i - 1].ms, 'shots are in time order');
     assert.ok(shot.t > 0 && shot.t < reel.DURATION, 'shots happen on screen');
