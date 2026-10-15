@@ -2964,29 +2964,39 @@
     // spins; integrated from the first hit with a fixed step for determinism.
     const STAR = { hub: 1.62, r: 0.56, plate: 0.1 };
     const starHits = SHOTS.filter((s) => s.target === "STAR");
-    function starState(st) {
+    // The hub angle is integrated once at a fixed step (1/240 s) from the first
+    // hit to past the end of the stage, then looked up per frame.
+    const STAR_DT = 1 / 240;
+    const starTable = (() => {
+      const phis = [0];
       const gone = new Set();
       let phi = 0;
       let w = 0;
-      const dt = 1 / 240;
-      let tt = starHits[0].st;
-      if (st > tt) {
-        for (; tt < st; tt += dt) {
-          starHits.forEach((h) => tt >= h.st + 0.02 && gone.add(h.hit));
-          let torque = 0;
-          let n = 0;
-          for (let k = 0; k < 5; k++) {
-            if (gone.has(k)) continue;
-            torque -= Math.cos(phi + Math.PI / 2 + (k * 2 * Math.PI) / 5);
-            n++;
-          }
-          const alpha = (9.81 / STAR.r) * (torque / (n + 0.8)) - 0.9 * w;
-          w += alpha * dt;
-          phi += w * dt;
+      const t0 = starHits[0].st;
+      for (let k = 0; t0 + k * STAR_DT < STAGE_MS / 1000 + 2; k++) {
+        const tt = t0 + k * STAR_DT;
+        starHits.forEach((h) => tt >= h.st + 0.02 && gone.add(h.hit));
+        let torque = 0;
+        let n = 0;
+        for (let p = 0; p < 5; p++) {
+          if (gone.has(p)) continue;
+          torque -= Math.cos(phi + Math.PI / 2 + (p * 2 * Math.PI) / 5);
+          n++;
         }
+        const alpha = (9.81 / STAR.r) * (torque / (n + 0.8)) - 0.9 * w;
+        w += alpha * STAR_DT;
+        phi += w * STAR_DT;
+        phis.push(phi);
       }
-      starHits.forEach((h) => st >= h.st + 0.02 && gone.add(h.hit));
-      return { phi, gone };
+      return phis;
+    })();
+    function starState(st) {
+      const gone = new Set(
+        starHits.filter((h) => st >= h.st + 0.02).map((h) => h.hit),
+      );
+      const x = clamp((st - starHits[0].st) / STAR_DT, 0, starTable.length - 1);
+      const k = Math.min(Math.floor(x), starTable.length - 2);
+      return { phi: lerp(starTable[k], starTable[k + 1], x - k), gone };
     }
     function starPlate(state, k) {
       const tg = TARGETS.STAR;
