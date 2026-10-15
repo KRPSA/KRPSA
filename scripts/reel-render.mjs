@@ -4,6 +4,10 @@
 //                                 [--fps 60] [--blur 4] [--credit]
 //   node scripts/reel-render.mjs --stills 0.5,6.1,9.5 --dir stills/
 //
+// Stops before rendering if Inter or Noto Sans KR fail to load, rather than
+// quietly setting the reel in system fallback fonts; pass --allow-fallback-fonts
+// to render anyway.
+//
 // Requires Playwright (`npm i --no-save playwright`, or a global install) and ffmpeg.
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -28,6 +32,7 @@ const { values: args } = parseArgs({
     dir: { type: 'string', default: '.' },
     from: { type: 'string', default: '0' },
     to: { type: 'string' },
+    'allow-fallback-fonts': { type: 'boolean', default: false },
   },
 });
 
@@ -87,21 +92,57 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 // Fetch web fonts with curl so they follow the system's proxy and CA settings.
 const userAgent = await page.evaluate(() => navigator.userAgent);
+const failedFonts = [];
 await page.route(/fonts\.(googleapis|gstatic)\.com/, async (route) => {
   const url = route.request().url();
+  let lastError;
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
-      const { stdout } = await run('curl', ['-sSLf', '-A', userAgent, url], { encoding: 'buffer', maxBuffer: 1 << 26 });
+      const { stdout } = await run('curl', ['-sSLf', '--max-time', '60', '-A', userAgent, url], { encoding: 'buffer', maxBuffer: 1 << 26 });
       return route.fulfill({ status: 200, body: stdout, contentType: url.includes('googleapis') ? 'text/css' : 'font/woff2', headers: { 'access-control-allow-origin': '*' } });
-    } catch {
+    } catch (error) {
+      lastError = error;
       await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
     }
   }
+  failedFonts.push(url);
+  console.error(`Font fetch failed after 4 attempts: ${url}\n  ${String(lastError?.stderr || lastError?.message || lastError).trim()}`);
   return route.abort();
 });
 page.on('pageerror', (error) => console.error(error));
 await page.goto(base);
 await page.evaluate(() => window.reelReady);
+
+// reel.js swallows font errors so the site never stalls on them, which here
+// would mean frames quietly set in system fallback fonts. Every weight the reel
+// preloads must have a loaded face, and no face may have failed (a failed
+// stylesheet leaves no faces at all; a failed woff2 subset leaves one in
+// 'error'). document.fonts.check() cannot tell: Chromium answers true for a
+// family it has no faces for.
+async function fontProblems() {
+  const { missing, errored } = await page.evaluate(() => {
+    const faces = [...document.fonts];
+    const name = (face) => face.family.replace(/["']/g, '');
+    const wanted = [...['400', '500', '600', '700', '800'].map((w) => ['Inter', w]), ['Noto Sans KR', '500'], ['Noto Sans KR', '700']];
+    return {
+      missing: wanted
+        .filter(([family, weight]) => !faces.some((f) => name(f) === family && String(f.weight) === weight && f.status === 'loaded'))
+        .map(([family, weight]) => `${family} ${weight}`),
+      errored: faces.filter((f) => f.status === 'error').map((f) => `${name(f)} ${f.weight} (${f.unicodeRange})`),
+    };
+  });
+  return [...new Set([...failedFonts.map((url) => `fetch failed: ${url}`), ...missing.map((face) => `not loaded: ${face}`), ...errored.map((face) => `failed to load: ${face}`)])];
+}
+const allowFallback = args['allow-fallback-fonts'];
+const listProblems = (problems) => problems.map((line) => `  ${line}`).join('\n');
+const fontsBefore = await fontProblems();
+if (fontsBefore.length && !allowFallback) {
+  console.error(`Error: web fonts did not load, so the reel would be set in fallback fonts:\n${listProblems(fontsBefore)}\nCheck the network or proxy and retry, or pass --allow-fallback-fonts to render anyway.`);
+  await browser.close();
+  server.close();
+  process.exit(1);
+}
+if (fontsBefore.length) console.warn(`Warning: rendering with fallback fonts (--allow-fallback-fonts):\n${listProblems(fontsBefore)}`);
 const duration = await page.evaluate(() => KRPSAReel.DURATION);
 const fps = Number(args.fps);
 const blur = Number(args.blur);
@@ -134,6 +175,12 @@ if (args.stills) {
   ffmpeg.stdin.end();
   await new Promise((resolve, reject) => ffmpeg.on('close', (code) => (code ? reject(new Error(`ffmpeg exited ${code}`)) : resolve())));
   console.log(`Wrote ${args.out}`);
+}
+// A face first used mid-render loads lazily; report one that failed after the check.
+const fontsAfter = (await fontProblems()).filter((problem) => !fontsBefore.includes(problem));
+if (fontsAfter.length) {
+  console.error(`${allowFallback ? 'Warning' : 'Error'}: web fonts failed during rendering, so some frames use fallback fonts:\n${listProblems(fontsAfter)}`);
+  if (!allowFallback) process.exitCode = 1;
 }
 await browser.close();
 server.close();
