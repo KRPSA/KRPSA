@@ -1372,7 +1372,7 @@
 
     // The shot timer, as it sits in the top-right corner after the beep.
     function timerHud(t) {
-      if (t < 6.75 || t > 20.4) return;
+      if (t < 6.52 || t > 20.4) return;
       const ms = stageMs(t);
       const a = (t < 6.8 ? 1 : 1) * (1 - seg(t, 19.95, 20.0));
       if (a <= 0) return;
@@ -1787,7 +1787,7 @@
         });
       }
       // big timer that flies to the HUD
-      const fly = ease.inOut3(seg(t, 6.42, 6.75));
+      const fly = ease.inOut3(seg(t, 6.26, 6.52));
       if (fly < 1) {
         const size = lerp(300, 64, fly);
         const x = lerp(W / 2, W - 96, fly);
@@ -2141,10 +2141,10 @@
       if (kind === "iron") {
         // front post: equal height, equal light in the rear notch
         const align = settle;
-        const px = lerp(26, 0, align);
+        const px = lerp(48, 0, align);
         // under recoil the post climbs out of the notch, then settles back
         const postLift = (dt) => kick(dt).lift * 1.15;
-        const py = lerp(30, 0, align) - postLift(t - SIGHT.recoil);
+        const py = lerp(-52, 0, align) - postLift(t - SIGHT.recoil);
         const post = (y, a) => {
           ctx.fillStyle = `rgba(27,29,33,${a})`;
           ctx.fillRect(px - 22, y, 44, 150);
@@ -2156,7 +2156,7 @@
         [3, 2, 1].forEach((k) => {
           const d = t - SIGHT.recoil - k * 0.03;
           if (d > 0 && d < 0.5)
-            post(lerp(30, 0, align) - postLift(d), 0.1 * (4 - k));
+            post(lerp(-52, 0, align) - postLift(d), 0.1 * (4 - k));
         });
         post(py, 1);
         slide();
@@ -3240,50 +3240,124 @@
       const r = cross(UP, face);
       const at = (h, side, fwd = 0) =>
         add(add(add(sp, [0, h, 0]), mul(r, side)), mul(face, fwd));
+      const P = (pt) => project(cam, pt);
+      const body = "#232830";
+      const rim = "rgba(244,245,247,0.85)";
+      // ground ring
       const ring = [];
       for (let k = 0; k < 24; k++) {
         const a = (k / 24) * Math.PI * 2;
         ring.push([sp[0] + Math.cos(a) * 0.4, 0.01, sp[2] + Math.sin(a) * 0.4]);
       }
-      poly3(cam, ring, rgba(C.white, 0.06), "rgba(255,255,255,0.5)", 1.5);
+      poly3(cam, ring, rgba(C.white, 0.05), "rgba(255,255,255,0.35)", 1.5);
       const step =
         Math.sin(seg(t, MOVE[0], MOVE[1]) * Math.PI * 6) *
         0.18 *
         env(t, MOVE[0], MOVE[1], 0.1, 0.1);
-      const ink = "rgba(244,245,247,0.85)";
-      seg3(cam, at(0.95, -0.12), at(0, -0.16, step), ink, 2.5);
-      seg3(cam, at(0.95, 0.12), at(0, 0.16, -step), ink, 2.5);
-      poly3(
+      const fill = (pts, smooth = false) => {
+        const q = pts.map(P);
+        ctx.beginPath();
+        ctx.moveTo(q[0][0], q[0][1]);
+        if (smooth) {
+          for (let k = 1; k < q.length; k++) {
+            const n = q[(k + 1) % q.length];
+            ctx.quadraticCurveTo(
+              q[k][0],
+              q[k][1],
+              (q[k][0] + n[0]) / 2,
+              (q[k][1] + n[1]) / 2,
+            );
+          }
+        } else q.slice(1).forEach(([x, y]) => ctx.lineTo(x, y));
+        ctx.closePath();
+        ctx.fillStyle = body;
+        ctx.fill();
+        ctx.strokeStyle = rim;
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+      };
+      // legs
+      [-1, 1].forEach((side) => {
+        const st = side * step;
+        fill([
+          at(0.98, side * 0.03),
+          at(0.98, side * 0.19),
+          at(0.05, side * 0.2, st),
+          at(0.05, side * 0.08, st),
+        ]);
+      });
+      // torso with rounded shoulders, leaning slightly into the gun
+      fill(
+        [
+          at(1.0, -0.17),
+          at(1.32, -0.21, 0.04),
+          at(1.5, -0.23, 0.06),
+          at(1.55, -0.12, 0.07),
+          at(1.57, 0, 0.07),
+          at(1.55, 0.12, 0.07),
+          at(1.5, 0.23, 0.06),
+          at(1.32, 0.21, 0.04),
+          at(1.0, 0.17),
+          at(0.97, 0),
+        ],
+        true,
+      );
+      // arms out to a two-handed grip
+      const hands = add([sp[0], 1.4, sp[2]], mul(dir, 0.62));
+      const H2 = P(hands);
+      const armW = Math.max(3, (0.085 * cam.focal) / H2[2]);
+      [-1, 1].forEach((side) => {
+        const S = P(at(1.47, side * 0.2, 0.06));
+        ctx.lineCap = "round";
+        ctx.strokeStyle = rim;
+        ctx.lineWidth = armW + 3;
+        ctx.beginPath();
+        ctx.moveTo(S[0], S[1]);
+        ctx.lineTo(H2[0], H2[1]);
+        ctx.stroke();
+        ctx.strokeStyle = body;
+        ctx.lineWidth = armW;
+        ctx.stroke();
+        ctx.lineCap = "butt";
+      });
+      seg3(
         cam,
-        [at(1.47, -0.23), at(1.47, 0.23), at(0.95, 0.16), at(0.95, -0.16)],
-        "rgba(244,245,247,0.1)",
-        ink,
-        2,
+        hands,
+        add(hands, mul(dir, 0.17)),
+        C.red,
+        Math.max(3, armW * 0.8),
       );
-      const hands = add([sp[0], 1.4, sp[2]], mul(dir, 0.6));
-      seg3(cam, at(1.45, -0.21), hands, ink, 2);
-      seg3(cam, at(1.45, 0.21), hands, ink, 2);
-      seg3(cam, hands, add(hands, mul(dir, 0.16)), C.red, 5);
-      const head = project(cam, at(1.7, 0));
-      ctx.fillStyle = "rgba(244,245,247,0.14)";
-      ctx.strokeStyle = ink;
-      ctx.lineWidth = 2;
+      // head with ear protection
+      const head = P(at(1.72, 0, 0.08));
+      const hr = Math.max(4, (0.105 * cam.focal) / head[2]);
+      ctx.fillStyle = body;
+      ctx.strokeStyle = rim;
+      ctx.lineWidth = 1.6;
       ctx.beginPath();
-      ctx.arc(
-        head[0],
-        head[1],
-        Math.max(4, (0.11 * cam.focal) / head[2]),
-        0,
-        Math.PI * 2,
-      );
+      ctx.arc(head[0], head[1], hr, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+      const er = P(at(1.71, 0.1, 0.08));
+      const el = P(at(1.71, -0.1, 0.08));
+      ctx.strokeStyle = rim;
+      ctx.lineWidth = Math.max(1.5, hr * 0.18);
+      ctx.beginPath();
+      ctx.moveTo(el[0], el[1]);
+      ctx.quadraticCurveTo(head[0], head[1] - hr * 1.5, er[0], er[1]);
+      ctx.stroke();
+      [el, er].forEach(([x, y]) => {
+        ctx.fillStyle = "#2a2e35";
+        ctx.beginPath();
+        ctx.ellipse(x, y, hr * 0.24, hr * 0.36, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
     }
 
     // S6 — hit factor.
     function sceneHitFactor(t) {
       if (t < 19.9 || t > 22.8) return;
-      const out = ease.in3(seg(t, 22.35, 22.65));
+      const out = ease.in3(seg(t, 22.28, 22.52));
       ctx.save();
       ctx.translate(0, -out * 140);
       ctx.globalAlpha = 1 - out;
@@ -3455,9 +3529,9 @@
           ease.out3(seg(t, 22.55, 22.65)) * (1 - ease.in3(seg(t, 23.3, 23.34)));
         const drop = seg(t, 22.7, 23.3);
         const holster = ease.in3(seg(t, 23.6, 23.95));
-        const enter = ease.out3(seg(t, 22.4, 22.7));
+        const enter = ease.out3(seg(t, 22.52, 22.82));
         const go = {
-          x: lerp(1960, 1500, enter),
+          x: lerp(2280, 1500, enter),
           y: 790 + holster * 520,
           s: 2.5,
           rot: holster * 0.9,
@@ -3502,6 +3576,11 @@
       ctx.clip();
       background(t);
       blueprintGrid(0.5);
+      // a slow push-in so the hold keeps breathing
+      const push = lerp(1, 1.04, ease.inOut3(seg(t, 24.5, 28)));
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(push, push);
+      ctx.translate(-W / 2, -H / 2);
       const lt = t - 24.5;
       const img = images["krpsa-logo.png"];
       const fade = 1 - seg(t, 27.2, 28);
@@ -3613,8 +3692,8 @@
       const flashes = [
         [BEEP, 0.16, "255,255,255", 1],
         [BEEP + 0.03, 0.6, "236,34,66", 0.35],
-        [RESUME, 0.18, "255,255,255", 0.6],
-        [21.0, 0.25, "255,255,255", 0.25],
+        [RESUME, 0.12, "255,255,255", 0.3],
+        [21.0, 0.18, "255,255,255", 0.14],
         [FREEZE, 0.25, "255,255,255", 0.35],
       ];
       for (const [at, dur, rgb, a] of flashes) {
