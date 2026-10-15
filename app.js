@@ -539,12 +539,15 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
   const reelButton = controls.querySelector('[data-slide="reel"]');
   const soundButton = controls.querySelector(".slideshow-sound");
   let reel = null;
-  // The reel needs a reasonably current canvas; older browsers keep the photos.
+  // The reel needs a reasonably current canvas and container-query units for
+  // its stage (Chromium 105+); older browsers keep the photos.
   const capable =
     "fonts" in document &&
     typeof CanvasRenderingContext2D !== "undefined" &&
     "roundRect" in CanvasRenderingContext2D.prototype &&
-    "findLastIndex" in Array.prototype;
+    "findLastIndex" in Array.prototype &&
+    typeof CSS !== "undefined" &&
+    CSS.supports("width", "1cqw");
   if (figure && window.KRPSAReel && capable) {
     try {
       reel = window.KRPSAReel.player(figure);
@@ -566,6 +569,9 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
   // With reduced motion, start on the first photograph and do not autoplay.
   let index = reel && !reduced.matches ? 0 : slides.indexOf(photos[0]);
   let paused = reduced.matches;
+  // With reduced motion, choosing the reel plays it once and then returns to
+  // the still photographs; it never turns into slideshow autoplay.
+  let reelOnce = false;
   let inView = true;
   let timer;
   const isReel = (i) => slides[i] === "reel";
@@ -610,17 +616,9 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
     );
     if (reel) {
       soundButton.hidden = !isReel(index);
+      // A toggle keeps one name; aria-pressed carries whether sound is on.
       soundButton.setAttribute("aria-pressed", String(reel.sound));
-      soundButton.setAttribute(
-        "aria-label",
-        en
-          ? reel.sound
-            ? "Mute the reel"
-            : "Play the reel with sound"
-          : reel.sound
-            ? "사운드 끄기"
-            : "사운드 켜고 보기",
-      );
+      soundButton.setAttribute("aria-label", en ? "Reel sound" : "영상 사운드");
       figure
         .querySelector("[data-reel-chapters]")
         ?.setAttribute("aria-label", en ? "Reel chapters" : "영상 챕터");
@@ -630,6 +628,8 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
   function advance() {
     for (let step = 1; step < slides.length; step++) {
       const next = (index + step) % slides.length;
+      // With reduced motion the slideshow cycles the photographs only.
+      if (reduced.matches && isReel(next)) continue;
       if (ready(next)) {
         go(next);
         return;
@@ -638,11 +638,21 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
   }
 
   function go(next, { restart = true } = {}) {
-    const wasReel = isReel(index);
+    // Switching between the reel and the photographs hides one set of
+    // controls. If keyboard focus is in it, hand focus to the new slide's
+    // selector rather than letting it fall back to <body>.
+    const focused = document.activeElement;
+    const hiding = isReel(index)
+      ? [figure, soundButton]
+      : [hero.querySelector(".hero-copy"), hero.querySelector(".hero-bottom")];
+    const stranded =
+      isReel(index) !== isReel(next) &&
+      hiding.some((element) => element?.contains(focused));
     index = next;
-    if (reel && isReel(index) && (!wasReel || restart)) reel.seek(0);
+    if (reel && isReel(index) && restart) reel.seek(0);
     render();
     schedule();
+    if (stranded) buttons[index]?.focus({ preventScroll: true });
   }
 
   function schedule() {
@@ -661,11 +671,13 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
       if (!ready(i)) return;
       // Choosing the reel plays it; choosing a photograph holds it.
       paused = !isReel(i);
+      reelOnce = isReel(i) && reduced.matches;
       go(i);
     }),
   );
   toggle.addEventListener("click", () => {
     paused = !paused;
+    reelOnce = false;
     render();
     schedule();
   });
@@ -680,10 +692,15 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
   });
   if (reel) {
     reel.on("ended", () => {
-      if (!paused) advance();
+      if (reelOnce) {
+        reelOnce = false;
+        paused = true;
+        go(slides.indexOf(photos[0]));
+      } else if (!paused) advance();
     });
     reel.on("select", () => {
       paused = false;
+      reelOnce = reduced.matches;
       if (!isReel(index)) go(slides.indexOf("reel"), { restart: false });
       else {
         render();
@@ -695,12 +712,14 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
       reel.setSound(!reel.sound);
       if (reel.sound && paused) {
         paused = false;
+        reelOnce = reduced.matches;
         schedule();
       }
       render();
     });
     figure.querySelector(".hero-reel-skip")?.addEventListener("click", () => {
       paused = true;
+      reelOnce = false;
       reel.setSound(false);
       go(slides.indexOf(photos[0]));
     });
@@ -711,7 +730,11 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
           behavior: reduced.matches ? "auto" : "smooth",
         });
         paused = false;
+        reelOnce = reduced.matches;
         go(slides.indexOf("reel"));
+        // Bring keyboard focus along, so the next Tab reaches the chapters
+        // instead of scrolling back to this link and pausing the reel.
+        figure.focus({ preventScroll: true });
       }),
     );
   }
@@ -720,6 +743,7 @@ document.getElementById("copy-kakao")?.addEventListener("click", async () => {
   reduced.addEventListener("change", () => {
     if (reduced.matches) {
       paused = true;
+      reelOnce = false;
       render();
       schedule();
     }

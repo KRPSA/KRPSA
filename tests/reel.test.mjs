@@ -52,7 +52,10 @@ test('chapters, captions and sound cues stay inside the reel', () => {
 
 test('the homepage plays the reel as the first hero slide', async () => {
   const html = await readFile(new URL('index.html', ROOT), 'utf8');
-  assert.ok(html.indexOf('src="reel.js"') < html.indexOf('src="app.js"'), 'reel.js loads before app.js');
+  const reelScript = html.indexOf('<script src="reel.js"');
+  const appScript = html.indexOf('<script src="app.js"');
+  assert.ok(reelScript >= 0, 'index.html loads reel.js');
+  assert.ok(appScript > reelScript, 'reel.js loads before app.js');
   assert.match(html, /class="hero-reel"[\s\S]*<canvas/);
   assert.match(html, /data-slide="reel"/);
   const audio = html.match(/<audio[^>]*src="([^"]+)"/)[1];
