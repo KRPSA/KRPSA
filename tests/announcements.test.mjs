@@ -125,7 +125,7 @@ async function fixture(t, { empty = false } = {}) {
   await mkdir(path.join(root, 'announcements'));
   const homepage = `<!doctype html><html><head></head><body><header class="header"><a class="brand" href="#"><svg><image href="assets/logo.png"></image></svg></a><nav><a href="#training">Training</a><a href="announcements/">News</a></nav><a href="https://example.com/">External</a></header><main>${LATEST_START}${LATEST_END}</main><footer><a class="brand" href="#">Home</a><a class="back-top" href="#">Top</a></footer></body></html>`;
   await writeFile(path.join(root, 'index.html'), homepage);
-  await Promise.all(['style.css', 'announcements.css', 'app.js', 'assets/logo.png', 'assets/kr.svg'].map((name) => writeFile(path.join(root, name), 'fixture')));
+  await Promise.all(['style.css', 'announcements.css', 'app.js', 'reel.js', 'assets/logo.png', 'assets/kr.svg'].map((name) => writeFile(path.join(root, name), 'fixture')));
   await writeFile(path.join(root, 'CNAME'), 'ipsckorea.co.kr\n');
   await writeFile(path.join(root, 'private.txt'), 'must not be deployed');
   if (!empty) {
@@ -161,6 +161,7 @@ test('full build creates latest three, complete archive, detail pages and correc
   const deployedFiles = await readdir(result.dist);
   assert.ok(!deployedFiles.includes('private.txt'));
   assert.ok(deployedFiles.includes('.nojekyll'));
+  assert.ok(deployedFiles.includes('reel.js'));
 });
 
 test('rebuild removes deleted or unpublished pages without leaving stale announcements', async (t) => {

@@ -63,17 +63,35 @@ draft: false
 
 - `index.html`: 홈페이지와 모든 페이지가 공유하는 헤더·푸터
 - `style.css`: 홈페이지와 공통 반응형 스타일
-- `app.js`: 한·영 전환, 사진 슬라이드, 카카오톡 ID 복사
+- `app.js`: 한·영 전환, 대문 슬라이드(영상 + 사진), 카카오톡 ID 복사
+- `reel.js`: 대문 첫 슬라이드의 IPSC 설명 영상(캔버스 렌더러와 재생기)
+- `scripts/reel-render.mjs`, `scripts/reel-audio.mjs`: 영상 MP4 내보내기와 효과음·음악 합성
 - `announcements/*.md`: 공지사항 원문
 - `announcements.css`: 최신 공지·전체 목록·상세 페이지 스타일
 - `scripts/build.mjs`: Markdown 검증, 목록 정렬, 정적 HTML 생성
 - `scripts/serve.mjs`: 빌드 결과 미리보기 서버
 - `tests/`: 빌드·콘텐츠 검증 및 보안 회귀 검사
-- `assets/`: 로고, 태극기 및 협회 사진
+- `assets/`: 로고, 태극기 및 협회 사진, `assets/reel/` 영상 사운드트랙
 - `SOURCES.md`: 출처 및 사진 저작자 안내
 - `dist/`: 생성된 배포 결과. Git에 저장하지 않습니다.
 
 홈페이지의 `<!-- latest-announcements:start -->`와 `<!-- latest-announcements:end -->` 사이에는 빌드할 때 최신 글 목록이 삽입됩니다. 헤더·푸터 변경은 전체 공지와 상세 페이지에 함께 반영되고, 상대 링크를 다시 계산하므로 프로젝트 경로를 사용하는 GitHub Pages에서도 동작합니다. 본문과 목록은 JavaScript 없이도 읽을 수 있습니다.
+
+## IPSC in Motion 영상
+
+대문 슬라이드의 첫 장면은 `reel.js`가 그리는 28초 분량의 IPSC 설명 영상입니다. 영상 파일이 아니라 코드로 매 프레임을 그리므로 한·영 전환에 맞춰 자막이 바뀌고, 챕터를 눌러 원하는 장면으로 이동할 수 있습니다. 영상이 끝나면 사진 슬라이드와 대문 문구로 넘어갑니다. 움직임 줄이기를 설정한 방문자에게는 사진이 먼저 표시되고 자동 재생하지 않습니다. 사운드 버튼을 누르면 `assets/reel/ipsc-in-motion.mp3`가 영상과 같은 시간축으로 재생됩니다.
+
+화면의 규정·장비 수치와 출처는 `SOURCES.md`에 정리되어 있습니다. 장면 시간, 사격 기록, 자막과 효과음 큐는 모두 `reel.js` 상단의 상수에서 관리합니다. 수정한 뒤에는 사운드트랙과 MP4를 다시 만듭니다. Playwright와 ffmpeg가 필요합니다.
+
+```sh
+npm i --no-save playwright
+node scripts/reel-audio.mjs reel.wav
+ffmpeg -i reel.wav -c:a libmp3lame -b:a 128k assets/reel/ipsc-in-motion.mp3
+node scripts/reel-render.mjs --out reel.mp4 --audio reel.wav --lang both --blur 4
+node scripts/reel-render.mjs --stills 6.1,9.5,17 --dir stills
+```
+
+`--lang`은 `ko`, `en`, `both`(한국어 자막 + 영어 보조 자막) 중에서 고르며, `--blur`는 프레임당 모션 블러 샘플 수입니다.
 
 ## 배포
 
