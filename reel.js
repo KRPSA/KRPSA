@@ -459,25 +459,64 @@
     { t: RESUME, type: "drop" },
     ...SHOTS.flatMap((s) => [
       { t: s.t, type: "shot", v: 1 },
-      ...(s.zone === "S"
-        ? [
-            { t: s.t + 0.06, type: "steel" },
-            { t: s.t + 0.4, type: "clank", v: 0.45 },
-          ]
-        : []),
       { t: s.t + 0.32 + (s.i % 3) * 0.04, type: "brass", v: 0.25 },
     ]),
     // the moving targets, the reload and the speed ramps
-    { t: vt(EVENTS.swingerRelease * 1000), type: "clank", v: 0.7 },
-    { t: vt(EVENTS.reload[1] * 1000), type: "clank", v: 0.45 },
-    { t: vt(EVENTS.reload[2] * 1000), type: "click", v: 0.9 },
-    { t: vt(EVENTS.reload[3] * 1000), type: "slide", v: 0.8 },
-    { t: vt(EVENTS.turnerRelease * 1000), type: "clank", v: 0.7 },
-    ...RAMPS.map(([ms, , rate]) => ({
-      t: vt(ms),
-      type: "whoosh",
-      v: rate > 1 ? 0.65 : 0.4,
-    })),
+    // Each hit sounds like its kind of target and lands as the target reacts on
+    // screen, in stage time so slow motion stretches it: paper thuds, a popper
+    // rings and falls over (see drawStageTarget), plates ping. `target` and `k`
+    // (which plate) let reel-audio.mjs place it in stereo.
+    ...SHOTS.flatMap((s) => {
+      const at = (ms) => ({ t: vt(s.ms + ms), target: s.target });
+      if (TARGETS[s.target].kind === "popper")
+        return [
+          { ...at(50), type: "popper" },
+          { ...at(450), type: "fall", v: 0.7 },
+        ];
+      if (s.zone === "S") return [{ ...at(45), type: "plates", k: s.hit }];
+      return [{ ...at(40), type: "paper", v: s.zone === "A" ? 0.9 : 0.7 }];
+    }),
+    // The swinger's latch lets go (its swings, and the mover, are sampled in
+    // reel-audio.mjs). The drop turner (see turnerAngle) is released, swings
+    // round to stop facing the shooter, then turns away against its stop.
+    ...Object.keys(TARGETS).flatMap((key) => {
+      const kind = TARGETS[key].kind;
+      if (kind === "swinger")
+        return [
+          { t: vt(EVENTS.swingerRelease * 1000), type: "latch", target: key },
+        ];
+      if (kind !== "turner") return [];
+      return [
+        [0, "latch", 0.8],
+        [0, "turn", 0.8, 300],
+        [220, "clack", 0.9],
+        [850, "turn", 0.6, 550],
+        [1330, "clack", 0.65],
+      ].map(([ms, type, v, dur]) => {
+        const at = EVENTS.turnerRelease * 1000 + ms;
+        const cue = { t: vt(at), type, v, target: key };
+        return dur ? { ...cue, dur: vt(at + dur) - vt(at) } : cue;
+      });
+    }),
+    // Reload on the move: the slide locks back on the last round, the empty
+    // magazine drops and hits the ground, a fresh one seats, the slide slams home.
+    { t: vt(EVENTS.reload[0] * 1000 + 60), type: "lock", v: 0.8 },
+    { t: vt(EVENTS.reload[1] * 1000), type: "magout" },
+    { t: vt(EVENTS.reload[1] * 1000 + 420), type: "magdrop", v: 0.7 },
+    { t: vt(EVENTS.reload[2] * 1000), type: "magin" },
+    { t: vt(EVENTS.reload[3] * 1000), type: "slidefwd" },
+    // Speed ramps: a tape stop into slow motion (deeper the slower it gets), a
+    // riser into fast forward and a tape flutter while it lasts.
+    ...RAMPS.map(([a, b, rate]) =>
+      rate < 1
+        ? { t: vt(a), type: "slowmo", v: 1 - rate }
+        : {
+            t: vt(a),
+            type: "ffwd",
+            v: Math.min(1, 0.4 + (rate - 1) * 0.35),
+            dur: vt(b) - vt(a),
+          },
+    ),
     { t: 19.95 + SHIFT, type: "whoosh", v: 0.8 },
     ...Array.from({ length: 9 }, (_, i) => ({
       t: 20.05 + SHIFT + i * 0.045,
@@ -4709,6 +4748,24 @@
       stageEnd: STAGE_END,
       shift: SHIFT,
       ramps: RAMPS.map(([a, b, rate]) => [vt(a), vt(b), rate]),
+      // For scripts/reel-audio.mjs, which samples the moving targets in stage
+      // time: the stage clock at `resume` (s) and EVENTS (stage s), read as
+      // they are. `swinger` mirrors SWING/swingAngle and `cuts` mirrors CUTS
+      // [video s, blend s, rig] in the S5 scene code in create(): keep them in
+      // step with it.
+      stageStart: FREEZE_MS / 1000,
+      events: EVENTS,
+      swinger: { theta0: 1.15, period: 1.5, damping: 0.18 },
+      cuts: [
+        [vt(2420), 0.5, "swinger"],
+        [vt(3480) - 0.08, 0.32, "high"],
+        [vt(5150), 0.4, "pov"],
+        [vt(7500), 0.35, "high"],
+        [vt(10120), 0.4, "drone"],
+        [vt(11120), 0.42, "mover"],
+        [vt(12100), 0.4, "drone"],
+        [STAGE_END + 0.12, 0.6, "overview"],
+      ],
     },
     create,
   };
