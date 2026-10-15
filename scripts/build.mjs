@@ -34,6 +34,32 @@ function requiredText(data, key, file, maxLength = 300) {
   return data[key].trim();
 }
 
+function renderBodies(body, filename) {
+  const normalized = body.replace(/\r\n?/g, '\n');
+  const lines = normalized.split('\n');
+  const codeLines = new Set();
+  // Markdown's source maps distinguish actual dividers from examples in code.
+  for (const token of markdown.parse(normalized, {})) {
+    if (['fence', 'code_block'].includes(token.type) && token.map) {
+      for (let line = token.map[0]; line < token.map[1]; line++) codeLines.add(line);
+    }
+  }
+  const dividers = [];
+  for (const [line, text] of lines.entries()) {
+    if (codeLines.has(line)) continue;
+    const marker = text.match(/^ {0,3}<!--\s*lang:\s*([^\s>]+)\s*-->[ \t]*$/);
+    if (!marker) continue;
+    if (marker[1] !== 'en') fail(filename, 'unsupported body language marker; use <!-- lang:en -->');
+    dividers.push(line);
+  }
+  if (dividers.length > 1) fail(filename, 'use only one <!-- lang:en --> body divider');
+  if (!dividers.length) return { html: markdown.render(normalized), htmlEn: null };
+  const korean = lines.slice(0, dividers[0]).join('\n');
+  const english = lines.slice(dividers[0] + 1).join('\n');
+  if (!korean.trim() || !english.trim()) fail(filename, 'both Korean and English Markdown bodies must be nonempty when using <!-- lang:en -->');
+  return { html: markdown.render(korean), htmlEn: markdown.render(english) };
+}
+
 export function parseAnnouncement(source, filename) {
   const match = source.replace(/^\uFEFF/, '').match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/);
   if (!match) fail(filename, 'start with YAML front matter between --- lines');
@@ -63,15 +89,15 @@ export function parseAnnouncement(source, filename) {
   if (data.draft !== undefined && typeof data.draft !== 'boolean') fail(filename, 'draft must be true or false');
   const optionalText = (key, fallback) => data[key] === undefined ? fallback : requiredText(data, key, filename);
   const category = optionalText('category', '안내');
-  const body = match[2].trim();
-  if (!body) fail(filename, 'Markdown body must not be empty');
+  const body = match[2];
+  if (!body.trim()) fail(filename, 'Markdown body must not be empty');
   return {
     title, summary, date, slug, category,
     titleEn: optionalText('titleEn', title),
     summaryEn: optionalText('summaryEn', summary),
     categoryEn: optionalText('categoryEn', category === '안내' ? 'Notice' : category),
     draft: data.draft ?? false,
-    html: markdown.render(body),
+    ...renderBodies(body, filename),
   };
 }
 
@@ -123,10 +149,10 @@ function sharedMarkup(homepage, tag, rootPrefix) {
   });
 }
 
-function pageDocument({ homepage, rootPrefix, title, titleEn, description, content }) {
+function pageDocument({ homepage, rootPrefix, title, titleEn, description, descriptionEn = description, content }) {
   return `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><meta name="theme-color" content="#111317"><link rel="icon" href="${rootPrefix}assets/kr.svg"><link rel="stylesheet" href="${rootPrefix}style.css"><link rel="stylesheet" href="${rootPrefix}announcements.css"><script src="${rootPrefix}app.js" defer></script></head>
-<body class="announcement-page" data-title-ko="${escapeHtml(title)}" data-title-en="${escapeHtml(titleEn)}">
+<body class="announcement-page" data-title-ko="${escapeHtml(title)}" data-title-en="${escapeHtml(titleEn)}" data-description-ko="${escapeHtml(description)}" data-description-en="${escapeHtml(descriptionEn)}">
 <a href="#main" class="skip" data-i18n="skip">본문으로 이동</a>
 ${sharedMarkup(homepage, 'header', rootPrefix)}
 <main id="main">${content}</main>
@@ -138,6 +164,7 @@ function listPage(homepage, announcements) {
   return pageDocument({
     homepage, rootPrefix: '../', title: '공지사항 — KRPSA', titleEn: 'Announcements — KRPSA',
     description: 'KRPSA의 교육, 입회 및 협회 소식을 확인하세요.',
+    descriptionEn: 'Explore KRPSA training, membership and association announcements.',
     content: `<section class="announcement-hero"><div class="wrap"><a class="announcement-back" href="../" ${translation('← 홈으로', '← Back to home')}>← 홈으로</a><span class="section-label">KRPSA NEWSROOM</span><h1 ${translation('협회의 소식.\n다음 도전의 시작.', 'Association news.\nYour next chapter.')}>협회의 소식.\n다음 도전의 시작.</h1><p ${translation('교육 안내부터 협회 소식까지, KRPSA의 새로운 이야기를 만나보세요.', 'Training updates and association news, all in one place.')}>교육 안내부터 협회 소식까지, KRPSA의 새로운 이야기를 만나보세요.</p></div></section><section class="announcement-index wrap" aria-labelledby="all-announcements"><div class="announcement-index-heading"><h2 id="all-announcements" ${translation('전체 공지사항', 'All announcements')}>전체 공지사항</h2><span ${translation(`총 ${announcements.length}개`, `${announcements.length} announcement${announcements.length === 1 ? '' : 's'}`)}>총 ${announcements.length}개</span></div>${renderList(announcements)}<div class="announcement-contact"><div><span class="section-label">LET’S CONNECT</span><h2 ${translation('궁금한 점이 있으신가요?', 'Have a question?')}>궁금한 점이 있으신가요?</h2><p ${translation('교육과 입회는 카카오톡 ipsckorea로 문의해 주세요.', 'For training and membership, contact ipsckorea on KakaoTalk.')}>교육과 입회는 카카오톡 ipsckorea로 문의해 주세요.</p></div><a class="inline-link" href="../#contact" ${translation('협회 문의 ↗', 'Contact KRPSA ↗')}>협회 문의 ↗</a></div></section>`,
   });
 }
@@ -147,9 +174,16 @@ function detailPage(homepage, announcement, announcements) {
   const newer = announcements[index - 1];
   const older = announcements[index + 1];
   const adjacent = (item, ko, en) => item ? `<a href="../${item.slug}/"><span ${translation(ko, en)}>${ko}</span><strong ${translation(item.title, item.titleEn)}>${escapeHtml(item.title)}</strong></a>` : '<span aria-hidden="true"></span>';
+  const body = `<div class="announcement-prose" data-announcement-language="ko" lang="ko">${announcement.html}</div>`;
+  const englishBody = announcement.htmlEn
+    ? `<div class="announcement-prose" data-announcement-language="en" lang="en" hidden>${announcement.htmlEn}</div>`
+    : '';
+  const fallback = announcement.htmlEn
+    ? ''
+    : '<p class="announcement-language-note" data-announcement-fallback lang="en" hidden>An English translation is not available for this announcement. The original Korean text is shown below.</p>';
   return pageDocument({
-    homepage, rootPrefix: '../../', title: `${announcement.title} — KRPSA`, titleEn: `${announcement.titleEn} — KRPSA`, description: announcement.summary,
-    content: `<article class="announcement-article wrap"><a class="announcement-back" href="../" ${translation('← 전체 공지사항', '← All announcements')}>← 전체 공지사항</a><header class="announcement-article-header"><div class="announcement-meta"><span class="announcement-category" ${translation(announcement.category, announcement.categoryEn)}>${escapeHtml(announcement.category)}</span><time datetime="${announcement.date}">${announcement.date.replaceAll('-', '.')}</time></div><h1 ${translation(announcement.title, announcement.titleEn)}>${escapeHtml(announcement.title)}</h1><p class="announcement-deck" ${translation(announcement.summary, announcement.summaryEn)}>${escapeHtml(announcement.summary)}</p></header><p class="announcement-language-note" ${translation('본문은 한국어로 제공됩니다.', 'This announcement is available in Korean.')}>본문은 한국어로 제공됩니다.</p><div class="announcement-prose" lang="ko">${announcement.html}</div><nav class="announcement-adjacent" aria-label="공지사항 탐색">${adjacent(newer, '← 이전 글', '← Previous announcement')}${adjacent(older, '다음 글 →', 'Next announcement →')}</nav><a class="button announcement-all-button" href="../" ${translation('전체 공지사항 보기 →', 'View all announcements →')}>전체 공지사항 보기 →</a></article>`,
+    homepage, rootPrefix: '../../', title: `${announcement.title} — KRPSA`, titleEn: `${announcement.titleEn} — KRPSA`, description: announcement.summary, descriptionEn: announcement.summaryEn,
+    content: `<article class="announcement-article wrap"><a class="announcement-back" href="../" ${translation('← 전체 공지사항', '← All announcements')}>← 전체 공지사항</a><header class="announcement-article-header"><div class="announcement-meta"><span class="announcement-category" ${translation(announcement.category, announcement.categoryEn)}>${escapeHtml(announcement.category)}</span><time datetime="${announcement.date}">${announcement.date.replaceAll('-', '.')}</time></div><h1 ${translation(announcement.title, announcement.titleEn)}>${escapeHtml(announcement.title)}</h1><p class="announcement-deck" ${translation(announcement.summary, announcement.summaryEn)}>${escapeHtml(announcement.summary)}</p></header>${fallback}${body}${englishBody}<nav class="announcement-adjacent" aria-label="공지사항 탐색" data-aria-ko="공지사항 탐색" data-aria-en="Announcement navigation">${adjacent(newer, '← 이전 글', '← Previous announcement')}${adjacent(older, '다음 글 →', 'Next announcement →')}</nav><a class="button announcement-all-button" href="../" ${translation('전체 공지사항 보기 →', 'View all announcements →')}>전체 공지사항 보기 →</a></article>`,
   });
 }
 

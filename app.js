@@ -192,6 +192,25 @@ function setLanguage(requestedLanguage) {
     element.textContent =
       language === "en" ? element.dataset.en : element.dataset.ko;
   });
+  document.querySelectorAll("[data-aria-ko][data-aria-en]").forEach((element) => {
+    element.setAttribute(
+      "aria-label",
+      language === "en" ? element.dataset.ariaEn : element.dataset.ariaKo,
+    );
+  });
+  const announcementBodies = [
+    ...document.querySelectorAll("[data-announcement-language]"),
+  ];
+  const translatedBody = announcementBodies.find(
+    (element) => element.dataset.announcementLanguage === language,
+  );
+  const visibleBody = translatedBody || announcementBodies[0];
+  announcementBodies.forEach((element) => {
+    element.hidden = element !== visibleBody;
+  });
+  document.querySelectorAll("[data-announcement-fallback]").forEach((element) => {
+    element.hidden = language !== "en" || Boolean(translatedBody);
+  });
   document.querySelectorAll("[data-alt]").forEach((element) => {
     const alt = (language === "en" ? english : koreanAlts)[element.dataset.alt];
     if (alt !== undefined) element.alt = alt;
@@ -202,11 +221,15 @@ function setLanguage(requestedLanguage) {
       String(element.dataset.lang === language),
     );
   });
-  const titles = document.body.dataset;
+  const pageCopy = document.body.dataset;
   document.title =
     language === "en"
-      ? titles.titleEn || "KRPSA — Korea Practical Shooting Association"
-      : titles.titleKo || "KRPSA — 대한민국 실용사격의 새로운 기준";
+      ? pageCopy.titleEn || "KRPSA — Korea Practical Shooting Association"
+      : pageCopy.titleKo || "KRPSA — 대한민국 실용사격의 새로운 기준";
+  const description = document.querySelector('meta[name="description"]');
+  const descriptionCopy =
+    language === "en" ? pageCopy.descriptionEn : pageCopy.descriptionKo;
+  if (description && descriptionCopy) description.content = descriptionCopy;
   try {
     localStorage.setItem("krpsa-language", language);
   } catch {

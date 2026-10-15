@@ -26,3 +26,23 @@ slug: "training-membership"
 - 협회 입회 절차
 
 국제 교류 및 기타 이메일 문의는 [kor@ipsc.org](mailto:kor@ipsc.org)로 보내 주세요.
+
+<!-- lang:en -->
+
+New to practical shooting? Contact **ipsckorea on KakaoTalk** for help with training applications and KRPSA membership inquiries.
+
+## Contact us on KakaoTalk
+
+1. Open KakaoTalk and select **Add Friends**.
+2. Choose **Add by ID** and search for `ipsckorea`.
+3. Send us your questions about the courses you are interested in or about membership.
+
+You can also find and copy the KakaoTalk ID in the [contact section of our website](../../#contact).
+
+## What you can ask us about
+
+- An introduction to Action Air and the MISIA handgun training courses
+- Course dates, venues, fees and entry requirements
+- The association's membership application process
+
+For international exchange and other email inquiries, contact [kor@ipsc.org](mailto:kor@ipsc.org).

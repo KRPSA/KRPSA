@@ -14,15 +14,18 @@
     <link rel="stylesheet" href="announcements.css" />
     <script src="app.js" defer></script>
   </head>
-  <body>
+  <body
+    data-description-ko="Korea Practical Shooting Association. 대한민국 IPSC 실용사격 협회 소개, 공지사항, MISIA 교육 과정 및 공식 문의."
+    data-description-en="Korea Practical Shooting Association. Discover IPSC practical shooting in Korea, association news, MISIA training courses and official contact information."
+  >
     <a href="#main" class="skip" data-i18n="skip">본문으로 이동</a>
     <header class="header">
-      <a class="brand" href="#" aria-label="KRPSA Home"
+      <a class="brand" href="#" aria-label="KRPSA 홈" data-aria-ko="KRPSA 홈" data-aria-en="KRPSA Home"
         ><span class="crest small"
           ><img src="assets/krpsa-logo.png" alt="KRPSA" /></span
         ><span>KRPSA<small>IPSC KOREA</small></span></a
       >
-      <nav aria-label="Main navigation">
+      <nav aria-label="주 메뉴" data-aria-ko="주 메뉴" data-aria-en="Main navigation">
         <a href="#about" data-i18n="navAbout">협회 소개</a
         ><a href="#ipsc" data-i18n="navSport">실용사격</a
         ><a href="#disciplines" data-i18n="navDisciplines">종목 안내</a
@@ -31,9 +34,9 @@
         ><a href="#contact" data-i18n="navContact">문의</a>
       </nav>
       <div class="header-end">
-        <div class="languages" aria-label="Language">
-          <button data-lang="ko" aria-pressed="true">KO</button><span>/</span
-          ><button data-lang="en" aria-pressed="false">EN</button>
+        <div class="languages" aria-label="언어 선택" data-aria-ko="언어 선택" data-aria-en="Language">
+          <button data-lang="ko" aria-pressed="true" aria-label="한국어" data-aria-ko="한국어" data-aria-en="Korean">KO</button><span>/</span
+          ><button data-lang="en" aria-pressed="false" aria-label="영어" data-aria-ko="영어" data-aria-en="English">EN</button>
         </div>
         <a href="#contact" class="contact-pill" data-i18n="contactCta"
           >협회 문의 ↗</a
