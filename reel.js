@@ -211,8 +211,8 @@
     [
       8.1,
       10.95,
-      "CZ Shadow 2 — 프로덕션 디비전에서 널리 쓰이는 스틸 프레임 9mm.",
-      "CZ Shadow 2 — a steel-frame 9 mm widely used in Production.",
+      "장비는 디비전 규정을 따릅니다 — 이번 스테이지는 프로덕션.",
+      "Every gun follows its division's rules — this stage: Production.",
     ],
     [
       11.1,
@@ -420,57 +420,86 @@
     if (s.closed && p >= 1) ctx.closePath();
   }
 
-  // CZ Shadow 2, right side, muzzle to the right. Millimetres: about 217 mm long,
-  // barrel ≈124 mm, the slide riding inside the frame rails as on every CZ 75.
+  // CZ Shadow 2, right side, muzzle to the right, in millimetres. Outline,
+  // trigger guard, grip panel and base pad are traced from a reference photo
+  // (mirrored) and scaled to the 217 mm overall length; the slide rides
+  // inside the frame rails, so only a narrow band of slide shows.
   const GUN = {
-    cx: 109,
-    cy: 73,
-    muzzle: [217, 21],
-    port: [117, 13],
-    barrel: rect(93, 14, 124, 14),
+    cx: 108.5,
+    cy: 80,
+    muzzle: [217, 19.3],
+    port: [119, 12.5],
+    sight: [211.3, 1.2],
+    barrel: rect(93, 12.4, 124, 13.8),
     slide: shape(
-      "M 23,8 L 211,8 Q 216,8 216.5,12 L 217,26 Q 217,30 213,30 L 22,30 L 19,13 Q 19.5,8.5 23,8 Z",
+      "M 19.2,23.6 L 27.8,0.3 L 30.8,0.3 L 31.2,0.0 L 33.6,0.3 L 36.1,1.2 L 40.4,1.8 L 41.9,2.5 L 43.1,2.5 L 44.7,3.1 L 45.9,3.1 L 46.2,3.4 L 47.4,3.4 L 47.7,3.7 L 51.1,4.3 L 52.9,4.9 L 54.5,7.4 L 102.1,7.4 L 102.4,7.7 L 113.4,7.4 L 114.3,7.7 L 114.6,7.4 L 196.6,7.1 L 196.9,6.8 L 196.6,2.1 L 197.2,1.8 L 198.7,1.8 L 200.0,2.8 L 205.2,2.8 L 205.5,3.1 L 206.4,2.8 L 206.7,3.1 L 207.6,3.1 L 208.9,2.1 L 210.7,2.1 L 211.0,1.8 L 211.3,2.5 L 211.3,4.6 L 212.2,6.4 L 212.2,7.1 L 213.5,8.6 L 214.1,9.8 L 214.1,10.7 L 215.9,12.0 L 215.9,12.6 L 216.5,13.5 L 216.5,15.3 L 216.8,15.7 L 216.8,21.5 L 216.5,22.1 L 199.0,22.1 L 198.7,22.4 L 156.1,22.4 L 155.8,22.7 L 113.1,22.7 L 112.8,23.0 L 70.1,23.0 L 69.8,23.3 L 27.2,23.3 L 26.9,23.6 Z",
     ),
     port_: shape(
-      "M 98,8 L 136,8 L 136,19 Q 136,21 134,21 L 100,21 Q 98,21 98,19 Z",
+      "M 100,8.2 L 138,8.2 L 138,16.4 Q 138,17.6 136.8,17.6 L 101.2,17.6 Q 100,17.6 100,16.4 Z",
     ),
-    hood: rect(101, 10, 32, 9),
-    extractor: shape("M 82,12 L 97,12 L 97,15.5 L 82,15.5 Z"),
-    rearSight: shape(
-      "M 24,8 L 25,1.5 Q 25.5,0.5 27,0.5 L 38,0.5 Q 40,0.8 41,3 L 43,8 Z",
-    ),
-    frontSight: shape(
-      "M 199,8 L 201,2 Q 201.5,1.2 202.5,1.2 L 207.5,1.2 Q 208.5,1.2 209,2 L 210.5,8 Z",
-    ),
+    hood: rect(102.5, 9.6, 33, 6.4),
+    extractor: shape("M 86,10.6 L 99,10.6 L 99,13.4 L 86,13.4 Z"),
     frame: shape(
-      "M 4,40 Q 8,33 17,31 L 212,30 Q 215,30 215,33 L 215,49 Q 215,53 211,53 L 128,53 Q 124,53 125,57 L 126,76 Q 126,83 119,83 L 90,83 Q 82,82 79,77 Q 77,75 76,79 L 62,132 Q 61,136 57,136 L 33,136 Q 29,136 28,132 L 13,72 Q 11,62 8,52 Q 5,46 2,44 Q 1,41 4,40 Z",
+      "M 216.5,22.4 L 215.9,25.5 L 214.4,27.3 L 214.4,37.4 L 214.1,37.8 L 213.8,40.8 L 212.9,42.4 L 213.2,45.4 L 211.3,48.8 L 207.3,50.0 L 174.8,50.0 L 174.2,48.5 L 173.3,48.5 L 169.6,49.7 L 144.1,49.7 L 140.7,48.5 L 136.7,47.9 L 135.5,48.5 L 134.9,49.4 L 134.0,49.4 L 133.1,50.0 L 132.7,50.6 L 131.2,51.9 L 129.7,54.6 L 129.4,57.1 L 129.1,57.4 L 129.1,58.9 L 128.8,59.2 L 128.8,64.1 L 129.1,64.5 L 129.1,69.1 L 129.4,69.4 L 129.1,70.6 L 129.4,70.9 L 129.4,74.0 L 129.7,74.3 L 129.4,75.2 L 130.0,77.0 L 129.7,77.0 L 126.6,80.4 L 125.1,81.3 L 124.2,82.6 L 123.2,82.6 L 122.3,83.2 L 119.2,84.1 L 116.5,84.1 L 116.2,84.4 L 98.4,83.8 L 98.1,83.5 L 96.5,83.5 L 96.2,83.2 L 94.1,82.9 L 90.4,81.6 L 81.8,77.3 L 80.9,77.3 L 80.6,77.0 L 77.5,77.0 L 75.0,78.0 L 72.3,80.4 L 72.3,81.3 L 72.0,81.3 L 70.7,82.9 L 71.1,84.7 L 70.4,86.2 L 70.1,88.7 L 69.5,89.3 L 68.9,93.0 L 68.3,93.6 L 67.4,98.2 L 66.8,99.1 L 65.8,103.7 L 64.9,105.9 L 64.9,107.7 L 64.3,108.3 L 63.7,111.7 L 63.1,112.6 L 62.5,116.0 L 61.8,116.9 L 60.9,121.5 L 60.3,122.8 L 60.3,124.0 L 59.7,124.9 L 59.4,126.5 L 57.9,127.7 L 57.2,133.2 L 57.5,133.5 L 57.5,135.7 L 58.2,137.5 L 58.2,139.3 L 58.8,140.3 L 58.8,141.2 L 12.4,141.2 L 12.1,140.9 L 9.7,140.6 L 8.4,140.0 L 7.5,139.0 L 6.9,139.0 L 6.0,138.4 L 4.5,136.6 L 4.1,132.6 L 3.8,132.3 L 3.8,130.4 L 4.1,130.1 L 3.8,126.1 L 4.5,124.3 L 4.1,123.4 L 4.8,123.1 L 5.7,118.5 L 6.3,117.6 L 6.3,116.6 L 7.2,113.9 L 7.2,112.6 L 8.1,110.8 L 8.1,109.3 L 8.7,108.0 L 8.7,107.1 L 8.4,106.8 L 8.7,106.8 L 9.4,105.9 L 9.7,103.4 L 10.3,102.8 L 10.6,100.4 L 10.9,100.1 L 11.8,95.5 L 12.4,94.5 L 14.3,85.9 L 14.9,85.3 L 15.2,82.9 L 16.7,82.0 L 17.3,80.4 L 22.9,71.5 L 25.9,65.7 L 26.5,63.8 L 26.5,62.6 L 26.9,62.3 L 26.9,57.7 L 26.5,57.4 L 26.2,55.2 L 24.7,52.2 L 23.2,51.0 L 23.2,50.3 L 20.1,47.9 L 16.7,46.7 L 9.7,46.0 L 9.4,45.7 L 7.5,45.7 L 5.4,45.1 L 2.9,43.6 L 1.1,43.0 L 1.1,42.4 L 0.5,41.7 L 0.5,40.5 L 0.8,40.2 L 4.8,40.2 L 6.9,40.8 L 11.2,41.1 L 11.5,40.8 L 12.4,40.8 L 14.9,39.0 L 16.1,37.8 L 17.3,35.3 L 17.6,32.2 L 18.6,29.8 L 19.2,23.9 L 26.9,23.9 L 27.2,23.6 L 69.8,23.6 L 70.1,23.3 L 112.8,23.3 L 113.1,23.0 L 155.8,23.0 L 156.1,22.7 L 198.7,22.7 L 199.0,22.4 Z",
     ),
     guard: shape(
-      "M 86,57 L 117,57 Q 120,57 120.5,60 L 121,73 Q 121,78 116,78 L 92,78 Q 86,78 84,72 L 83.5,62 Q 83.5,57 86,57 Z",
+      "M 121.7,54.6 L 120.5,52.8 L 118.0,50.3 L 114.3,48.2 L 113.4,48.2 L 113.1,47.9 L 108.5,47.9 L 106.0,49.1 L 103.9,49.7 L 104.2,53.1 L 103.9,53.4 L 103.6,57.1 L 103.3,57.4 L 103.3,60.8 L 104.8,65.4 L 105.7,66.0 L 105.7,66.9 L 107.6,69.1 L 108.2,69.1 L 108.5,70.0 L 110.6,71.5 L 111.3,71.5 L 111.9,72.1 L 113.7,72.7 L 113.4,73.7 L 112.5,73.7 L 112.2,74.0 L 109.1,74.0 L 108.8,73.7 L 107.9,73.7 L 106.4,72.7 L 104.8,72.4 L 104.8,71.8 L 101.4,68.8 L 99.3,64.8 L 98.1,60.5 L 98.1,58.9 L 97.1,58.3 L 97.1,57.7 L 96.5,57.1 L 96.5,55.9 L 97.1,54.9 L 97.8,56.2 L 99.0,63.2 L 99.6,64.5 L 100.5,64.8 L 100.8,64.5 L 100.5,61.4 L 100.2,61.1 L 100.2,56.8 L 100.8,54.9 L 100.5,49.7 L 100.2,49.4 L 97.1,49.4 L 96.8,49.7 L 96.5,51.9 L 95.6,52.2 L 95.6,51.6 L 94.4,50.6 L 94.1,49.7 L 92.5,49.7 L 91.9,50.3 L 91.9,51.0 L 91.6,50.6 L 90.7,50.6 L 88.5,51.9 L 88.2,52.8 L 87.3,52.8 L 83.6,56.8 L 82.1,60.8 L 82.1,62.6 L 81.8,62.9 L 81.8,65.7 L 82.1,66.0 L 82.1,67.2 L 82.7,69.4 L 84.6,72.7 L 85.5,73.0 L 85.5,73.7 L 86.1,74.6 L 89.8,77.3 L 94.4,79.2 L 97.1,79.5 L 97.5,79.8 L 99.3,79.8 L 99.6,80.1 L 104.2,80.1 L 104.5,80.4 L 119.9,80.4 L 121.1,79.8 L 122.3,78.6 L 122.3,77.7 L 123.2,77.3 L 123.8,76.1 L 123.8,74.6 L 124.2,74.3 L 123.5,60.8 L 123.2,60.5 L 122.9,57.7 L 122.3,55.9 L 121.7,55.2 Z",
     ),
     grip: shape(
-      "M 21,66 Q 22,63 26,63 L 66,72 Q 70,73 69,77 L 58,126 Q 57,129 54,129 L 34,129 Q 31,129 30,126 L 19,72 Q 18.5,68 21,66 Z",
+      "M 62.8,47.9 L 63.7,48.5 L 63.7,50.3 L 63.4,50.6 L 63.4,51.9 L 62.8,53.1 L 62.5,54.9 L 61.8,55.2 L 61.8,57.1 L 60.9,59.2 L 60.9,60.8 L 60.3,62.3 L 60.3,64.1 L 59.1,64.8 L 56.6,67.5 L 56.3,72.1 L 56.9,72.4 L 56.9,74.9 L 55.7,78.3 L 55.4,80.7 L 54.2,83.2 L 54.2,85.0 L 53.6,85.9 L 52.6,90.9 L 51.7,92.7 L 51.1,96.4 L 50.5,97.3 L 50.2,99.8 L 49.0,102.8 L 49.0,104.0 L 48.3,105.3 L 48.3,106.2 L 47.4,106.8 L 47.4,109.3 L 46.2,112.6 L 45.9,115.4 L 45.3,116.3 L 44.7,119.7 L 43.4,122.2 L 43.1,125.2 L 42.2,126.5 L 42.2,129.8 L 41.9,130.1 L 42.2,142.7 L 39.4,143.0 L 39.1,142.7 L 36.7,142.7 L 35.1,142.1 L 30.5,142.4 L 29.6,141.8 L 26.2,141.8 L 25.9,142.1 L 13.7,141.8 L 13.4,140.9 L 11.5,140.9 L 8.4,139.7 L 7.5,138.7 L 6.6,136.0 L 6.6,134.1 L 6.3,133.8 L 6.3,126.5 L 6.6,126.1 L 6.9,122.2 L 7.8,120.6 L 8.1,117.2 L 9.1,115.7 L 9.4,113.0 L 10.0,111.7 L 10.6,108.7 L 11.2,107.7 L 11.2,106.2 L 11.8,105.0 L 11.8,103.4 L 13.0,100.4 L 13.0,97.3 L 13.7,97.0 L 14.3,95.8 L 16.1,88.4 L 17.3,86.6 L 18.3,83.8 L 18.9,82.9 L 19.8,82.3 L 19.8,81.6 L 20.4,81.0 L 21.3,78.6 L 24.1,74.6 L 25.3,71.8 L 27.5,69.1 L 30.2,63.8 L 30.8,60.8 L 31.2,60.5 L 31.5,57.4 L 31.8,57.1 L 31.8,54.9 L 34.2,54.6 L 34.8,53.1 L 36.1,53.1 L 37.3,52.2 L 40.1,51.3 L 40.7,50.6 L 42.8,50.0 L 47.7,47.6 L 59.7,47.6 L 60.0,47.9 Z",
+    ),
+    hammer: shape(
+      "M 27.5,0.3 L 24.7,8.3 L 24.1,9.2 L 23.8,10.7 L 23.2,11.7 L 22.9,13.2 L 22.3,14.1 L 21.9,15.7 L 21.3,16.6 L 21.0,18.1 L 20.4,19.0 L 19.8,19.0 L 18.0,14.1 L 18.0,10.1 L 19.2,8.6 L 19.5,8.9 L 21.9,8.9 L 24.1,8.3 L 24.7,3.7 L 25.3,3.1 L 26.2,0.9 L 26.9,0.3 Z",
     ),
     trigger: shape(
-      "M 99,53 L 103,53 Q 106,63 101,74 Q 99,77 96,76 Q 95,75 96.5,72 Q 100,64 99,53 Z",
+      "M 94.4,49.7 L 96.5,49.7 L 96.8,49.4 L 99.3,49.4 L 99.6,49.1 L 102.1,49.1 L 102.4,48.8 L 104.5,48.8 L 104.8,48.5 L 107.3,48.5 L 107.6,48.2 L 108.2,48.2 L 107.6,48.2 L 106.0,49.1 L 104.2,49.4 L 103.9,49.7 L 104.2,53.1 L 103.9,53.4 L 103.6,57.1 L 103.3,57.4 L 103.3,60.8 L 103.6,61.1 L 103.6,62.0 L 103.9,62.3 L 103.9,63.2 L 104.5,64.1 L 104.5,64.8 L 104.8,65.4 L 105.7,66.0 L 105.7,66.9 L 106.4,67.8 L 107.6,69.1 L 108.2,69.1 L 108.2,69.7 L 110.6,71.5 L 111.3,71.5 L 111.9,72.1 L 113.4,72.4 L 113.7,72.7 L 113.7,73.4 L 113.4,73.7 L 112.5,73.7 L 112.2,74.0 L 109.1,74.0 L 108.8,73.7 L 107.9,73.7 L 106.4,72.7 L 104.8,72.4 L 104.8,71.8 L 101.4,68.8 L 99.3,64.8 L 99.3,64.1 L 98.7,62.9 L 98.7,62.0 L 98.4,61.7 L 98.4,60.8 L 98.1,60.5 L 98.1,58.9 L 97.1,58.3 L 97.1,57.7 L 96.5,57.1 L 96.5,55.9 L 97.1,54.9 L 97.8,56.2 L 97.8,57.4 L 98.4,58.9 L 98.4,60.8 L 98.7,61.1 L 99.0,63.2 L 99.9,64.8 L 100.5,64.8 L 100.8,64.5 L 100.5,61.4 L 100.2,61.1 L 100.2,56.8 L 100.5,56.5 L 100.5,55.2 L 100.8,54.9 L 100.5,49.7 L 100.2,49.4 L 97.1,49.4 L 96.8,49.7 L 96.5,51.9 L 95.9,51.9 L 95.6,52.2 L 95.6,51.6 L 94.4,50.6 Z",
     ),
+    hammerPivot: [20.4, 20.6],
     safety: shape(
-      "M 30,33 L 52,35 Q 55,36 54,39 L 44,41 L 31,39 Q 28,37 30,33 Z",
+      "M 58.5,32.5 L 54.2,31.6 L 41.9,32.5 L 35.8,35.6 L 33.3,37.8 L 34.5,39.6 L 39.4,39.9 L 48.6,39.3 L 54.8,40.5 L 57.5,37.4 Z",
     ),
-    hammer: shape("M 13,26 L 21,36 L 25,33 L 16,19 Z"),
-    magBody: shape("M 33,136 L 61,136 L 77,70 L 49,70 Z"),
+    stopPin: [83.9, 31.9],
+    screws: [
+      [64.9, 67.5],
+      [22.6, 93.6],
+    ],
+    magBody: shape("M 57.9,141.2 L 22.6,141.2 L 32.7,74.3 L 68.0,74.3 Z"),
     magPad: shape(
-      "M 30,136 L 63,136 Q 65,136 65.5,138 L 66,143 Q 66,146 63,146 L 31,146 Q 28,146 28,143 L 28.5,138 Q 29,136 30,136 Z",
+      "M 58.8,141.5 L 58.8,143.0 L 58.5,143.3 L 58.8,155.9 L 57.9,158.1 L 57.5,158.1 L 56.3,159.6 L 11.5,159.6 L 10.0,157.8 L 9.7,156.8 L 9.7,154.1 L 9.4,153.8 L 9.7,151.0 L 10.9,147.6 L 11.8,142.4 L 12.4,142.1 L 12.4,141.5 Z",
     ),
-    serrRear: Array.from({ length: 9 }, (_, i) =>
-      shape(`M ${41.2 + i * 3.2},11 L ${40 + i * 3.2},27`),
-    ),
-    serrFront: Array.from({ length: 7 }, (_, i) =>
-      shape(`M ${161.2 + i * 3.2},11 L ${160 + i * 3.2},27`),
-    ),
-    slots: Array.from({ length: 6 }, (_, i) =>
-      rect(142 + i * 12, 49.5, 5, 3.5),
-    ),
+    magPivot: [36.4, 141.2],
+    serrRear: [
+      shape("M 64.3,11.0 L 61.8,20.0"),
+      shape("M 59.9,11.0 L 57.4,20.0"),
+      shape("M 55.4,11.0 L 52.9,20.0"),
+      shape("M 50.8,11.0 L 48.3,20.0"),
+      shape("M 46.2,11.0 L 43.7,20.0"),
+      shape("M 41.4,11.0 L 39.0,20.0"),
+      shape("M 37.1,11.0 L 34.7,20.0"),
+      shape("M 32.7,11.0 L 30.2,20.0"),
+    ],
+    serrFront: [
+      shape("M 192.1,11.0 L 188.1,21.8"),
+      shape("M 187.2,11.0 L 183.2,21.8"),
+      shape("M 182.2,11.0 L 178.2,21.8"),
+      shape("M 177.3,11.0 L 173.3,21.8"),
+      shape("M 172.2,11.0 L 168.2,21.8"),
+      shape("M 167.1,11.0 L 163.1,21.8"),
+      shape("M 162.4,11.0 L 158.4,21.8"),
+      shape("M 157.5,11.0 L 153.5,21.8"),
+    ],
+    grooves: [
+      shape("M 130.6,61.1 L 124.5,61.4"),
+      shape("M 130.6,62.9 L 124.5,63.2"),
+      shape("M 130.6,64.8 L 124.5,65.1"),
+      shape("M 130.6,66.6 L 124.5,66.9"),
+      shape("M 130.6,68.4 L 124.5,68.8"),
+      shape("M 130.6,70.3 L 124.5,70.6"),
+      shape("M 130.6,72.1 L 124.5,72.4"),
+      shape("M 130.6,74.0 L 124.5,74.3"),
+      shape("M 130.6,75.8 L 124.5,76.1"),
+    ],
+    rail: shape("M 204.6,45.4 L 140.1,45.4"),
   };
 
   // IPSC target (46 × 58 cm cardboard) in centimetres, centre origin, y down:
@@ -706,142 +735,160 @@
         ctx.lineWidth = w * px;
         ctx.stroke();
       };
-      const g = (y0, y1, c0, c1) => {
+      const g = (y0, y1, ...stops) => {
         const gr = ctx.createLinearGradient(0, y0, 0, y1);
-        gr.addColorStop(0, c0);
-        gr.addColorStop(1, c1);
+        stops.forEach((c, k) => gr.addColorStop(k / (stops.length - 1), c));
         return gr;
       };
+      const solidLayer = (fn) => {
+        if (solid <= 0) return;
+        ctx.save();
+        ctx.globalAlpha *= solid;
+        fn();
+        ctx.restore();
+      };
+      const dot = (x, y, r, style) => {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = style;
+        ctx.fill();
+      };
 
-      // Magazine body sits behind the frame; the base pad in front of it.
+      // The magazine: body behind the frame, base pad in front of it.
       const mag = o.mag;
+      const [mpx, mpy] = GUN.magPivot;
       const withMag = (fn) => {
         ctx.save();
         if (mag) {
-          ctx.translate(47 + mag.dx, 136 + mag.dy);
+          ctx.translate(mpx + mag.dx, mpy + mag.dy);
           ctx.rotate(mag.rot);
-          ctx.translate(-47, -136);
+          ctx.translate(-mpx, -mpy);
         }
         fn();
         ctx.restore();
       };
-      if (mag && solid > 0) {
-        withMag(() => {
-          ctx.globalAlpha *= solid;
-          fillShape(GUN.magBody, "#2a2e34");
-        });
-      }
-      if (mag && blue > 0) withMag(() => strokeShape(GUN.magBody, blue * 0.6));
-
-      // Barrel (visible at the muzzle once the slide is back).
-      if (solid > 0) {
-        ctx.save();
-        ctx.globalAlpha *= solid;
-        fillShape(GUN.barrel, g(14, 28, "#8b929c", "#4a5059"));
-        ctx.restore();
+      if (mag) {
+        withMag(() => solidLayer(() => fillShape(GUN.magBody, "#2a2e34")));
+        if (blue > 0) withMag(() => strokeShape(GUN.magBody, blue * 0.6));
       }
 
-      // Hammer pivots under the rear of the slide.
-      ctx.save();
-      ctx.translate(20, 33);
-      ctx.rotate(
-        ((o.hammer ?? 0) * 40 - Math.min(slide, 6) * 2) * (Math.PI / 180),
+      // Barrel, exposed at the muzzle once the slide is back.
+      solidLayer(() =>
+        fillShape(GUN.barrel, g(12.4, 26.2, "#9aa1aa", "#4a5059")),
       );
-      ctx.translate(-20, -33);
-      if (solid > 0) {
-        ctx.save();
-        ctx.globalAlpha *= solid;
-        fillShape(GUN.hammer, "#30343b");
-        ctx.beginPath();
-        ctx.arc(11, 21, 6.2, 0, Math.PI * 2);
-        ctx.arc(11, 21, 2.6, 0, Math.PI * 2, true);
-        ctx.fillStyle = "#30343b";
-        ctx.fill();
-        ctx.restore();
-      }
-      if (blue > 0) {
-        strokeShape(GUN.hammer, blue * 0.8);
-        ctx.beginPath();
-        ctx.arc(11, 21, 6.2, 0, Math.PI * 2 * drawOn);
-        ctx.strokeStyle = `rgba(244,245,247,${blue * 0.8})`;
-        ctx.lineWidth = 1.6 * px;
-        ctx.stroke();
-      }
+
+      // Hammer, cocked by the slide as it runs back.
+      const [hx, hy] = GUN.hammerPivot;
+      ctx.save();
+      ctx.translate(hx, hy);
+      ctx.rotate(
+        ((o.hammer ?? 0) * 38 - Math.min(slide, 6) * 2) * (Math.PI / 180),
+      );
+      ctx.translate(-hx, -hy);
+      solidLayer(() => fillShape(GUN.hammer, "#2a2d32"));
+      if (blue > 0) strokeShape(GUN.hammer, blue * 0.8);
       ctx.restore();
 
-      // Frame with the trigger-guard opening.
-      if (solid > 0) {
-        ctx.save();
-        ctx.globalAlpha *= solid;
+      // Frame: grey dust cover and rails, black trigger guard and grip.
+      solidLayer(() => {
         tracePath(ctx, GUN.frame);
         tracePath2(GUN.guard);
-        ctx.fillStyle = g(30, 136, "#2f343c", "#15181c");
+        // grey dust cover and rails above ≈46 mm, black guard, grip and tang below
+        const fg = ctx.createLinearGradient(0, 22, 0, 160);
+        fg.addColorStop(0, "#73787f");
+        fg.addColorStop(0.15, "#5c6168");
+        fg.addColorStop(0.175, "#2a2d32");
+        fg.addColorStop(0.2, "#212328");
+        fg.addColorStop(1, "#16181b");
+        ctx.fillStyle = fg;
         ctx.fill("evenodd");
-        // grip panel, blue aluminium with checkering
-        fillShape(GUN.grip, g(63, 129, "#2c5bb8", "#16316d"));
+        // front strap and trigger-guard grooves
+        ctx.save();
+        tracePath(ctx, GUN.frame);
+        ctx.clip();
+        ctx.strokeStyle = "rgba(0,0,0,0.55)";
+        ctx.lineWidth = 0.6;
+        GUN.grooves.forEach((sh) => {
+          tracePath(ctx, sh);
+          ctx.stroke();
+        });
+        tracePath(ctx, GUN.rail);
+        ctx.strokeStyle = "rgba(0,0,0,0.6)";
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+        ctx.restore();
+        // blue aluminium grip panel with checkering
+        fillShape(GUN.grip, g(40, 140, "#3f74b3", "#2a548d"));
         ctx.save();
         tracePath(ctx, GUN.grip);
         ctx.clip();
-        ctx.strokeStyle = "rgba(255,255,255,0.09)";
-        ctx.lineWidth = 0.5;
-        for (let k = -80; k < 80; k += 3) {
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.lineWidth = 0.45;
+        for (let k = -150; k < 120; k += 2.6) {
           ctx.beginPath();
-          ctx.moveTo(k, 60);
-          ctx.lineTo(k + 70, 130);
-          ctx.moveTo(k + 70, 60);
-          ctx.lineTo(k, 130);
+          ctx.moveTo(k, 30);
+          ctx.lineTo(k + 120, 150);
+          ctx.moveTo(k + 120, 30);
+          ctx.lineTo(k, 150);
           ctx.stroke();
         }
         ctx.restore();
-        GUN.slots.forEach((sl) => fillShape(sl, "#0b0d10"));
-        fillShape(GUN.trigger, "#3a3f47");
-        fillShape(GUN.safety, "#3b4048");
-        ctx.beginPath();
-        ctx.arc(113, 41, 2.4, 0, Math.PI * 2);
-        ctx.fillStyle = "#4b515a";
-        ctx.fill();
-        tracePath(ctx, GUN.frame);
-        ctx.strokeStyle = "rgba(255,255,255,0.16)";
-        ctx.lineWidth = px;
+        tracePath(ctx, GUN.grip);
+        ctx.strokeStyle = "rgba(0,0,0,0.45)";
+        ctx.lineWidth = 0.8;
         ctx.stroke();
-        ctx.restore();
-      }
+        GUN.screws.forEach(([x, y]) => {
+          dot(x, y, 2.3, "#1b1d21");
+          dot(x, y, 0.9, "#4a4f57");
+        });
+        // ambidextrous safety and the slide-stop pin
+        fillShape(GUN.safety, g(30, 41, "#3c4047", "#1d2024"));
+        dot(GUN.stopPin[0], GUN.stopPin[1], 2.2, "#3a3e45");
+        // trigger blade, then a rim light so the black frame reads on dark backgrounds
+        fillShape(GUN.trigger, g(52, 78, "#5d636b", "#25282d"));
+        tracePath(ctx, GUN.trigger);
+        ctx.strokeStyle = "rgba(255,255,255,0.35)";
+        ctx.lineWidth = 0.8 * px;
+        ctx.stroke();
+        tracePath(ctx, GUN.frame);
+        tracePath2(GUN.guard);
+        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.lineWidth = 1.4 * px;
+        ctx.stroke();
+      });
       if (blue > 0) {
         strokeShape(GUN.frame, blue);
         strokeShape(GUN.guard, blue);
         strokeShape(GUN.grip, blue * 0.55, 1.2);
-        strokeShape(GUN.trigger, blue * 0.9);
         strokeShape(GUN.safety, blue * 0.8);
-        GUN.slots.forEach((sl) => strokeShape(sl, blue * 0.5, 1.1));
+        strokeShape(GUN.trigger, blue * 0.8);
+        strokeShape(GUN.rail, blue * 0.45, 1);
+        GUN.grooves.forEach((sh) => strokeShape(sh, blue * 0.35, 1));
       }
 
-      // Slide group.
+      // Slide: dark top strip over machined grey flanks.
       ctx.save();
       ctx.translate(-slide, 0);
-      if (solid > 0) {
-        ctx.save();
-        ctx.globalAlpha *= solid;
-        fillShape(GUN.rearSight, "#121418");
-        fillShape(GUN.frontSight, "#121418");
-        fillShape(GUN.slide, g(8, 30, "#454b54", "#1d2026"));
+      solidLayer(() => {
+        fillShape(
+          GUN.slide,
+          g(0, 23.6, "#1c1e22", "#2c2f34", "#5d6168", "#7d828a", "#8f949b"),
+        );
         fillShape(GUN.port_, "#0c0e11");
-        if (slide < 4) fillShape(GUN.hood, g(10, 19, "#9aa1aa", "#5a606a"));
+        if (slide < 4) fillShape(GUN.hood, g(9.6, 16, "#a7adb5", "#5d636c"));
         fillShape(GUN.extractor, "#2b2f36");
-        ctx.strokeStyle = "rgba(0,0,0,0.55)";
-        ctx.lineWidth = 0.7;
+        ctx.strokeStyle = "rgba(0,0,0,0.7)";
+        ctx.lineWidth = 1.1;
         [...GUN.serrRear, ...GUN.serrFront].forEach((sh) => {
           tracePath(ctx, sh);
           ctx.stroke();
         });
-        line(23, 8.4, 211, 8.4, "rgba(255,255,255,0.35)", 0.6);
-        ctx.restore();
-      }
+        line(32, 7.9, 197, 7.9, "rgba(255,255,255,0.28)", 0.5);
+      });
       if (blue > 0) {
         strokeShape(GUN.slide, blue);
         strokeShape(GUN.port_, blue * 0.8);
         strokeShape(GUN.extractor, blue * 0.5, 1.1);
-        strokeShape(GUN.rearSight, blue * 0.9);
-        strokeShape(GUN.frontSight, blue * 0.9);
         [...GUN.serrRear, ...GUN.serrFront].forEach((sh) =>
           strokeShape(sh, blue * 0.45, 1),
         );
@@ -849,32 +896,59 @@
       // fibre-optic front sight
       const glow = o.fiber ?? 1;
       if (glow > 0) {
-        const gr = ctx.createRadialGradient(205, 3.2, 0, 205, 3.2, 6);
+        const [fx, fy] = GUN.sight;
+        const gr = ctx.createRadialGradient(fx, fy, 0, fx, fy, 6);
         gr.addColorStop(0, rgba(C.red, 0.85 * glow));
         gr.addColorStop(1, rgba(C.red, 0));
         ctx.fillStyle = gr;
         ctx.beginPath();
-        ctx.arc(205, 3.2, 6, 0, Math.PI * 2);
+        ctx.arc(fx, fy, 6, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = `rgba(255,90,110,${glow})`;
-        ctx.beginPath();
-        ctx.arc(205, 3.2, 1.3, 0, Math.PI * 2);
-        ctx.fill();
+        dot(fx, fy, 1.3, `rgba(255,90,110,${glow})`);
       }
       ctx.restore();
 
-      if (mag && solid > 0) {
-        withMag(() => {
-          ctx.globalAlpha *= solid;
-          fillShape(GUN.magPad, g(136, 146, "#3a3f47", "#1a1d22"));
-        });
+      // Base pad, always in place unless the magazine is dropping.
+      withMag(() =>
+        solidLayer(() =>
+          fillShape(GUN.magPad, g(141, 160, "#34383e", "#16181b")),
+        ),
+      );
+      if (blue > 0) withMag(() => strokeShape(GUN.magPad, blue));
+
+      // A soft highlight sweeping along the metal.
+      if (o.sheen > 0 && o.sheen < 1 && solid > 0) {
+        const lx = lerp(250, -40, o.sheen);
+        const sg = ctx.createLinearGradient(lx - 28, 0, lx + 28, 0);
+        sg.addColorStop(0, "rgba(255,255,255,0)");
+        sg.addColorStop(0.5, "rgba(255,255,255,0.22)");
+        sg.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.save();
+        ctx.globalAlpha *= solid;
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = sg;
+        tracePath(ctx, GUN.frame);
+        tracePath2(GUN.guard);
+        ctx.fill("evenodd");
+        tracePath(ctx, GUN.magPad);
+        ctx.fill();
+        ctx.translate(-slide, 0);
+        tracePath(ctx, GUN.slide);
+        ctx.fill();
+        ctx.restore();
       }
-      if (mag && blue > 0) withMag(() => strokeShape(GUN.magPad, blue));
 
       // Bore axis as a technical centre line.
       if (blue > 0) {
         ctx.setLineDash([6 * px, 3 * px, 1.5 * px, 3 * px]);
-        line(-6, 21, -6 + 232 * drawOn, 21, rgba(C.red, 0.55 * blue), px);
+        line(
+          -6,
+          GUN.muzzle[1],
+          -6 + 232 * drawOn,
+          GUN.muzzle[1],
+          rgba(C.red, 0.55 * blue),
+          px,
+        );
         ctx.setLineDash([]);
       }
       ctx.restore();
@@ -1655,8 +1729,8 @@
       // push in and centre for the anatomy
       const p = ease.inOut3(seg(t, 7.0, 8.0));
       x = lerp(x, 1010, p);
-      y = lerp(y, 532, p);
-      s = lerp(s, 4.4, p);
+      y = lerp(y, 548, p);
+      s = lerp(s, 4.2, p);
       // make room for the Production check
       const q = ease.inOut3(seg(t, 11.0, 11.45));
       x = lerp(x, 590, q);
@@ -1742,67 +1816,6 @@
       }
     }
 
-    // A callout: anchor dot, elbow leader, label + Korean/English note.
-    function callout(t, at, anchor, lx, ly, title, note, side = 1) {
-      const lt = t - at;
-      if (lt < 0) return;
-      const out = 1 - seg(t, 10.95, 11.2);
-      if (out <= 0) return;
-      ctx.save();
-      ctx.globalAlpha = out;
-      const [ax, ay] = anchor;
-      const pop = ease.outBack(seg(lt, 0, 0.25));
-      ctx.fillStyle = C.red;
-      ctx.beginPath();
-      ctx.arc(ax, ay, 6 * pop, 0, Math.PI * 2);
-      ctx.fill();
-      const ring = seg(lt, 0, 0.6);
-      ctx.strokeStyle = rgba(C.red, 1 - ring);
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(ax, ay, 6 + ring * 26, 0, Math.PI * 2);
-      ctx.stroke();
-      const ex = lx - side * 24;
-      const p1 = ease.out3(seg(lt, 0.05, 0.25));
-      const p2 = ease.out3(seg(lt, 0.2, 0.38));
-      ctx.strokeStyle = "rgba(255,255,255,0.7)";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(lerp(ax, ex, p1), lerp(ay, ly, p1));
-      if (p2 > 0) ctx.lineTo(lerp(ex, lx, p2), ly);
-      ctx.stroke();
-      const align = side > 0 ? "left" : "right";
-      const tx = lx + side * 14;
-      kinetic(title, tx, ly + 7, {
-        size: 22,
-        weight: 700,
-        t: lt - 0.25,
-        tracking: 1.5,
-        align,
-        stagger: 0.006,
-        dur: 0.3,
-      });
-      ctx.globalAlpha = out * ease.out3(seg(lt, 0.4, 0.7));
-      const lang = opt.lang;
-      const sub = lang === "en" ? note[1] : note[0];
-      text(sub, tx, ly + 38, {
-        size: 17,
-        weight: 500,
-        color: C.dim,
-        align,
-        family: lang === "en" ? SANS : KR,
-      });
-      if (lang === "both")
-        text(note[1], tx, ly + 62, {
-          size: 14,
-          weight: 500,
-          color: C.faint,
-          align,
-        });
-      ctx.restore();
-    }
-
     function dimension(x0, x1, y, label, a, tickUp = true) {
       if (a <= 0) return;
       ctx.save();
@@ -1858,9 +1871,39 @@
 
       ctx.save();
       ctx.globalAlpha = 1 - out;
-      if (t >= 8.0) drawGun({ ...pose, blue: 1, draw: 1 });
+      const o = pose;
+      const lang = opt.lang;
+      if (t >= 8.0) {
+        // A scan line renders the traced blueprint into the finished gun.
+        const scan = ease.inOut3(seg(t, 8.6, 10.0));
+        const [sx0] = gunPoint(o, 228, 0);
+        const [sx1] = gunPoint(o, -12, 0);
+        const sx = lerp(sx0, sx1, scan);
+        const half = (fn) => (left) => {
+          ctx.save();
+          ctx.beginPath();
+          if (left) ctx.rect(-100, -100, sx + 100, H + 200);
+          else ctx.rect(sx, -100, W + 200, H + 200);
+          ctx.clip();
+          fn();
+          ctx.restore();
+        };
+        if (scan < 1) half(() => drawGun({ ...o, blue: 1, draw: 1 }))(true);
+        if (scan > 0)
+          half(() => drawGun({ ...o, blue: 0, sheen: seg(t, 10.05, 10.8) }))(
+            false,
+          );
+        if (scan > 0 && scan < 1) {
+          const gr = ctx.createLinearGradient(sx - 60, 0, sx + 8, 0);
+          gr.addColorStop(0, rgba(C.red, 0));
+          gr.addColorStop(1, rgba(C.red, 0.35));
+          ctx.fillStyle = gr;
+          ctx.fillRect(sx - 60, 120, 68, H - 260);
+          line(sx, 120, sx, H - 140, C.red, 2);
+        }
+      }
 
-      // title block
+      // title
       const ta = t - 8.0;
       if (ta >= 0) {
         kinetic("CZ SHADOW 2", 96, 214, {
@@ -1870,89 +1913,7 @@
           stagger: 0.02,
           out: t - 12.75,
         });
-        ctx.save();
-        ctx.globalAlpha *= ease.out3(seg(ta, 0.2, 0.5));
-        text("9×19 mm  ·  SA/DA  ·  STEEL FRAME", 98, 250, {
-          size: 15,
-          weight: 700,
-          tracking: 3,
-          color: C.red,
-        });
-        ctx.restore();
       }
-      // overall length
-      const o = pose;
-      const L0 = gunPoint(o, 0, 150);
-      const L1 = gunPoint(o, 217, 150);
-      const anat = 1 - seg(t, 10.95, 11.2);
-      dimension(
-        L0[0],
-        L1[0],
-        L0[1] + 24,
-        "≈ 217 mm",
-        seg(t, 8.05, 8.55) * anat,
-        false,
-      );
-
-      const lang = opt.lang;
-      callout(
-        t,
-        8.25,
-        gunPoint(o, 205, 2),
-        1500,
-        262,
-        "FIBRE-OPTIC FRONT SIGHT",
-        [
-          "파이버 옵틱 가늠쇠 · 조절식 가늠자",
-          "Fibre-optic front, adjustable rear",
-        ],
-      );
-      callout(
-        t,
-        8.75,
-        gunPoint(o, 172, 30),
-        1500,
-        410,
-        "SLIDE INSIDE THE FRAME",
-        ["CZ 75 설계 — 낮은 보어축", "CZ 75 layout — a low bore axis"],
-      );
-      callout(
-        t,
-        9.25,
-        gunPoint(o, 190, 46),
-        1500,
-        560,
-        "STEEL FRAME · ≈1.3 kg",
-        [
-          "무게로 반동과 총구 들림을 억제",
-          "Weight that tames recoil and muzzle rise",
-        ],
-      );
-      callout(t, 9.75, gunPoint(o, 100, 66), 1180, 760, "SA / DA TRIGGER", [
-        "싱글·더블 액션 해머 방식",
-        "Single- and double-action hammer",
-      ]);
-      callout(
-        t,
-        10.25,
-        gunPoint(o, 47, 142),
-        470,
-        760,
-        "17-ROUND MAGAZINE",
-        ["프로덕션 경기에선 최대 15발", "Loaded to 15 for Production"],
-        -1,
-      );
-      callout(
-        t,
-        10.75,
-        gunPoint(o, 40, 37),
-        470,
-        420,
-        "AMBIDEXTROUS SAFETY",
-        ["좌우 양손 수동 안전장치", "Manual safety on both sides"],
-        -1,
-      );
-      void lang;
 
       // Production division check
       if (t > 11.1) {
@@ -2101,7 +2062,7 @@
         }
         const mag = ease.outBack(seg(t, 12.15, 12.45));
         if (mag > 0) {
-          const [mx, my] = gunPoint(o, 66, 141);
+          const [mx, my] = gunPoint(o, 61, 150);
           ctx.save();
           ctx.globalAlpha *= 1 - out;
           line(mx + 4, my, mx + 70, my, C.red, 2);
@@ -2752,14 +2713,14 @@
       });
       const last = [...SHOTS].reverse().find((s) => t >= s.t);
       const rc = last ? recoil(t - last.t) : { slide: 0, flip: 0 };
-      const go = { x: px + 214, y: py + 132, s: 1.2, rot: rc.flip };
+      const go = { x: px + 214, y: py + 124, s: 1.1, rot: rc.flip };
       ctx.save();
       ctx.beginPath();
       ctx.roundRect(px, py, 420, 230, 6);
       ctx.clip();
       drawGun({ ...go, slide: rc.slide, fiber: 0.9 });
       if (last && t - last.t < 0.05) {
-        const [mx, my] = gunPoint(go, 217, 21);
+        const [mx, my] = gunPoint(go, GUN.muzzle[0], GUN.muzzle[1]);
         muzzleFlash(mx + 10, my, 54, 1 - (t - last.t) / 0.05, last.i * 3 + 1);
       }
       ctx.restore();
@@ -3157,7 +3118,7 @@
         const enter = ease.out3(seg(t, 22.4, 22.7));
         const go = {
           x: lerp(1960, 1500, enter),
-          y: 805 + holster * 520,
+          y: 790 + holster * 520,
           s: 2.5,
           rot: holster * 0.9,
         };
@@ -3168,7 +3129,7 @@
           mag: { dx: -drop * 18, dy: drop * drop * 900, rot: drop * 0.8 },
         });
         if (t > 22.62 && t < 23.25) {
-          const [cx, cy] = gunPoint(go, 117, 18);
+          const [cx, cy] = gunPoint(go, GUN.port[0], GUN.port[1]);
           const a = env(t, 22.62, 23.25, 0.1, 0.15);
           ctx.save();
           ctx.globalAlpha = a;
