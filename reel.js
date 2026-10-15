@@ -4538,7 +4538,12 @@
     function startAudio() {
       if (!audio) return;
       audio.currentTime = t;
-      audio.play().catch(() => {
+      audio.play().catch((error) => {
+        // pause() while the mp3 is still loading rejects the pending play()
+        // with an AbortError; that is not a refusal, so keep the sound choice.
+        // Autoplay refusals (NotAllowedError) and a missing or unsupported
+        // track (NotSupportedError) still fall back to silence.
+        if (error?.name === "AbortError") return;
         sound = false;
         emit("sound");
       });
@@ -4612,6 +4617,22 @@
       ready = true;
       draw();
       if (wanted) play();
+    });
+    // Once it has played, the soundtrack is exposed to OS media controls
+    // (media notification, media keys, headset buttons), which call the
+    // element's play()/pause() directly. The reel owns the clock, so refuse a
+    // play it did not start, and treat an outside pause while the reel runs as
+    // the viewer muting it. The player clears `playing` or `sound` before each
+    // of its own audio.pause() calls, and the `audio.paused` re-check skips a
+    // stale 'pause' event queued just before the player resumed the track.
+    audio?.addEventListener("play", () => {
+      if (!playing || !sound) audio.pause();
+    });
+    audio?.addEventListener("pause", () => {
+      if (playing && sound && audio.paused && !audio.ended) {
+        sound = false;
+        emit("sound");
+      }
     });
     document.addEventListener("languagechange", () => {
       reel.setLang(language());

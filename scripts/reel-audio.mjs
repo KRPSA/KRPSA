@@ -3,12 +3,12 @@
 //
 //   node scripts/reel-audio.mjs out.wav
 import { readFile, writeFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
-const ROOT = fileURLToPath(new URL('../', import.meta.url));
+// Resolve against this module's URL, not a path pasted into a file:// string,
+// so a checkout path containing '#', '?' or '%' still finds reel.js.
 const sandbox = { window: {} };
-vm.runInNewContext(await readFile(new URL('reel.js', `file://${ROOT}`), 'utf8'), sandbox);
+vm.runInNewContext(await readFile(new URL('../reel.js', import.meta.url), 'utf8'), sandbox);
 const { CUES, DURATION, MARKS } = sandbox.window.KRPSAReel;
 
 const SR = 48000;
