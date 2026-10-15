@@ -20,8 +20,17 @@ test('the stage run follows IPSC Production scoring and the shot timer', () => {
   const beforeReload = reel.SHOTS.filter((shot) => shot.st <= reel.STAGE.reload).length;
   assert.ok(beforeReload <= reel.STAGE.magazine);
   assert.ok(reel.SHOTS.length - beforeReload <= reel.STAGE.magazine);
-  // IPSC long courses: at most 32 rounds.
+  // IPSC long courses: at most 32 rounds, and no more than 9 scoring hits from one location.
   assert.ok(reel.SHOTS.length <= 32);
+  const hitsFrom = {};
+  for (const shot of reel.SHOTS) {
+    const area = reel.TARGETS[shot.target].from;
+    hitsFrom[area] = (hitsFrom[area] ?? 0) + 1;
+  }
+  for (const [area, hits] of Object.entries(hitsFrom)) assert.ok(hits <= 9, `area ${area}: ${hits} hits`);
+  // IPSC target arrays: no stars, racks or trees.
+  for (const target of Object.values(reel.TARGETS))
+    assert.ok(['paper', 'noshoot', 'popper', 'plates', 'swinger', 'turner', 'mover'].includes(target.kind), target.kind);
   assert.ok(reel.STAGE.points <= reel.STAGE.maxPoints);
   reel.SHOTS.forEach((shot, i) => {
     assert.ok(i === 0 || shot.ms > reel.SHOTS[i - 1].ms, 'shots are in time order');

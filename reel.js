@@ -73,7 +73,8 @@
   const RESUME = 16.0; // ...and resumes here
   const FREEZE_MS = 800;
 
-  // The stage: a long course (27 rounds; IPSC long courses allow up to 32) over
+  // The stage: a long course (IPSC: at most 32 rounds, and no more than 9
+  // scoring hits from any one location) over
   // three shooting areas. Everything is defined in stage time — milliseconds on
   // the shot timer — and RAMPS map it to video time, so the runs between areas
   // play fast and the swinger and the Texas Star play slow.
@@ -86,10 +87,10 @@
       ],
     },
     B: {
-      pos: [-1.0, 0, 2.1],
+      pos: [0.2, 0, 2.1],
       box: [
-        [-2.0, 1.25],
-        [0.0, 2.85],
+        [-0.8, 1.25],
+        [1.2, 2.85],
       ],
     },
     C: {
@@ -100,23 +101,28 @@
       ],
     },
   };
+  // Only IPSC-legal props: no stars, racks or trees (IPSC target arrays allow at
+  // most two plates on a common base); moving targets start from activators.
   const TARGETS = {
     T1: { kind: "paper", pos: [-9.2, 0, 6.6], from: "A" },
     T2: { kind: "paper", pos: [-7.3, 0, 7.6], from: "A" },
     NS1: { kind: "noshoot", pos: [-6.98, 0, 7.12], from: "A" },
     P1: { kind: "popper", pos: [-5.6, 0, 8.6], from: "A" },
-    SW: { kind: "swinger", pos: [-3.9, 0, 9.4], from: "A" },
-    RACK: { kind: "rack", pos: [-1.0, 0, 10.4], from: "B" },
-    T3: { kind: "paper", pos: [0.5, 0, 8.4], from: "B" },
-    STAR: { kind: "star", pos: [3.4, 0, 10.0], from: "C" },
+    SW: { kind: "swinger", pos: [-4.4, 0, 9.5], from: "A" },
+    PL: { kind: "plates", pos: [0.2, 0, 10.2], from: "B" },
+    T3: { kind: "paper", pos: [1.8, 0, 8.6], from: "B" },
+    T7: { kind: "paper", pos: [-0.6, 0, 10.8], from: "B" },
+    T6: { kind: "paper", pos: [-1.4, 0, 8.8], from: "B" },
+    NS2: { kind: "noshoot", pos: [-1.12, 0, 8.45], from: "B" },
     P2: { kind: "popper", pos: [6.3, 0, 8.6], from: "C" },
-    DT: { kind: "turner", pos: [7.8, 0, 9.6], from: "C" },
+    DT: { kind: "turner", pos: [7.0, 0, 9.8], from: "C" },
+    MV: { kind: "mover", pos: [3.6, 0, 10.4], from: "C" },
     T4: { kind: "paper", pos: [6.8, 0, 6.2], from: "C" },
     T5: { kind: "paper", pos: [8.8, 0, 6.9], from: "C" },
   };
   const ZONE_POINTS = { A: 5, C: 3, D: 1, S: 5 }; // Minor (Production); S = steel
-  const PAPER_KINDS = ["paper", "swinger", "turner"];
-  const STEEL_COUNT = { popper: 1, rack: 6, star: 5 };
+  const PAPER_KINDS = ["paper", "swinger", "turner", "mover"];
+  const STEEL_COUNT = { popper: 1, plates: 2 };
   const MAX_POINTS = Object.values(TARGETS).reduce(
     (sum, tg) =>
       sum +
@@ -132,21 +138,23 @@
     [2260, "P1", "S", 0],
     [3100, "SW", "A", [0.01, -0.05]],
     [3360, "SW", "C", [0.1, 0.08]],
-    ...[0, 1, 2, 3, 4, 5].map((k) => [5750 + k * 200, "RACK", "S", k]),
-    [7050, "T3", "A", [0.02, -0.03]],
-    [7290, "T3", "A", [-0.03, 0.03]],
-    [10300, "STAR", "S", 0],
-    [10720, "STAR", "S", 1],
-    [11180, "STAR", "S", 4],
-    [11660, "STAR", "S", 2],
-    [12160, "STAR", "S", 3],
-    [12620, "P2", "S", 0],
-    [13000, "DT", "A", [0.0, -0.04]],
-    [13240, "DT", "A", [0.03, 0.03]],
-    [13700, "T4", "A", [-0.02, -0.05]],
-    [13930, "T4", "A", [0.03, 0.01]],
-    [14300, "T5", "A", [0.01, -0.03]],
-    [14540, "T5", "D", [0.19, 0.2]],
+    [5750, "PL", "S", 0],
+    [5960, "PL", "S", 1],
+    [6230, "T3", "A", [0.02, -0.03]],
+    [6450, "T3", "A", [-0.03, 0.03]],
+    [6740, "T7", "A", [0.0, -0.05]],
+    [6960, "T7", "A", [0.03, 0.02]],
+    [7240, "T6", "A", [-0.05, -0.02]],
+    [7460, "T6", "C", [-0.13, 0.06]],
+    [10300, "P2", "S", 0],
+    [10720, "DT", "A", [0.0, -0.04]],
+    [10960, "DT", "A", [0.03, 0.03]],
+    [11560, "MV", "A", [0.01, -0.03]],
+    [11920, "MV", "A", [-0.03, 0.02]],
+    [12380, "T4", "A", [-0.02, -0.05]],
+    [12620, "T4", "A", [0.03, 0.01]],
+    [12990, "T5", "A", [0.01, -0.03]],
+    [13230, "T5", "D", [0.19, 0.2]],
   ].map(([ms, target, zone, hit], i, list) => ({
     ms,
     st: ms / 1000,
@@ -161,19 +169,22 @@
   // Stage-time events (seconds).
   const EVENTS = {
     swingerRelease: 2.34,
-    reload: [7.29, 7.45, 8.15, 8.55], // slide lock, magazine out, new magazine in, slide forward
-    turnerRelease: 12.7,
+    reload: [7.46, 7.6, 8.3, 8.7], // slide lock, magazine out, new magazine in, slide forward
+    // P2 starts both the drop turner and the mover
+    turnerRelease: 10.38,
+    moverRelease: 10.38,
+    mover: { start: 10.48, dur: 3.0 }, // crosses the rail at constant speed
     moves: [
       [3.48, 5.5, "A", "B"],
-      [7.38, 10.18, "B", "C"],
+      [7.55, 10.18, "B", "C"],
     ],
   };
   // [from ms, to ms, playback rate]: slow motion below 1, fast forward above.
   const RAMPS = [
     [2850, 3450, 0.45],
     [3480, 5500, 2.8],
-    [7380, 10180, 2.0],
-    [10250, 12300, 0.8],
+    [7550, 10180, 2.0],
+    [11250, 12050, 0.45],
   ];
   function videoOfStage(ms) {
     let v = RESUME;
@@ -210,7 +221,7 @@
   const STAGE_END = SHOTS[SHOTS.length - 1].t; // video time of the last shot
   // Everything after the stage moves later by SHIFT (kept on the 0.5 s beat grid).
   const SHIFT = Math.ceil((STAGE_END + 0.6 - 20) * 2) / 2;
-  const DURATION = 28 + SHIFT;
+  const DURATION = Math.ceil(28 + SHIFT); // the end card holds to a whole second
   const vt = (ms) => videoOfStage(ms);
 
   // Stage time (ms) shown by the shot timer at video time t.
@@ -352,27 +363,33 @@
     ],
     [
       vt(3480) + 0.19,
-      vt(7290) - 0.03,
-      "이동 중에도 총구는 180° 안에 — 포트 너머엔 플레이트 랙.",
-      "On the move the muzzle stays inside the 180°. Then a plate rack, through a port.",
+      vt(7460) - 0.03,
+      "이동 중에도 총구는 180° 안에 — 포트 너머엔 철판 두 장과 표적.",
+      "On the move the muzzle stays inside the 180°. Then plates and paper, through a port.",
     ],
     [
-      vt(7290) + 0.27,
-      vt(10250) - 0.08,
+      vt(7460) + 0.27,
+      vt(10300) - 0.08,
       "15발 소진 — 이동하며 재장전.",
       "Fifteen rounds gone: reload on the move.",
     ],
     [
-      vt(10250) + 0.22,
-      vt(12620) - 0.27,
-      "텍사스 스타 — 철판이 떨어질 때마다 별이 돌아갑니다.",
-      "Texas Star: every plate that falls sets it spinning.",
+      vt(10300) + 0.22,
+      vt(11250) + 0.48,
+      "포퍼 하나가 드롭 터너와 무버를 함께 작동시킵니다.",
+      "One popper starts both the drop turner and the mover.",
     ],
     [
-      vt(12620) + 0.03,
+      vt(11250) + 0.78,
+      vt(12050),
+      "무버는 바리케이드 사이를 지날 때 쏩니다.",
+      "Hit the mover as it crosses the gap.",
+    ],
+    [
+      vt(12050) + 0.3,
       STAGE_END + 0.55,
-      "드롭 터너는 단 한 번 나타납니다. 마지막 한 발에 타이머가 멈춥니다.",
-      "The drop turner shows itself once. The last shot stops the clock.",
+      "마지막 한 발에 타이머가 멈춥니다.",
+      "The last shot stops the clock.",
     ],
     [
       20.1 + SHIFT,
@@ -2915,14 +2932,14 @@
     ];
     const WALL_B = {
       z: 3.4,
-      x: [-2.7, 0.7],
+      x: [-1.5, 1.9],
       h: 2.1,
       port: [
-        [-1.55, 0.9],
-        [-0.45, 1.75],
+        [-0.35, 0.9],
+        [0.75, 1.75],
       ],
     };
-    const CTRL = { AB: [-4.6, 0, 1.7], BC: [2.4, 0, 0.4] };
+    const CTRL = { AB: [-3.6, 0, 1.7], BC: [2.8, 0, 0.6] };
     function moveAt(st) {
       return EVENTS.moves.find(([a, b]) => st >= a && st <= b);
     }
@@ -2983,66 +3000,37 @@
       if (st < r + 0.85) return 0;
       return lerp(0, -Math.PI / 2, ease.inOut3(seg(st, r + 0.85, r + 1.4)));
     }
-    // Texas Star: five plates on a free hub. Removing plates unbalances it, so it
-    // spins; integrated from the first hit with a fixed step for determinism.
-    const STAR = { hub: 1.62, r: 0.56, plate: 0.1 };
-    const starHits = SHOTS.filter((s) => s.target === "STAR");
-    // The hub angle is integrated once at a fixed step (1/240 s) from the first
-    // hit to past the end of the stage, then looked up per frame.
-    const STAR_DT = 1 / 240;
-    const starTable = (() => {
-      const phis = [0];
-      const gone = new Set();
-      let phi = 0;
-      let w = 0;
-      const t0 = starHits[0].st;
-      for (let k = 0; t0 + k * STAR_DT < STAGE_MS / 1000 + 2; k++) {
-        const tt = t0 + k * STAR_DT;
-        starHits.forEach((h) => tt >= h.st + 0.02 && gone.add(h.hit));
-        let torque = 0;
-        let n = 0;
-        for (let p = 0; p < 5; p++) {
-          if (gone.has(p)) continue;
-          torque -= Math.cos(phi + Math.PI / 2 + (p * 2 * Math.PI) / 5);
-          n++;
-        }
-        const alpha = (9.81 / STAR.r) * (torque / (n + 0.8)) - 0.9 * w;
-        w += alpha * STAR_DT;
-        phi += w * STAR_DT;
-        phis.push(phi);
-      }
-      return phis;
-    })();
-    function starState(st) {
-      const gone = new Set(
-        starHits.filter((h) => st >= h.st + 0.02).map((h) => h.hit),
-      );
-      const x = clamp((st - starHits[0].st) / STAR_DT, 0, starTable.length - 1);
-      const k = Math.min(Math.floor(x), starTable.length - 2);
-      return { phi: lerp(starTable[k], starTable[k + 1], x - k), gone };
+    // Two IPSC metal plates on a common base, falling back when hit.
+    function platePos(k) {
+      const tg = TARGETS.PL;
+      const { right } = targetFrame("PL");
+      return add([tg.pos[0], 1.1, tg.pos[2]], mul(right, k ? 0.24 : -0.24));
     }
-    function starPlate(state, k) {
-      const tg = TARGETS.STAR;
-      const { right } = targetFrame("STAR");
-      const a = state.phi + Math.PI / 2 + (k * 2 * Math.PI) / 5;
-      return add(
-        add([tg.pos[0], STAR.hub, tg.pos[2]], mul(right, Math.cos(a) * STAR.r)),
-        [0, Math.sin(a) * STAR.r, 0],
-      );
+    // Mover: a paper target on a carriage, crossing a rail at constant speed
+    // between two barricades.
+    const MOVER = { half: 2.4, gap: 1.25 };
+    function moverOffset(st) {
+      const { start, dur } = EVENTS.mover;
+      return lerp(-MOVER.half, MOVER.half, seg(st, start, start + dur));
     }
-    function rackPlate(k) {
-      const tg = TARGETS.RACK;
-      const { right } = targetFrame("RACK");
-      return add([tg.pos[0], 1.12, tg.pos[2]], mul(right, -0.75 + k * 0.3));
+    function moverCentre(st) {
+      const tg = TARGETS.MV;
+      const { right } = targetFrame("MV");
+      return add([tg.pos[0], 1.24, tg.pos[2]], mul(right, moverOffset(st)));
     }
 
     // Where a shot lands, in world space, at stage time st (moving targets carry their holes).
     function hitWorld(s, st = s.st) {
       const tg = TARGETS[s.target];
       if (tg.kind === "popper") return [tg.pos[0], 0.7, tg.pos[2]];
-      if (tg.kind === "rack") return rackPlate(s.hit);
-      if (tg.kind === "star") return starPlate(starState(s.st), s.hit);
+      if (tg.kind === "plates") return platePos(s.hit);
       const { right } = targetFrame(s.target);
+      if (tg.kind === "mover")
+        return add(add(moverCentre(st), mul(right, s.hit[0])), [
+          0,
+          -s.hit[1],
+          0,
+        ]);
       if (tg.kind === "swinger") {
         const p = swingerPose(st);
         const ax = [Math.cos(p.th), Math.sin(p.th)];
@@ -3156,16 +3144,16 @@
         const wp = workPoint(st);
         return [[sp[0], 1.65, sp[2] + 0.05], lerp3(FOCUS.B, wp, 0.6), 32, 0];
       },
-      star: closeUp("STAR", {
-        dist: 5.0,
-        push: 1.0,
-        from: 10.1,
-        to: 12.4,
-        side: -0.6,
-        height: 1.4,
-        lookY: 1.55,
-        fov: 36,
-        roll: 0.035,
+      mover: closeUp("MV", {
+        dist: 5.2,
+        push: 0.8,
+        from: 11.1,
+        to: 12.2,
+        side: -0.4,
+        height: 1.3,
+        lookY: 1.2,
+        fov: 38,
+        roll: 0.03,
       }),
       overview() {
         return [[-0.4, 15, -7.4], [-0.4, 0, 5.0], 54, 0];
@@ -3175,9 +3163,10 @@
       [vt(2420), 0.5, "swinger"],
       [vt(3480) - 0.08, 0.32, "high"],
       [vt(5150), 0.4, "pov"],
-      [vt(7330), 0.35, "high"],
-      [vt(10100), 0.42, "star"],
-      [vt(12380), 0.4, "drone"],
+      [vt(7500), 0.35, "high"],
+      [vt(10120), 0.4, "drone"],
+      [vt(11120), 0.42, "mover"],
+      [vt(12100), 0.4, "drone"],
       [STAGE_END + 0.12, 0.6, "overview"],
     ];
     function stageCamera(t, st) {
@@ -3400,6 +3389,7 @@
       [
         ["P1", "SW", EVENTS.swingerRelease],
         ["P2", "DT", EVENTS.turnerRelease],
+        ["P2", "MV", EVENTS.moverRelease],
       ].forEach(([from, to, at]) => {
         const a = env(st, at - 0.05, at + 0.9, 0.15, 0.35);
         if (a <= 0) return;
@@ -3867,70 +3857,64 @@
           );
         hitsOf(key).forEach((s) => Math.abs(Math.cos(psi)) > 0.2 && hole(s));
         label3(cam, [tg.pos[0], 1.8, tg.pos[2]], "DROP TURNER");
-      } else if (tg.kind === "rack") {
-        const a = add([tg.pos[0], 0.98, tg.pos[2]], mul(right, -0.95));
-        const b = add([tg.pos[0], 0.98, tg.pos[2]], mul(right, 0.95));
-        seg3(cam, a, b, "rgba(170,175,185,0.9)", 4);
-        [a, b].forEach((p) =>
-          seg3(cam, p, [p[0], 0, p[2]], "rgba(170,175,185,0.9)", 3),
+      } else if (tg.kind === "plates") {
+        // a common base: post, crossbar, two round plates on hinges
+        const base = [tg.pos[0], 0, tg.pos[2]];
+        const a = add([tg.pos[0], 0.95, tg.pos[2]], mul(right, -0.4));
+        const b = add([tg.pos[0], 0.95, tg.pos[2]], mul(right, 0.4));
+        seg3(
+          cam,
+          base,
+          [tg.pos[0], 0.95, tg.pos[2]],
+          "rgba(170,175,185,0.9)",
+          4,
         );
-        for (let k = 0; k < 6; k++) {
+        seg3(cam, a, b, "rgba(170,175,185,0.9)", 4);
+        for (let k = 0; k < 2; k++) {
           const s = SHOTS.find((x) => x.target === key && x.hit === k);
           const fall = s
             ? ease.in3(seg(st, s.st + 0.02, s.st + 0.25)) * 1.5
             : 0;
-          const hinge = add(rackPlate(k), [0, -0.12, 0]);
+          const hinge = add(platePos(k), [0, -0.15, 0]);
           const up2 = add(mul(UP, Math.cos(fall)), mul(back, Math.sin(fall)));
           steel(
-            disc(add(hinge, mul(up2, 0.12)), right, up2, 0.1),
+            disc(add(hinge, mul(up2, 0.1)), right, up2, 0.1),
             flashOf(key, k),
           );
         }
-        label3(cam, [tg.pos[0], 1.55, tg.pos[2]], "PLATE RACK");
-      } else if (tg.kind === "star") {
-        const state = starState(st);
-        const hub = [tg.pos[0], STAR.hub, tg.pos[2]];
+        label3(cam, [tg.pos[0], 1.5, tg.pos[2]], "PLATES");
+      } else if (tg.kind === "mover") {
+        // the rail, the target on its carriage, then the barricades in front
+        const at = (u, y, fwd = 0) =>
+          add(add([tg.pos[0], y, tg.pos[2]], mul(right, u)), mul(n, fwd));
         seg3(
           cam,
-          [tg.pos[0], 0, tg.pos[2] + 0.05],
-          [tg.pos[0], STAR.hub, tg.pos[2] + 0.05],
+          at(-MOVER.half - 0.4, 0.12),
+          at(MOVER.half + 0.4, 0.12),
           "rgba(170,175,185,0.9)",
-          4,
+          3,
         );
-        for (let k = 0; k < 5; k++) {
-          const s = starHits.find((x) => x.hit === k);
-          const P = starPlate(state, k);
-          seg3(cam, hub, P, "rgba(190,195,205,0.95)", 3);
-          if (!state.gone.has(k)) steel(disc(P, right, UP, STAR.plate), 0);
-          else {
-            // the plate drops away from its arm
-            const d = st - s.st;
-            if (d < 0.7) {
-              const from = starPlate(starState(s.st), k);
-              const c = add(
-                from,
-                add(mul(back, d * 0.6), [0, -4.9 * d * d, 0]),
-              );
-              ctx.save();
-              ctx.globalAlpha *= 1 - d / 0.7;
-              steel(disc(c, right, UP, STAR.plate), flashOf(key, k));
-              ctx.restore();
-            }
-          }
-        }
-        const H0 = project(cam, hub);
-        if (H0[2] < 0.3) return;
-        ctx.fillStyle = "#2a2e35";
-        ctx.beginPath();
-        ctx.arc(
-          H0[0],
-          H0[1],
-          Math.max(3, (0.06 * cam.focal) / H0[2]),
-          0,
-          Math.PI * 2,
-        );
-        ctx.fill();
-        label3(cam, [tg.pos[0], STAR.hub + 0.85, tg.pos[2]], "TEXAS STAR");
+        const u = moverOffset(st);
+        seg3(cam, at(u, 0.12), at(u, 0.95), "rgba(150,155,165,0.9)", 3);
+        const c = moverCentre(st);
+        paper(c, right, UP, false, flashOf(key));
+        hitsOf(key).forEach(hole);
+        [-1, 1].forEach((sd) => {
+          const u0 = sd * MOVER.gap;
+          const u1 = sd * (MOVER.half + 0.45);
+          poly3(
+            cam,
+            [
+              at(u0, 0, 0.45),
+              at(u1, 0, 0.45),
+              at(u1, 2.0, 0.45),
+              at(u0, 2.0, 0.45),
+            ],
+            "rgba(22,25,31,0.97)",
+            "rgba(255,255,255,0.22)",
+          );
+        });
+        label3(cam, at(0, 2.3, 0.45), "MOVER");
       }
       if (/^T\d/.test(key))
         label3(
@@ -4710,6 +4694,7 @@
     CUES,
     CAPTIONS,
     SHOTS,
+    TARGETS,
     STAGE: {
       points: STAGE_POINTS,
       time: STAGE_TIME,
