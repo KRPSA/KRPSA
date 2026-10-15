@@ -22,6 +22,8 @@ test('the stage run follows IPSC Production scoring and the shot timer', () => {
   assert.ok(reel.SHOTS.length - beforeReload <= reel.STAGE.magazine);
   // IPSC long courses: at most 32 rounds, and no more than 9 scoring hits from one location.
   assert.ok(reel.SHOTS.length <= 32);
+  // Labelled LONG COURSE: more rounds than a medium course (24) allows.
+  assert.ok(reel.SHOTS.length > 24);
   const hitsFrom = {};
   for (const shot of reel.SHOTS) {
     const area = reel.TARGETS[shot.target].from;

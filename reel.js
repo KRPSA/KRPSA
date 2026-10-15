@@ -77,7 +77,7 @@
   // scoring hits from any one location) over
   // three shooting areas. Everything is defined in stage time — milliseconds on
   // the shot timer — and RAMPS map it to video time, so the runs between areas
-  // play fast and the swinger and the Texas Star play slow.
+  // play fast and the swinger and the mover play slow.
   const AREAS = {
     A: {
       pos: [-7, 0, 0],
@@ -100,6 +100,13 @@
         [6.4, 2.0],
       ],
     },
+    D: {
+      pos: [9.0, 0, 2.4],
+      box: [
+        [8.0, 1.4],
+        [10.0, 3.4],
+      ],
+    },
   };
   // Only IPSC-legal props: no stars, racks or trees (IPSC target arrays allow at
   // most two plates on a common base); moving targets start from activators.
@@ -117,8 +124,10 @@
     P2: { kind: "popper", pos: [6.3, 0, 8.6], from: "C" },
     DT: { kind: "turner", pos: [7.0, 0, 9.8], from: "C" },
     MV: { kind: "mover", pos: [3.6, 0, 10.4], from: "C" },
-    T4: { kind: "paper", pos: [6.8, 0, 6.2], from: "C" },
-    T5: { kind: "paper", pos: [8.8, 0, 6.9], from: "C" },
+    T4: { kind: "paper", pos: [8.6, 0, 7.4], from: "D" },
+    T5: { kind: "paper", pos: [10.4, 0, 7.9], from: "D" },
+    NS3: { kind: "noshoot", pos: [10.6, 0, 7.49], from: "D" },
+    T8: { kind: "paper", pos: [11.8, 0, 6.6], from: "D" },
   };
   const ZONE_POINTS = { A: 5, C: 3, D: 1, S: 5 }; // Minor (Production); S = steel
   const PAPER_KINDS = ["paper", "swinger", "turner", "mover"];
@@ -151,10 +160,12 @@
     [10960, "DT", "A", [0.03, 0.03]],
     [11560, "MV", "A", [0.01, -0.03]],
     [11920, "MV", "A", [-0.03, 0.02]],
-    [12380, "T4", "A", [-0.02, -0.05]],
-    [12620, "T4", "A", [0.03, 0.01]],
-    [12990, "T5", "A", [0.01, -0.03]],
-    [13230, "T5", "D", [0.19, 0.2]],
+    [13200, "T4", "A", [-0.02, -0.05]],
+    [13430, "T4", "A", [0.03, 0.01]],
+    [13760, "T5", "A", [-0.04, -0.03]],
+    [13990, "T5", "A", [-0.06, 0.04]],
+    [14330, "T8", "A", [0.01, -0.03]],
+    [14560, "T8", "D", [0.19, 0.2]],
   ].map(([ms, target, zone, hit], i, list) => ({
     ms,
     st: ms / 1000,
@@ -177,6 +188,7 @@
     moves: [
       [3.48, 5.5, "A", "B"],
       [7.55, 10.18, "B", "C"],
+      [12.0, 12.95, "C", "D"],
     ],
   };
   // [from ms, to ms, playback rate]: slow motion below 1, fast forward above.
@@ -185,6 +197,7 @@
     [3480, 5500, 2.8],
     [7550, 10180, 2.0],
     [11250, 12050, 0.45],
+    [12050, 12950, 1.8],
   ];
   function videoOfStage(ms) {
     let v = RESUME;
@@ -221,7 +234,8 @@
   const STAGE_END = SHOTS[SHOTS.length - 1].t; // video time of the last shot
   // Everything after the stage moves later by SHIFT (kept on the 0.5 s beat grid).
   const SHIFT = Math.ceil((STAGE_END + 0.6 - 20) * 2) / 2;
-  const DURATION = Math.ceil(28 + SHIFT); // the end card holds to a whole second
+  const END_HOLD = 0.8; // RANGE IS CLEAR holds this long before the end card
+  const DURATION = Math.ceil(28 + SHIFT + END_HOLD); // the end card holds to a whole second
   const vt = (ms) => videoOfStage(ms);
 
   // Stage time (ms) shown by the shot timer at video time t.
@@ -404,8 +418,8 @@
       "Safe to the very end — unload, show clear, hammer down.",
     ],
     [
-      24.7 + SHIFT,
-      27.2 + SHIFT,
+      24.7 + SHIFT + END_HOLD,
+      27.2 + SHIFT + END_HOLD,
       "1976년 시작된 IPSC, 2026년 50주년.",
       "IPSC, founded in 1976 — fifty years in 2026.",
     ],
@@ -499,7 +513,7 @@
     { t: 23.32 + SHIFT, type: "slide", v: 0.8 },
     { t: 23.47 + SHIFT, type: "click", v: 0.9 },
     { t: 24.0 + SHIFT, type: "stab", v: 1 },
-    { t: 24.5 + SHIFT, type: "logo" },
+    { t: 24.5 + SHIFT + END_HOLD, type: "logo" },
   ];
 
   // ------------------------------------------------------------------- shapes
@@ -2949,7 +2963,7 @@
         [0.75, 1.75],
       ],
     };
-    const CTRL = { AB: [-3.6, 0, 1.7], BC: [2.8, 0, 0.6] };
+    const CTRL = { AB: [-3.6, 0, 1.7], BC: [2.8, 0, 0.6], CD: [7.6, 0, 1.2] };
     function moveAt(st) {
       return EVENTS.moves.find(([a, b]) => st >= a && st <= b);
     }
@@ -3176,7 +3190,7 @@
       [vt(7500), 0.35, "high"],
       [vt(10120), 0.4, "drone"],
       [vt(11120), 0.42, "mover"],
-      [vt(12100), 0.4, "drone"],
+      [vt(12000), 0.45, "drone"],
       [STAGE_END + 0.12, 0.6, "overview"],
     ];
     function stageCamera(t, st) {
@@ -4203,7 +4217,7 @@
 
     // S7 — unload, show clear, hammer down, holster, range is clear.
     function sceneClear(t) {
-      if (t < 22.4 || t > 24.8) return;
+      if (t < 22.4 || t > 24.8 + END_HOLD) return;
       const lines = [
         ["IF YOU ARE FINISHED,", "UNLOAD AND SHOW CLEAR", 22.5, 23.02],
         ["IF CLEAR,", "HAMMER DOWN, HOLSTER", 23.25, 23.77],
@@ -4468,7 +4482,7 @@
       sceneHitFactor(t - SHIFT);
       sceneClear(t - SHIFT);
       if (t >= 12.75 && t <= 13.25) blinds(t, 12.75, 13.15);
-      sceneEnd(t - SHIFT);
+      sceneEnd(t - SHIFT - END_HOLD);
       ctx.restore();
       overlays(t);
       timerHud(t);
