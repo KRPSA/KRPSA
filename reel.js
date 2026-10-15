@@ -476,8 +476,8 @@
     { t: 21.0 + SHIFT, type: "hit", v: 1 },
     ...[21.5, 21.75, 22.0].map((t) => ({ t: t + SHIFT, type: "blip", v: 0.5 })),
     { t: 22.5 + SHIFT, type: "stab", v: 0.8 },
-    { t: 22.62 + SHIFT, type: "slide", v: 0.6 },
-    { t: 22.75 + SHIFT, type: "clank", v: 0.6 },
+    { t: 22.62 + SHIFT, type: "clank", v: 0.6 },
+    { t: 22.88 + SHIFT, type: "slide", v: 0.6 },
     { t: 23.25 + SHIFT, type: "stab", v: 0.8 },
     { t: 23.32 + SHIFT, type: "slide", v: 0.8 },
     { t: 23.47 + SHIFT, type: "click", v: 0.9 },
@@ -660,7 +660,8 @@
 
   // ------------------------------------------------------------------ factory
   function create(canvas, options = {}) {
-    const ctx = canvas.getContext("2d");
+    // `let`: soft() points the drawing helpers at an offscreen layer for a moment.
+    let ctx = canvas.getContext("2d");
     const opt = {
       lang: "ko",
       assetBase: "assets/",
@@ -853,7 +854,8 @@
     // ------------------------------------------------------------- the gun
     // o: x, y (screen position of the gun centre), s (px per mm), rot, blue
     // (0 solid → 1 blueprint), draw (outline draw-on), slide (mm back),
-    // hammer (0 cocked → 1 down), mag ({dx, dy, rot} or null), alpha.
+    // hammer (0 down, the traced pose → 1 cocked; the slide also cocks it as it
+    // opens), mag ({dx, dy, rot} or null), alpha.
     function drawGun(o) {
       const s = o.s;
       const blue = o.blue ?? 0;
@@ -921,15 +923,22 @@
         fillShape(GUN.barrel, g(12.4, 26.2, "#9aa1aa", "#4a5059")),
       );
 
-      // Hammer, cocked by the slide as it runs back.
+      // Hammer: traced down against the slide; cocked, it swings 55° back over
+      // the beavertail. The slide cocks it as it runs back; o.hammer = 1 keeps
+      // it cocked once the slide has closed again.
       const [hx, hy] = GUN.hammerPivot;
+      const cock = Math.max(o.hammer ?? 0, Math.min(slide, 6) / 6);
       ctx.save();
       ctx.translate(hx, hy);
-      ctx.rotate(
-        ((o.hammer ?? 0) * 38 - Math.min(slide, 6) * 2) * (Math.PI / 180),
-      );
+      ctx.rotate(-cock * 55 * (Math.PI / 180));
       ctx.translate(-hx, -hy);
-      solidLayer(() => fillShape(GUN.hammer, "#2a2d32"));
+      solidLayer(() => {
+        fillShape(GUN.hammer, "#2a2d32");
+        // a rim light, as on the frame, so the dark spur reads when cocked
+        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.lineWidth = px;
+        ctx.stroke();
+      });
       if (blue > 0) strokeShape(GUN.hammer, blue * 0.8);
       ctx.restore();
 
@@ -1203,15 +1212,16 @@
           ? `rgba(240,242,244,${fill})`
           : rgba(C.card, fill);
         ctx.fill();
-        // corrugated cardboard texture
-        ctx.save();
-        tracePath(ctx, TGT.outer);
-        ctx.clip();
-        ctx.strokeStyle = `rgba(0,0,0,${0.05 * fill})`;
-        ctx.lineWidth = 0.35;
-        for (let k = -30; k < 30; k += 1.3)
-          line(k, -30, k, 30, `rgba(0,0,0,${0.045 * fill})`, 0.35);
-        ctx.restore();
+        // corrugated cardboard texture (o.texture 0 skips it, e.g. under a blur)
+        const tex = fill * (o.texture ?? 1);
+        if (tex > 0) {
+          ctx.save();
+          tracePath(ctx, TGT.outer);
+          ctx.clip();
+          for (let k = -30; k < 30; k += 1.3)
+            line(k, -30, k, 30, `rgba(0,0,0,${0.045 * tex})`, 0.35);
+          ctx.restore();
+        }
       }
       const ring = (outer, inner, a) => {
         if (a <= 0) return;
@@ -2145,31 +2155,39 @@
     };
     const canBlur = "filter" in CanvasRenderingContext2D.prototype;
 
-    // Draw fn() softened, with a cheap fallback where canvas filters are missing.
+    let softLayer = null;
+
+    // Draw fn() softened by a blur of `radius` design px. A canvas filter blurs
+    // every fill and stroke on its own, so fn() is drawn once, sharp, into an
+    // offscreen layer (with the current transform), and that layer is blurred
+    // onto the canvas in a single pass, under the caller's clip and alpha. The
+    // radius scales with the canvas, so every size matches the 1920 export.
+    // Without canvas filters fn() is simply drawn sharp.
     function soft(radius, fn) {
-      if (radius <= 0.3) return fn();
-      if (canBlur) {
-        ctx.save();
-        ctx.filter = `blur(${radius.toFixed(1)}px)`;
-        fn();
-        ctx.restore();
-        return;
+      if (radius <= 0.3 || !canBlur) return fn();
+      const main = ctx;
+      if (!softLayer)
+        softLayer = document.createElement("canvas").getContext("2d");
+      const layer = softLayer.canvas;
+      if (layer.width !== canvas.width || layer.height !== canvas.height) {
+        layer.width = canvas.width;
+        layer.height = canvas.height;
       }
-      ctx.save();
-      const a = ctx.globalAlpha;
-      [
-        [-1, 0],
-        [1, 0],
-        [0, -1],
-        [0, 1],
-      ].forEach(([dx, dy]) => {
-        ctx.save();
-        ctx.globalAlpha = a * 0.3;
-        ctx.translate(dx * radius * 0.6, dy * radius * 0.6);
+      softLayer.save();
+      softLayer.clearRect(0, 0, layer.width, layer.height);
+      softLayer.setTransform(main.getTransform());
+      ctx = softLayer;
+      try {
         fn();
-        ctx.restore();
-      });
-      ctx.restore();
+      } finally {
+        ctx = main;
+        softLayer.restore();
+      }
+      main.save();
+      main.setTransform(1, 0, 0, 1, 0, 0);
+      main.filter = `blur(${((radius * canvas.width) / W).toFixed(2)}px)`;
+      main.drawImage(layer, 0, 0);
+      main.restore();
     }
 
     // Recoil of the sight picture dt seconds into the cycle: lift (px) and tilt.
@@ -2324,6 +2342,8 @@
       ctx.translate(cx, 330);
       ctx.scale(zoom, zoom);
       ctx.translate(-cx, -330);
+      // iron sights: the eye focuses on the front sight, the target goes soft
+      const blur = kind === "iron" ? (5 * settle + 1.5) * (1 - lowered) : 0;
       const drawRange = () => {
         line(
           cx - 80,
@@ -2341,10 +2361,13 @@
           "rgba(150,120,80,0.9)",
           4,
         );
-        drawTarget(cx, tgtY, s, { letters: 0.9 });
+        // the faint corrugation is lost in the blur: fade it out, then skip it
+        drawTarget(cx, tgtY, s, {
+          letters: 0.9,
+          texture: clamp((1.5 - blur) / 1.2),
+        });
       };
-      // iron sights: the eye focuses on the front sight, the target goes soft
-      soft(kind === "iron" ? (5 * settle + 1.5) * (1 - lowered) : 0, drawRange);
+      soft(blur, drawRange);
 
       ctx.save();
       ctx.translate(cx + sx, aimY + sy);
@@ -3641,7 +3664,7 @@
       ctx.beginPath();
       ctx.roundRect(px, py, 420, 230, 6);
       ctx.clip();
-      drawGun({ ...go, slide, mag, fiber: 0.9 });
+      drawGun({ ...go, slide, mag, fiber: 0.9, hammer: last ? 1 : 0 });
       if (last && !reloading && st - last.st < 0.05) {
         const [mx, my] = gunPoint(go, GUN.muzzle[0], GUN.muzzle[1]);
         muzzleFlash(mx + 10, my, 54, 1 - (st - last.st) / 0.05, last.i * 3 + 1);
@@ -4218,11 +4241,13 @@
         ctx.fillStyle = C.red;
         ctx.fillRect(150, 590, w, 8);
       }
-      // the gun: slide locked back, magazine out, slide forward, hammer down, holster
+      // the gun: magazine out, slide locked back, show clear, slide forward,
+      // hammer down, holster. The magazine clears the grip by 22.72, before the
+      // slide comes back (22.8–22.9) and the chamber is shown empty.
       if (t < 24.0) {
+        const drop = seg(t, 22.58, 23.08);
         const lock =
-          ease.out3(seg(t, 22.55, 22.65)) * (1 - ease.in3(seg(t, 23.3, 23.34)));
-        const drop = seg(t, 22.7, 23.3);
+          ease.out3(seg(t, 22.8, 22.9)) * (1 - ease.in3(seg(t, 23.3, 23.34)));
         const holster = ease.in3(seg(t, 23.6, 23.95));
         const enter = ease.out3(seg(t, 22.52, 22.82));
         const go = {
@@ -4234,12 +4259,13 @@
         drawGun({
           ...go,
           slide: lock * 27,
-          hammer: ease.in3(seg(t, 23.44, 23.5)),
+          // cocked by the stage's last shot until HAMMER DOWN
+          hammer: 1 - ease.in3(seg(t, 23.44, 23.5)),
           mag: { dx: -drop * 18, dy: drop * drop * 900, rot: drop * 0.8 },
         });
-        if (t > 22.62 && t < 23.25) {
+        if (t > 22.88 && t < 23.25) {
           const [cx, cy] = gunPoint(go, GUN.port[0], GUN.port[1]);
-          const a = env(t, 22.62, 23.25, 0.1, 0.15);
+          const a = env(t, 22.88, 23.25, 0.08, 0.12);
           ctx.save();
           ctx.globalAlpha = a;
           ctx.strokeStyle = C.white;
