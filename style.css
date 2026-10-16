@@ -3230,7 +3230,9 @@ html[lang="en"] .latest-announcements-heading h2 {
 .hero-reel-chapters {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  /* one row however many chapters the reel has */
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
   gap: 8px;
   margin: 0;
   padding: 0;
