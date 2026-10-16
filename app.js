@@ -64,7 +64,7 @@ const english = {
     'Your next challenge.<br><span class="muted">Starts with KRPSA.</span>',
   contactBody:
     "Get in touch about getting started, association membership, international exchange and competition.",
-  contactSource: "Email listed in the official IPSC regional directory",
+  contactSource: "Address listed in IPSC's official regions directory",
   directorName: "Wontaek Lim",
   directorBody: "Korea Practical Shooting Association<br>Republic of Korea",
   backTop: "Back to top ↑",
@@ -104,7 +104,7 @@ Object.assign(english, {
     "From beginner training to association membership. Contact ipsckorea on KakaoTalk to get started.",
   copyId: "Copy ID",
   kakaoHelp: "In KakaoTalk, choose Add by ID and search for ipsckorea.",
-  emailLabel: "International exchange & other email inquiries",
+  emailLabel: "IPSC Korea Regional Director email",
   standardBody:
     "An iron-sight division for handguns that fit inside the prescribed measuring box. Eligibility is based on size and equipment requirements rather than the Production approved list, allowing a variety of competition handguns without optical sights.",
 });
