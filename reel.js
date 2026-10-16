@@ -420,8 +420,8 @@
     [
       vt(12050) + 0.3,
       STAGE_END + 0.55,
-      "마지막 포지션 — 마지막 발에 타이머가 멈춥니다.",
-      "Last position. The last shot stops the clock.",
+      "낮은 포트에서 무릎 쏴 — 마지막 발에 타이머가 멈춥니다.",
+      "Down on one knee at the low port. The last shot stops the clock.",
     ],
     [
       20.1 + SHIFT,
@@ -4631,13 +4631,13 @@
       background(t);
       blueprintGrid(0.5);
       // a slow push-in so the hold keeps breathing
-      const push = lerp(1, 1.04, ease.inOut3(seg(t, 24.5, 28)));
+      const push = lerp(1, 1.04, ease.inOut3(seg(t, 24.5, 28 + TAIL)));
       ctx.translate(W / 2, H / 2);
       ctx.scale(push, push);
       ctx.translate(-W / 2, -H / 2);
       const lt = t - 24.5;
       const img = images["krpsa-logo.png"];
-      const fade = 1 - seg(t, 27.2, 28);
+      const fade = 1 - seg(t, 27.2 + TAIL, 28 + TAIL);
       ctx.globalAlpha = fade;
       if (img) {
         const h = 420;
@@ -5097,9 +5097,10 @@
     }
     return { t: t - off, insert: null, lt: 0 };
   }
-  const DURATION = Math.ceil(
-    BASE_DURATION + INSERTS.reduce((sum, x) => sum + x.dur, 0),
-  );
+  // the cut runs one minute: the end card holds for whatever time is left
+  const CUT = BASE_DURATION + INSERTS.reduce((sum, x) => sum + x.dur, 0);
+  const TAIL = Math.max(0, 60 - CUT);
+  const DURATION = Math.ceil(CUT + TAIL);
   {
     const [div, fly] = INSERTS;
     // chapters: one that starts exactly where an insert begins opens with it
@@ -5136,6 +5137,7 @@
       ],
     );
     CAPTIONS.sort((a, b) => a[0] - b[0]);
+    CAPTIONS[CAPTIONS.length - 1][1] += TAIL; // the closing line stays with the end card
     CUES.forEach((c) => (c.t = ins(c.t)));
     CUES.push(
       ...DIV_INFO.cues.map((c) => ({ ...c, t: insStart(div) + c.lt })),
