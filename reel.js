@@ -4359,6 +4359,7 @@
     }
 
     // S8 — end card.
+    let logoLayer = null;
     function sceneEnd(t) {
       if (t < 24.3) return;
       const iris = ease.inOut3(seg(t, 24.3, 24.75));
@@ -4388,19 +4389,31 @@
         ctx.beginPath();
         ctx.rect(-w / 2 - 10, h / 2 - (h + 20) * p, w + 20, (h + 20) * p);
         ctx.clip();
-        ctx.drawImage(img, -w / 2, -h / 2, w, h);
-        // light sweep
+        // The light sweep is composited on the crest's own layer, so it only
+        // touches the crest's pixels and never the background around it.
         const sw = seg(lt, 0.4, 1.2);
         if (sw > 0 && sw < 1) {
-          const sx = lerp(-w, w, sw);
-          const g = ctx.createLinearGradient(sx - 80, 0, sx + 80, 0);
+          logoLayer ||= document.createElement("canvas").getContext("2d");
+          const lc = logoLayer;
+          const iw = Math.round(w);
+          const ih = Math.round(h);
+          if (lc.canvas.width !== iw || lc.canvas.height !== ih) {
+            lc.canvas.width = iw;
+            lc.canvas.height = ih;
+          }
+          lc.globalCompositeOperation = "source-over";
+          lc.clearRect(0, 0, iw, ih);
+          lc.drawImage(img, 0, 0, iw, ih);
+          const sx = lerp(-0.2, 1.2, sw) * iw;
+          const g = lc.createLinearGradient(sx - 90, 0, sx + 90, ih * 0.25);
           g.addColorStop(0, "rgba(255,255,255,0)");
-          g.addColorStop(0.5, "rgba(255,255,255,0.35)");
+          g.addColorStop(0.5, "rgba(255,255,255,0.55)");
           g.addColorStop(1, "rgba(255,255,255,0)");
-          ctx.globalCompositeOperation = "source-atop";
-          ctx.fillStyle = g;
-          ctx.fillRect(-w / 2, -h / 2, w, h);
-        }
+          lc.globalCompositeOperation = "source-atop";
+          lc.fillStyle = g;
+          lc.fillRect(0, 0, iw, ih);
+          ctx.drawImage(lc.canvas, -w / 2, -h / 2, w, h);
+        } else ctx.drawImage(img, -w / 2, -h / 2, w, h);
         ctx.restore();
       }
       kinetic("KRPSA", 820, 545, {
