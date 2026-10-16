@@ -4027,7 +4027,8 @@
       shoulder: 0.19,
     };
     const STRIDE = 2.1; // metres per running cycle (two steps)...
-    const CADENCE = 2.4; // ...and at most this many cycles a second
+    const CADENCE = 2.6; // ...and at most this many cycles a second
+    const GROUND = 0.36; // share of the cycle a foot is on the ground
     const yawDir = (a) => [Math.sin(a), 0, Math.cos(a)];
     const yawOf = (v) => Math.atan2(v[0], v[2]);
     const lerpYaw = (a, b, p) =>
@@ -4045,14 +4046,18 @@
       );
     }
     // Two-bone IK: [middle joint, end] of a limb from a reaching for c, with
-    // bones l1 and l2, bending towards pole. Out of reach, c is pulled in.
-    function ik2(a, c, l1, l2, pole) {
+    // bones l1 and l2, bending towards pole. Near full extension the reach
+    // eases off (soft IK, so the knee never snaps straight) and c is pulled in.
+    function ik2(a, c, l1, l2, pole, softAt = 0.94) {
       const d = sub(c, a);
       let len = Math.hypot(d[0], d[1], d[2]);
       const max = (l1 + l2) * 0.999;
-      if (len > max) {
-        c = add(a, mul(d, max / len));
-        len = max;
+      const soft = softAt * max;
+      if (len > soft) {
+        const L =
+          soft + (max - soft) * (1 - Math.exp(-(len - soft) / (max - soft)));
+        c = add(a, mul(d, L / len));
+        len = L;
       }
       len = Math.max(len, Math.abs(l1 - l2) + 0.01);
       const n = norm(d);
@@ -4061,51 +4066,67 @@
       const h = Math.sqrt(Math.max(0, l1 * l1 - x * x));
       return [add(add(a, mul(n, x)), mul(p, h)), c];
     }
-    // The run near stage time st: the stride phase (cycles) and heading. The
-    // feet stay planted up to a sprinter's cadence and skate beyond it.
+    // The ankles of the shooting stance at stage time t: [support, strong].
+    function standFeet(t) {
+      const p = shooterPos(t);
+      const F = yawDir(yawOf(sub(focusAt(t), p)));
+      const R = cross(UP, F);
+      return [
+        offs(p, F, R, 0.06, -0.19, 0.08),
+        offs(p, F, R, -0.07, 0.2, 0.08),
+      ];
+    }
+    // The run near stage time st: the stride phase (cycles; the support
+    // foot's, the strong foot is half a cycle on) and heading, sampled from
+    // shooterPos so they follow any speed profile. A run starts with the
+    // forward foot planted, at the phase that matches where it stands, and
+    // the other foot lifting. The feet stay planted up to a sprinter's
+    // cadence and skate beyond it.
     let runTable = null;
     function runAt(st) {
       runTable ??= EVENTS.moves.map(([a, b, from, to]) => {
-        const A = AREAS[from].pos;
-        const B = AREAS[to].pos;
+        const pos = [];
+        for (let k = 0; k <= 64; k++) pos.push(shooterPos(lerp(a, b, k / 64)));
         const c = CTRL[from + to];
-        const len = [0];
-        let prev = A;
-        for (let k = 1; k <= 32; k++) {
-          const p = k / 32;
-          const u = 1 - p;
-          const q = [
-            u * u * A[0] + 2 * u * p * c[0] + p * p * B[0],
-            0,
-            u * u * A[2] + 2 * u * p * c[2] + p * p * B[2],
-          ];
-          len.push(len[k - 1] + Math.hypot(q[0] - prev[0], q[2] - prev[2]));
-          prev = q;
-        }
-        const at = (p) => {
-          const i = Math.min(31, Math.floor(p * 32));
-          return lerp(len[i], len[i + 1], p * 32 - i);
-        };
-        const ph = [0];
+        const hd = [yawOf(sub(c, AREAS[from].pos))];
+        const reach = (GROUND * STRIDE) / 2;
+        const d = standFeet(a).map((p) => dot(sub(p, pos[0]), yawDir(hd[0])));
+        const j = d[0] >= d[1] ? 0 : 1;
+        const fj = GROUND * clamp((reach - d[j]) / (2 * reach), 0.08, 0.92);
+        const ph = [(fj - 0.5 * j + 1) % 1];
         for (let k = 1; k <= 64; k++) {
-          const dd = at(ease.inOut3(k / 64)) - at(ease.inOut3((k - 1) / 64));
+          const dp = sub(pos[k], pos[k - 1]);
+          const dd = Math.hypot(dp[0], dp[2]);
           ph.push(ph[k - 1] + Math.min(dd / STRIDE, (CADENCE * (b - a)) / 64));
+          const v =
+            k < 64 ? sub(pos[k + 1], pos[k - 1]) : sub(AREAS[to].pos, c);
+          hd.push(Math.hypot(v[0], v[2]) > 1e-6 ? yawOf(v) : hd[k - 1]);
         }
-        return { A, B, c, ph };
+        // the stage time at which the phase reaches f (within the run)
+        const timeAt = (f) => {
+          let i = 0;
+          while (i < 63 && ph[i + 1] < f) i++;
+          const x = clamp((f - ph[i]) / Math.max(1e-9, ph[i + 1] - ph[i]));
+          return lerp(a, b, (i + x) / 64);
+        };
+        const headingAt = (t) => {
+          const x = seg(t, a, b) * 64;
+          const i = Math.min(63, Math.floor(x));
+          return lerpYaw(hd[i], hd[i + 1], x - i);
+        };
+        return { a, b, to, start: ph[0], end: ph[64], timeAt, headingAt, ph };
       });
       const k = EVENTS.moves.findIndex(
         ([a, b]) => st > a - 0.6 && st < b + 0.6,
       );
       if (k < 0) return null;
-      const [a, b, , to] = EVENTS.moves[k];
-      const { A, B, c, ph } = runTable[k];
-      const p = ease.inOut3(seg(st, a, b));
-      const x = seg(st, a, b) * 64;
+      const r = runTable[k];
+      const x = seg(st, r.a, r.b) * 64;
       const i = Math.min(63, Math.floor(x));
       return {
-        to,
-        phase: lerp(ph[i], ph[i + 1], x - i),
-        heading: yawOf(add(mul(sub(c, A), 1 - p), mul(sub(B, c), p))),
+        ...r,
+        phase: lerp(r.ph[i], r.ph[i + 1], x - i),
+        heading: r.headingAt(st),
       };
     }
     // Recoil of the latest shot: 0 → 1 in 30 ms, recovered by 150 ms.
@@ -4281,7 +4302,9 @@
     //   forward, up, side   the pistol's unit axes (bore, top of the slide, right)
     //   slide          slide travel in mm (cycling, or locked back to reload)
     //   mag            whether a magazine is seated
-    //   weights        { aim, move, reload, kneel, recoil }, each 0–1
+    //   weights        { aim, move, ready, reload, kneel, recoil }, each 0–1
+    //                  (ready: the compressed ready, on the run and dropping
+    //                  to the knee)
     // The rest (axes, handPts, fingers, thumbs, index, pouch, pouches, hold)
     // is for drawShooter().
     function shooterRig(st) {
@@ -4298,7 +4321,20 @@
       );
       const kn = EVENTS.kneel;
       const kneel = kn ? ease.inOut3(seg(st, kn[0], kn[1])) : 0;
-      const aim = (1 - move) * (1 - reload);
+      // the pistol stays in the compressed ready on the run and on the way
+      // down to the knee, and presses out as the knee lands
+      const ready = Math.max(
+        move,
+        kn
+          ? ease.inOut3(
+              Math.min(
+                seg(st, kn[0] - 0.35, kn[0] - 0.15),
+                1 - seg(st, kn[1] - 0.1, kn[1] + 0.04),
+              ),
+            )
+          : 0,
+      );
+      const aim = (1 - ready) * (1 - reload);
       const kick = kickAt(st);
       const wp = workPoint(st);
 
@@ -4311,7 +4347,7 @@
       const sway = Math.sin(phase * 2 * Math.PI) * move;
       const lookYaw = run ? yawOf(sub(FOCUS[run.to], sp)) : aimYaw;
       const hipYaw = lerpYaw(
-        lerpYaw(feetYaw, aimYaw, 0.45),
+        lerpYaw(feetYaw, aimYaw, lerp(0.45, 0.2, kneel)),
         lerpYaw(heading, 0, 0.25) + 0.12 * sway,
         move,
       );
@@ -4325,20 +4361,18 @@
       // Legs: an athletic stance, a running gait, or down on one knee.
       const FF = yawDir(feetYaw);
       const FR = cross(UP, FF);
-      let ankles = [
-        offs(sp, FF, FR, 0.06, -0.19, 0.08),
-        offs(sp, FF, FR, -0.07, 0.2, 0.08),
-      ];
+      let ankles = standFeet(st);
       let toes = [yawDir(feetYaw - 0.22), yawDir(feetYaw + 0.32)];
       let pitch = [0, 0];
       let poles = [toes[0], toes[1]];
       let pelvis = offs(sp, FF, FR, -0.07, 0, 0.885);
-      if (move > 0) {
+      if (run) {
         const HF = yawDir(heading);
         const HR = cross(UP, HF);
-        const sig = 0.36; // share of the cycle a foot is on the ground
+        const sig = GROUND;
         const reach = (sig * STRIDE) / 2;
-        const gait = (ph, side) => {
+        // a foot at its own phase ph, about ground point o heading along F
+        const gait = (ph, side, o = sp, F = HF) => {
           let x;
           let y;
           let pt;
@@ -4356,27 +4390,113 @@
               0.4 * Math.sin(Math.PI * (1 - (1 - u) ** 1.6)) +
               0.14 * Math.max(0, Math.sin(pt));
           }
-          return [offs(sp, HF, HR, x, side * 0.09, 0.08 + y), pt];
+          return [offs(o, F, cross(UP, F), x, side * 0.09, 0.08 + y), pt];
         };
         const g = [gait(phase % 1, -1), gait((phase + 0.5) % 1, 1)];
+        // foot i in the gait when the run's phase is q, in world space
+        const gaitAt = (q, i) => {
+          const t = run.timeAt(q);
+          const F = yawDir(run.headingAt(t));
+          return gait((q + 0.5 * i) % 1, i ? 1 : -1, shooterPos(t), F)[0];
+        };
+        // Each foot joins the gait with a real first step: the planted one
+        // stays put until it lifts, the other lifts at once; each swings,
+        // carried along with the body, onto the gait. As the run ends, a
+        // foot in the air lands on the new stance and a planted one then
+        // steps across to it.
+        const S = [standFeet(run.a), standFeet(run.b)];
+        // a swing from P (lifting at time tP) to Q (landing at time tQ)
+        const step = (P, tP, Q, tQ, v, h = 0.3) => {
+          const from = sub(P, shooterPos(tP));
+          const to = sub(Q, shooterPos(tQ));
+          const lift = h * Math.sin(Math.PI * (1 - (1 - v) ** 1.6));
+          return add(add(sp, lerp3(from, to, ease.inOut3(v))), [0, lift, 0]);
+        };
+        const feet = [0, 1].map((i) => {
+          const s = run.start + 0.5 * i; // the foot's phase as the run starts
+          const e = run.end + 0.5 * i; // ...and as it ends
+          const tOf = (q) => run.timeAt(q - 0.5 * i);
+          const L = Math.floor(s) + Math.max(s % 1, sig); // first lift-off
+          const N = Math.floor(s) + 1; // first landing
+          const down = e % 1 < sig; // planted as the run ends
+          const L2 = Math.max(Math.floor(e) + sig, L); // last lift-off
+          const land = Math.max(run.b + 0.04 + 0.08 * i, tOf(L2) + 0.16);
+          return { L, N, down, L2, land, tOf };
+        });
+        const w = feet.map(({ L, N, down, L2, land, tOf }, i) => {
+          const f = phase + 0.5 * i; // the foot's own phase
+          if (down) {
+            // steps across once the other foot has landed
+            const t0 = Math.max(run.b, feet[1 - i].land - 0.04);
+            if (st > t0) {
+              const P = f < L ? S[0][i] : gaitAt(run.end, i);
+              const v = seg(st, t0, t0 + 0.2);
+              ankles[i] = step(P, run.b, S[1][i], run.b, v, 0.12);
+              return 1 - ease.inOut3(v);
+            }
+          } else if (f >= L2) {
+            // the last swing lands on the new stance
+            const P = L2 > L ? gaitAt(L2 - 0.5 * i, i) : S[0][i];
+            const v = seg(st, tOf(L2), land);
+            ankles[i] = step(P, tOf(L2), S[1][i], land, v);
+            return L2 > L ? 1 - ease.inOut3(v) : Math.sin(Math.PI * v);
+          }
+          if (f < L) {
+            ankles[i] = S[0][i];
+            return 0;
+          }
+          if (f < N) {
+            const v = (f - L) / (N - L);
+            ankles[i] = step(
+              S[0][i],
+              tOf(L),
+              gaitAt(N - 0.5 * i, i),
+              tOf(N),
+              v,
+            );
+            return ease.inOut3(v);
+          }
+          ankles[i] = g[i][0];
+          return 1;
+        });
         const bob = -0.025 * Math.cos(4 * Math.PI * (phase - sig / 2));
-        ankles = ankles.map((a, i) => lerp3(a, g[i][0], move));
-        toes = toes.map((t) => norm(lerp3(t, HF, move)));
-        pitch = pitch.map((p, i) => lerp(p, g[i][1], move));
-        poles = poles.map((p) => norm(lerp3(p, add(HF, [0, -0.1, 0]), move)));
+        toes = toes.map((t, i) => norm(lerp3(t, HF, w[i])));
+        pitch = pitch.map((p, i) => lerp(p, g[i][1], w[i]));
+        poles = poles.map((p, i) =>
+          norm(lerp3(p, add(HF, [0, -0.1, 0]), w[i])),
+        );
         pelvis = lerp3(pelvis, offs(sp, HF, HR, 0, 0, 0.87 + bob), move);
       }
       if (kneel > 0) {
-        // strong knee down, support foot forward
-        const kPel = offs(sp, FF, FR, -0.09, 0.02, 0.5);
+        // strong knee down, sitting back on the strong heel (toes tucked),
+        // support foot forward: low enough to shoot through a low port
+        const kPel = offs(sp, FF, FR, -0.16, 0.02, 0.32);
+        const kHip = add(kPel, mul(cross(UP, yawDir(hipYaw)), BODY.hip));
+        // the knee on the ground a thigh's length from the hip, the shin
+        // back along the ground to the raised heel
+        const drop = kHip[1] - 0.07;
+        const knee = add(
+          add(
+            kHip,
+            mul(
+              norm(add(FF, mul(FR, 0.15))),
+              Math.sqrt(BODY.thigh ** 2 - drop * drop),
+            ),
+          ),
+          [0, -drop, 0],
+        );
         const kAnk = [
-          offs(sp, FF, FR, 0.36, -0.2, 0.08),
-          offs(sp, FF, FR, -0.53, 0.18, 0.17),
+          offs(sp, FF, FR, 0.4, -0.21, 0.08),
+          add(
+            sub(knee, mul(FF, Math.sqrt(BODY.shin ** 2 - 0.01))),
+            [0, 0.1, 0],
+          ),
         ];
-        const knee = offs(sp, FF, FR, -0.12, 0.16, 0.06);
-        const mid = lerp3(add(kPel, mul(FR, BODY.hip)), kAnk[1], 0.5);
+        const mid = lerp3(kHip, kAnk[1], 0.5);
         const kPole = [norm(add(FF, [0, 0.5, 0])), norm(sub(knee, mid))];
         ankles = ankles.map((a, i) => lerp3(a, kAnk[i], kneel));
+        // the support foot steps forward rather than sliding
+        ankles[0][1] += 0.12 * Math.sin(Math.PI * kneel);
         toes = [
           norm(lerp3(toes[0], yawDir(feetYaw - 0.12), kneel)),
           norm(lerp3(toes[1], FF, kneel)),
@@ -4409,18 +4529,24 @@
       });
 
       // Torso: hips back, leaning into the gun (or into the run).
-      const lean = lerp(lerp(0.2, 0.33, move), 0.1, kneel);
+      const lean = lerp(lerp(0.2, 0.33, move), 0.36, kneel);
       const spine = rotAbout(UP, PR, lean);
       const cf0 = yawDir(chestYaw);
       const CF = norm(sub(cf0, mul(spine, dot(cf0, spine))));
       const CR = cross(spine, CF);
       const chest = add(pelvis, mul(spine, 0.36));
       const neck = add(pelvis, mul(spine, 0.53));
+      // on the gun the shoulders roll forward, the support shoulder in more
+      // so both arms reach out evenly (a true isosceles)
       const shoulders = [-1, 1].map((s) =>
         add(
           add(add(neck, mul(spine, -0.04)), mul(CR, s * BODY.shoulder)),
-          mul(CF, 0.01 + 0.03 * aim),
+          mul(CF, 0.01 + 0.07 * aim),
         ),
+      );
+      shoulders[0] = add(
+        shoulders[0],
+        add(mul(CF, 0.02 * aim), mul(CR, 0.02 * aim)),
       );
       // Head: upright over the gun, eyes on the work.
       const neckDir = norm(add(spine, UP));
@@ -4448,8 +4574,8 @@
           add(mul(f, p[0] / 1000), mul(u, p[1] / 1000)),
           mul(cross(u, f), p[2] / 1000),
         );
-      const af = norm(sub(wp, eye));
-      const au = norm(sub(UP, mul(af, af[1])));
+      let af = norm(sub(wp, eye));
+      let au = norm(sub(UP, mul(af, af[1])));
       let aG = sub(add(eye, mul(af, 0.6)), gv(af, au, PISTOL.rear));
       const over =
         Math.max(
@@ -4457,8 +4583,18 @@
             dist3(shoulders[i], add(aG, gv(af, au, PISTOL.wrist[i]))),
           ),
         ) -
-        0.97 * (BODY.upper + BODY.fore);
+        0.985 * (BODY.upper + BODY.fore);
       if (over > 0) aG = sub(aG, mul(af, over));
+      // after the last shot the arms lower the pistol to a low ready
+      const last = SHOTS[SHOTS.length - 1].st;
+      const done = ease.inOut3(seg(st, last + 0.3, last + 0.7));
+      if (done > 0) {
+        const k = norm(cross(UP, af));
+        const pv = lerp3(shoulders[0], shoulders[1], 0.5);
+        aG = add(pv, rotAbout(sub(aG, pv), k, 0.55 * done));
+        af = rotAbout(af, k, 0.55 * done);
+        au = rotAbout(au, k, 0.55 * done);
+      }
       const rf = norm([0, -0.42, 1]);
       const ru = norm(sub(UP, mul(rf, rf[1])));
       const rG = add(
@@ -4471,9 +4607,9 @@
         add(add(chest, mul(CF, 0.27)), mul(CR, -0.02)),
         mul(spine, 0.1),
       );
-      let G = lerp3(lerp3(aG, rG, move), lG, reload);
-      let gf = norm(lerp3(lerp3(af, rf, move), lf, reload));
-      let gu = lerp3(lerp3(au, ru, move), lu, reload);
+      let G = lerp3(lerp3(aG, rG, ready), lG, reload);
+      let gf = norm(lerp3(lerp3(af, rf, ready), lf, reload));
+      let gu = lerp3(lerp3(au, ru, ready), lu, reload);
       gu = norm(sub(gu, mul(gf, dot(gu, gf))));
       if (kick > 0) {
         // muzzle flip of about 8°, the hands rising with it
@@ -4576,7 +4712,7 @@
       }
       // Arms: two-bone IK from the shoulders, elbows out on the gun and
       // tucked on the run.
-      const tuck = Math.max(move, reload);
+      const tuck = Math.max(ready, reload);
       const poleArm = [-1, 1].map((s) =>
         norm(
           lerp3(
@@ -4602,11 +4738,16 @@
           BODY.upper,
           BODY.fore,
           poleArm[i],
+          0.99,
         );
         elbows.push(elbow);
         wrists.push(wrist);
       });
-      const trigger = clamp((aim - 0.6) / 0.4); // finger off the trigger unless aiming
+      // the finger goes to the trigger only on target, with a shot coming
+      let live = 0;
+      for (const s of SHOTS)
+        live = Math.max(live, env(st, s.st - 0.24, s.st + 0.18, 0.06, 0.08));
+      const trigger = clamp((aim - 0.9) / 0.1) * live;
       return {
         pos: sp,
         facing: yawDir(chestYaw),
@@ -4634,7 +4775,7 @@
         side: gs,
         slide,
         mag: st < rOut || st >= rIn,
-        weights: { aim, move, reload, kneel, recoil: kick },
+        weights: { aim, move, ready, reload, kneel, recoil: kick },
         // for drawing
         axes: { PF, PR, CF, CR, spine, hf, hu, hr },
         handPts: hands,
@@ -4920,7 +5061,7 @@
             ),
           );
         }
-        poly3(cam, pts, rgbOf(FIG.cap), "rgba(244,245,247,0.7)", rimW);
+        poly3(cam, pts, rgbOf(FIG.cap), "rgba(244,245,247,0.4)", rimW);
       };
       const brimFront = seen(P(0.1, 0.03, 0), hf);
       cups.filter((cp) => !seen(cp.o, cp.n)).forEach(cup);
@@ -4943,7 +5084,7 @@
       silhouette(
         () =>
           hullPath(cam, [
-            ...shell([0.03, 0.065, 0.095], 0.078, 0.122, 0.098, 0.004),
+            ...shell([0.03, 0.065, 0.095, 0.112], 0.078, 0.122, 0.098, 0.004),
             P(0, 0.124, 0),
           ]),
         rgbOf(FIG.cap),
@@ -4960,7 +5101,9 @@
         gn.push(norm(add(mul(hf, Math.cos(a)), mul(hr, Math.sin(a)))));
       }
       frontLine(cam, gl, gn, 0.026, "#090a0c");
-      if (ppm > 350)
+      // the lenses' glint, unless they are seen edge on
+      const view = norm(sub(cam.pos, c));
+      if (ppm > 350 && Math.abs(dot(hr, view)) < 0.9)
         frontLine(
           cam,
           gl.map((p) => add(p, mul(hu, 0.008))),
@@ -4968,22 +5111,22 @@
           0.004,
           "rgba(190,205,220,0.6)",
         );
-      const band = [];
-      for (let k = 0; k <= 10; k++) {
-        // over the crown, from cup to cup
-        const a = lerp(0.28, Math.PI - 0.28, k / 10);
-        band.push(P(-0.012, 0.13 * Math.sin(a), 0.086 * Math.cos(a)));
-      }
+      // over the crown from cup to cup, hugging the cap
+      const arc = [0.035, 0.065, 0.09, 0.105, 0.116].map((y) => [
+        y,
+        0.078 * Math.sqrt(1 - (y / 0.122) ** 2) + 0.008,
+      ]);
+      const band = [
+        ...arc.map(([y, x]) => P(-0.012, y, x)),
+        P(-0.012, 0.128, 0),
+        ...arc.reverse().map(([y, x]) => P(-0.012, y, -x)),
+      ];
       const bz = polyPath(cam, band);
       if (bz) {
         const w = (0.014 * cam.focal) / bz;
         ctx.lineCap = "round";
-        if (ppm > 350) {
-          ctx.strokeStyle = "rgba(244,245,247,0.6)";
-          ctx.lineWidth = w + rimW * 2;
-          ctx.stroke();
-        }
-        ctx.strokeStyle = ppm > 350 ? "#121418" : "rgba(244,245,247,0.45)";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = ppm > 350 ? "#2a2f37" : "rgba(244,245,247,0.45)";
         ctx.lineWidth = w;
         ctx.stroke();
         ctx.lineCap = "butt";
@@ -4991,8 +5134,37 @@
       cups.filter((cp) => seen(cp.o, cp.n)).forEach(cup);
     }
 
-    function drawShooter(cam, st) {
-      const rig = shooterRig(st);
+    // The figure fades as one piece: drawn opaque into an offscreen layer
+    // (with the current transform), then laid on the canvas at the fade, so
+    // its overlapping parts never show through each other.
+    let figLayer = null;
+    function asOne(alpha, fn) {
+      const main = ctx;
+      figLayer ??= document.createElement("canvas").getContext("2d");
+      const layer = figLayer.canvas;
+      if (layer.width !== canvas.width || layer.height !== canvas.height) {
+        layer.width = canvas.width;
+        layer.height = canvas.height;
+      }
+      figLayer.save();
+      figLayer.setTransform(1, 0, 0, 1, 0, 0);
+      figLayer.clearRect(0, 0, layer.width, layer.height);
+      figLayer.setTransform(main.getTransform());
+      ctx = figLayer;
+      try {
+        fn();
+      } finally {
+        ctx = main;
+        figLayer.restore();
+      }
+      main.save();
+      main.setTransform(1, 0, 0, 1, 0, 0);
+      main.globalAlpha = alpha;
+      main.drawImage(layer, 0, 0);
+      main.restore();
+    }
+
+    function drawFigure(cam, st, rig) {
       const sp = rig.pos;
       const { PF, PR, CF, CR, spine } = rig.axes;
       // ground ring
@@ -5176,27 +5348,41 @@
       // arms: sleeve, bare forearm and hand; the thumbs forward on the frame
       [0, 1].forEach((i) => {
         const z = depth(rig.elbows[i]);
+        const [, a] = shade(z, FIG.cloth);
+        const k = clamp((z - zc) / 0.25) * 0.8;
+        const skin = mixRGB(FIG.skin, FIG.far, k);
+        const end = lerp3(rig.shoulders[i], rig.elbows[i], 0.55);
+        const sleeve = () => capsule(cam, rig.shoulders[i], end, 0.064, 0.055);
+        const upper = () =>
+          capsule(cam, rig.shoulders[i], rig.elbows[i], 0.048, 0.042);
         groups.push({
-          z,
-          arm: i,
+          z: depth(lerp3(rig.shoulders[i], rig.elbows[i], 0.5)),
           draw: () => {
-            const [, a] = shade(z, FIG.cloth);
-            const k = clamp((z - zc) / 0.25) * 0.8;
-            const end = lerp3(rig.shoulders[i], rig.elbows[i], 0.55);
-            const sleeve = () =>
-              capsule(cam, rig.shoulders[i], end, 0.064, 0.055);
             silhouette(
               () => {
                 sleeve();
-                capsule(cam, rig.shoulders[i], rig.elbows[i], 0.048, 0.042);
-                capsule(cam, rig.elbows[i], rig.wrists[i], 0.042, 0.03);
-                hullPath(cam, [rig.wrists[i], ...rig.handPts[i]]);
+                upper();
               },
-              mixRGB(FIG.skin, FIG.far, k),
+              skin,
               a,
               rimW,
             );
             tone(sleeve, mixRGB(FIG.cloth, FIG.far, k));
+          },
+        });
+        groups.push({
+          z: depth(lerp3(rig.elbows[i], rig.hands[i], 0.6)),
+          arm: i,
+          draw: () => {
+            silhouette(
+              () => {
+                capsule(cam, rig.elbows[i], rig.wrists[i], 0.042, 0.03);
+                hullPath(cam, [rig.wrists[i], ...rig.handPts[i]]);
+              },
+              skin,
+              a,
+              rimW,
+            );
             // close up, the fingers wrapped round the grip
             const outer = i ? rig.side : mul(rig.side, -1);
             if (
@@ -5266,8 +5452,6 @@
         });
       }
 
-      groups.sort((a, b) => b.z - a.z);
-      // the pistol goes in just before the first hand, which wraps its grip
       const gun = {
         draw: () => {
           const { grip: G, forward: f, up: u, side: s } = rig;
@@ -5308,11 +5492,26 @@
           drawSolids(cam, items, 0.9, Math.max(1.2, rimW * 0.8));
         },
       };
-      const first = groups.findIndex((g) => g.arm !== undefined);
-      groups.splice(first, 0, gun);
-      // the thumbs lie along the left of the frame, the trigger finger on the
-      // right: behind the pistol, or over the hands, depending on the side seen
+      // The pistol is in front of the torso when the camera is beyond the
+      // plane that separates them (tangent to the chest, facing the gun).
+      const gc = lerp3(rig.grip, rig.muzzle, 0.35);
+      const gv = sub(gc, rig.chest);
+      const gn = norm(sub(gv, mul(spine, dot(gv, spine))));
+      const gr = 1 / Math.hypot(dot(gn, CF) / 0.135, dot(gn, CR) / 0.19);
+      const ahead = dot(sub(cam.pos, add(rig.chest, mul(gn, gr))), gn) > 0;
+      const zg = depth(gc);
+      gun.z = ahead ? Math.min(zg, zc - 0.002) : Math.max(zg, zc + 0.002);
+      // The hands wrap the grip: the one on the camera's side of the pistol
+      // goes over it, the other under it. The thumbs lie along the left of
+      // the frame, the trigger finger on the right.
       const right = dot(rig.side, sub(cam.pos, rig.grip)) > 0;
+      const fore = [0, 1].map((i) => groups.find((g) => g.arm === i));
+      const near = right ? 1 : 0;
+      const on = [!!rig.thumbs[0], true]; // which hands are on the pistol
+      if (on[near]) fore[near].z = Math.min(fore[near].z, gun.z - 0.001);
+      if (on[1 - near])
+        fore[1 - near].z = Math.max(fore[1 - near].z, gun.z + 0.001);
+      const zHold = [0, 1].filter((i) => on[i]).map((i) => fore[i].z);
       const digits = (pairs) => ({
         draw: () =>
           silhouette(
@@ -5326,10 +5525,14 @@
         rig.thumbs.filter(Boolean).map(([a, b]) => [a, b, 0.0105]),
       );
       const index = digits([[...rig.index, 0.0095]]);
+      const extra = [gun];
       if (ppm > 380) {
-        groups.splice(first, 0, right ? thumbs : index);
-        groups.push(right ? index : thumbs);
+        (right ? thumbs : index).z = gun.z + 0.0001;
+        (right ? index : thumbs).z = Math.min(...zHold) - 0.0001;
+        extra.push(thumbs, index);
       }
+      groups.push(...extra);
+      groups.sort((a, b) => b.z - a.z);
       if (rig.hold) {
         const { base, up, front, top } = rig.hold;
         const sd = cross(up, front);
@@ -5355,6 +5558,17 @@
         );
       }
       groups.forEach((g) => g.draw());
+    }
+
+    function drawShooter(cam, st) {
+      const rig = shooterRig(st);
+      // flying into the shooter's eyes, the figure is gone before the
+      // camera reaches the cap
+      const fade =
+        ctx.globalAlpha * clamp((dist3(cam.pos, rig.head) - 0.35) / 0.5);
+      if (fade <= 0.002) return;
+      if (fade < 0.999) asOne(fade, () => drawFigure(cam, st, rig));
+      else drawFigure(cam, st, rig);
     }
 
     // S6 — hit factor.
