@@ -3,6 +3,10 @@
 //   node scripts/reel-render.mjs --out reel.mp4 [--audio reel.wav] [--lang both|ko|en]
 //                                 [--fps 60] [--blur 4] [--credit]
 //   node scripts/reel-render.mjs --stills 0.5,6.1,9.5 --dir stills/
+//   node scripts/reel-render.mjs --divisions --stills 1,3.8 --dir stills/
+//
+// --divisions renders the divisions chapter on its own, in its local time
+// (renderDivisions), for previews: stills, or a video of the chapter.
 //
 // Stops before rendering if Inter or Noto Sans KR fail to load, rather than
 // quietly setting the reel in system fallback fonts; pass --allow-fallback-fonts
@@ -30,6 +34,7 @@ const { values: args } = parseArgs({
     blur: { type: 'string', default: '1' },
     credit: { type: 'boolean', default: false },
     stills: { type: 'string' },
+    divisions: { type: 'boolean', default: false },
     dir: { type: 'string', default: '.' },
     from: { type: 'string', default: '0' },
     to: { type: 'string' },
@@ -57,10 +62,11 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><link rel="styles
   const reel = KRPSAReel.create(work, opts);
   const octx = out.getContext('2d');
   // Average a few sub-frames across a 180° shutter for natural motion blur.
-  window.frame = (t, samples, fps) => {
+  window.frame = (t, samples, fps, divisions) => {
     for (let k = 0; k < samples; k++) {
       const dt = samples > 1 ? ((k + 0.5) / samples - 0.5) * (0.5 / fps) : 0;
-      reel.render(Math.max(0, t + dt));
+      if (divisions) reel.renderDivisions(Math.max(0, t + dt));
+      else reel.render(Math.max(0, t + dt));
       octx.globalAlpha = 1 / (k + 1);
       octx.drawImage(work, 0, 0);
     }
@@ -144,15 +150,15 @@ if (fontsBefore.length && !allowFallback) {
   process.exit(1);
 }
 if (fontsBefore.length) console.warn(`Warning: rendering with fallback fonts (--allow-fallback-fonts):\n${listProblems(fontsBefore)}`);
-const duration = await page.evaluate(() => KRPSAReel.DURATION);
+const duration = await page.evaluate((divisions) => (divisions ? reel.divisions.dur : KRPSAReel.DURATION), args.divisions);
 const fps = Number(args.fps);
 const blur = Number(args.blur);
 
 if (args.stills) {
   await mkdir(args.dir, { recursive: true });
   for (const t of args.stills.split(',').map(Number)) {
-    const png = await page.evaluate(([time, b, f]) => window.frame(time, b, f), [t, blur, fps]);
-    const file = path.join(args.dir, `frame-${t.toFixed(2).padStart(5, '0')}.png`);
+    const png = await page.evaluate(([time, b, f, d]) => window.frame(time, b, f, d), [t, blur, fps, args.divisions]);
+    const file = path.join(args.dir, `${args.divisions ? 'div' : 'frame'}-${t.toFixed(2).padStart(5, '0')}.png`);
     await writeFile(file, Buffer.from(png, 'base64'));
     console.log(file);
   }
@@ -169,7 +175,7 @@ if (args.stills) {
   const ffmpeg = spawn('ffmpeg', ffArgs, { stdio: ['pipe', 'inherit', 'inherit'] });
   const started = Date.now();
   for (let k = 0; k < count; k++) {
-    const png = await page.evaluate(([time, b, f]) => window.frame(time, b, f), [from + k / fps, blur, fps]);
+    const png = await page.evaluate(([time, b, f, d]) => window.frame(time, b, f, d), [from + k / fps, blur, fps, args.divisions]);
     if (!ffmpeg.stdin.write(Buffer.from(png, 'base64'))) await new Promise((r) => ffmpeg.stdin.once('drain', r));
     if (k % fps === 0) console.log(`frame ${k}/${count} · ${((Date.now() - started) / 1000).toFixed(0)} s`);
   }
