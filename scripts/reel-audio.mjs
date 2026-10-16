@@ -542,29 +542,54 @@ const AM = [57, 60, 64];
 const F = [53, 57, 60];
 const C = [55, 60, 64];
 const G = [55, 59, 62];
+// Music is written against the original cut; I() maps those times onto the
+// final timeline, which adds the Divisions chapter and the course walk.
+const I = MARKS.ins;
+const [DIVI, FLYI] = MARKS.inserts;
 voice.pad(0, AM, 6.0, 0.8, 700);
 voice.pad(6.0, AM, 2.0, 1, 1400);
-[[8, AM], [10, F], [12, C], [14, G]].forEach(([t, n]) => voice.pad(t, n, 2.0, 0.9, 600));
+[[8, AM], [10, F], [12, C]].forEach(([t, n]) => voice.pad(t, n, Math.min(2.0, DIVI.at - t), 0.9, 600));
+[[14, G]].forEach(([t, n]) => voice.pad(I(t), n, 2.0, 0.9, 600));
+// The Divisions chapter: a lighter groove under the equipment morphs.
+{
+  const prog = [F, C, G, AM];
+  for (let k = 0, t = DIVI.at; t < DIVI.at + DIVI.dur - 0.5; k++, t += 3) voice.pad(t, prog[k % 4], Math.min(3, DIVI.at + DIVI.dur - t), 0.85, 900);
+  const t0 = Math.ceil(DIVI.at * 2) / 2;
+  for (let t = t0; t < DIVI.at + DIVI.dur - 0.3; t += BEAT) {
+    const beat = Math.round((t - t0) / BEAT);
+    if (beat % 2 === 0) voice.kick(t, 0.6);
+    voice.hat(t + BEAT / 2, 0.5);
+    if (beat % 4 === 2) voice.clap(t, 0.45);
+    voice.bass(t, [29, 24, 31, 33][Math.floor(beat / 6) % 4], BEAT, 0.55, 700);
+  }
+}
+// The course walk: a held chord rising into the stage.
+voice.pad(FLYI.at, G, FLYI.dur, 0.9, 1200);
 // The stage: its length comes from the shot list, and everything after it is
 // moved by MARKS.shift so it stays on the beat grid.
 const S = MARKS.shift;
 const STAGE_OUT = 19.75 + S;
-[[16, AM, 4], [20, F, 2], [22, C, 2], [24, G, 2], [26, AM, STAGE_OUT - 26]].forEach(([t, n, d]) => voice.pad(t, n, d, 1, 1500));
-voice.pad(20 + S, F, 1.25, 1, 1300);
-voice.pad(21.25 + S, G, 1.25, 1, 1300);
-voice.pad(22.5 + S, AM, 2.0, 0.7, 800);
+[[16, AM, 4], [20, F, 2], [22, C, 2], [24, G, 2], [26, AM, STAGE_OUT - 26]].forEach(([t, n, d]) => voice.pad(I(t), n, d, 1, 1500));
+voice.pad(I(20 + S), F, 1.25, 1, 1300);
+voice.pad(I(21.25 + S), G, 1.25, 1, 1300);
+voice.pad(I(22.5 + S), AM, 2.0, 0.7, 800);
 
 for (let t = 2; t < 4; t += BEAT) voice.kick(t, 0.45);
 for (let t = 2; t < 5.75; t += BEAT / 2) voice.bass(t, 33, BEAT / 2, 0.7, 260 + (t - 2) * 120);
 for (let t = 2; t < 5.75; t += BEAT / 4) voice.hat(t, (t * 4) % 2 < 1 ? 0.6 : 0.35);
 voice.kick(6.5, 0.9);
-for (let t = 8; t < 16; t += 1) voice.kick(t, 0.55);
-for (let t = 8; t < 16; t += 2) voice.bass(t, t < 10 ? 33 : t < 12 ? 29 : t < 14 ? 31 : 31, 1.8, 0.5, 300);
+for (let t = 8; t < 16; t += 1) if (t < DIVI.at - 0.2 || t >= DIVI.at + 0.2) voice.kick(I(t), 0.55);
+for (let t = 8; t < 16; t += 2) voice.bass(I(t), t < 10 ? 33 : t < 12 ? 29 : t < 14 ? 31 : 31, 1.8, 0.5, 300);
 // Stage drums follow the speed ramps: half time in slow motion, sixteenth
 // hats while fast-forwarding.
-for (let t = 16; t < STAGE_OUT; t += BEAT) {
+for (let t = I(16); t < I(STAGE_OUT); t += BEAT) {
   const rate = rateAt(t);
-  const beat = Math.round((t - 16) / BEAT);
+  const beat = Math.round((t - I(16)) / BEAT);
+  if (rate < 0.1) {
+    // bullet time: a single held heartbeat
+    if (beat % 4 === 0) voice.kick(t, 0.5);
+    continue;
+  }
   if (rate < 1) {
     if (beat % 2 === 0) voice.kick(t, 0.75);
     if (beat % 4 === 2) voice.clap(t, 0.6);
@@ -577,11 +602,11 @@ for (let t = 16; t < STAGE_OUT; t += BEAT) {
   if (rate > 1) [0.25, 0.75].forEach((d) => voice.hat(t + BEAT * d, 0.45));
   for (const d of [0, BEAT / 2]) voice.bass(t + d, beat % 8 < 4 ? 33 : 29, BEAT / 2, 0.85, rate > 1 ? 1800 : 1200);
 }
-for (let t = 20 + S; t < 22.5 + S; t += BEAT) {
+for (let t = I(20 + S); t < I(22.5 + S); t += BEAT) {
   voice.kick(t, 0.7);
   voice.hat(t + BEAT / 2, 0.6);
 }
-for (let t = 20 + S; t < 22.5 + S; t += BEAT / 2) voice.bass(t, t < 21.25 + S ? 29 : 31, BEAT / 2, 0.7, 900);
+for (let t = I(20 + S); t < I(22.5 + S); t += BEAT / 2) voice.bass(t, t < I(21.25 + S) ? 29 : 31, BEAT / 2, 0.7, 900);
 
 // ------------------------------------------------------------------ cues
 // Sounds of the world play through the speed ramps like tape, slowed or sped
