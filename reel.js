@@ -563,6 +563,94 @@
     { t: 24.5 + SHIFT + END_HOLD, type: "logo" },
   ];
 
+  // The handgun divisions chapter (sceneDivisions) runs in its own local time
+  // lt, 0..dur, while the game clock stays frozen. Its captions
+  // ([from, to, ko, en]) and sound cues ({ lt, type, v }) are in local
+  // seconds on the 120 BPM grid, for the timeline to shift into place.
+  const DIV = {
+    dur: 12.5,
+    captions: [
+      [
+        0.15,
+        2.7,
+        "디비전은 장비로 나뉩니다 — 조준기, 컴펜세이터, 크기.",
+        "Equipment sets the division: sights, comps, size.",
+      ],
+      [
+        3.05,
+        6.7,
+        "스탠더드는 규격 박스에 들어가야 하고, 오픈은 장비가 가장 자유롭습니다.",
+        "Standard must fit a box. Open gives the widest freedom.",
+      ],
+      [
+        7.05,
+        8.5,
+        "파워 팩터 = 탄두 무게 × 속도 ÷ 1000.",
+        "Power factor: weight × speed.",
+      ],
+      [
+        8.8,
+        10.25,
+        "메이저는 C·D 존 점수가 더 높습니다.",
+        "Major scores more on C and D.",
+      ],
+      [
+        10.55,
+        12.0,
+        "그 밖에 클래식과 리볼버 디비전도 있습니다.",
+        "Plus Classic and Revolver.",
+      ],
+    ],
+    cues: [
+      // the gun inks in, the index rail and the matrix build
+      { lt: 0.5, type: "whoosh", v: 0.5 },
+      ...[0.5, 0.57, 0.64, 0.71, 0.78].map((lt) => ({
+        lt,
+        type: "tick",
+        v: 0.35,
+      })),
+      // Production; Production Optics: the optic seats
+      { lt: 1.0, type: "stab", v: 0.7 },
+      { lt: 1.15, type: "blip", v: 0.45 },
+      { lt: 2.0, type: "blip", v: 0.6 },
+      { lt: 2.42, type: "click", v: 0.8 },
+      // Standard: the optic lifts off, the box gauge slams shut
+      { lt: 3.0, type: "blip", v: 0.6 },
+      { lt: 3.02, type: "slide", v: 0.45 },
+      { lt: 3.25, type: "riser", dur: 0.25 },
+      { lt: 3.5, type: "clank", v: 0.9 },
+      { lt: 3.5, type: "hit", v: 0.55 },
+      ...[3.7, 3.85, 4.0].map((lt) => ({ lt, type: "tick", v: 0.5 })),
+      // Optics: the box opens, the optic seats, no compensator
+      { lt: 4.5, type: "whoosh", v: 0.5 },
+      { lt: 4.5, type: "blip", v: 0.6 },
+      { lt: 4.92, type: "click", v: 0.8 },
+      { lt: 5.0, type: "tick", v: 0.7 },
+      { lt: 5.25, type: "tick", v: 0.7 },
+      // Open: compensator on, long base pad
+      { lt: 5.5, type: "stab", v: 0.9 },
+      { lt: 5.82, type: "clank", v: 0.7 },
+      { lt: 6.25, type: "slide", v: 0.6 },
+      // power factor: minor, then major
+      { lt: 6.95, type: "whoosh", v: 0.7 },
+      { lt: 7.5, type: "tick", v: 0.6 },
+      { lt: 7.75, type: "tick", v: 0.6 },
+      { lt: 8.0, type: "hit", v: 0.6 },
+      { lt: 8.5, type: "riser", dur: 0.5 },
+      { lt: 9.0, type: "hit", v: 1 },
+      { lt: 9.0, type: "stab", v: 0.7 },
+      // the line-up, then Classic and Revolver
+      { lt: 9.45, type: "whoosh", v: 0.6 },
+      ...[9.8, 9.88, 9.96, 10.04, 10.12].map((lt) => ({
+        lt,
+        type: "tick",
+        v: 0.3,
+      })),
+      { lt: 10.5, type: "stab", v: 0.6 },
+      { lt: 12.25, type: "whoosh", v: 0.45 },
+    ],
+  };
+
   // ------------------------------------------------------------------- shapes
   // Paths are written in a tiny M/L/Q/Z syntax and flattened into polylines so
   // that any outline can be drawn on progressively and filled with the same data.
@@ -930,10 +1018,31 @@
     }
 
     // ------------------------------------------------------------- the gun
+    // Division kit in the gun's millimetres: a slide-mounted red dot just ahead
+    // of the rear sight (side view, its hood recess) and a three-port
+    // compensator on the muzzle.
+    const GUN_KIT = {
+      optic: shape(
+        "M 56,7.4 L 56.4,-1.5 Q 57,-12.5 64.5,-14.2 L 84.5,-14.2 Q 90,-14.2 92.8,-9.6 L 98.6,0.8 L 99,7.4 Z",
+      ),
+      hood: shape(
+        "M 62.5,-9.6 Q 63.6,-11.4 66,-11.4 L 83.6,-11.4 Q 87.2,-11.4 89.4,-8 L 91.6,-3.6 L 62.5,-3.6 Z",
+      ),
+      comp: shape(
+        "M 216.4,6.6 L 248.6,6.6 Q 252.6,6.6 252.6,10.6 L 252.6,23.4 Q 252.6,27.4 248.6,27.4 L 216.4,27.4 Z",
+      ),
+      ports: [223.5, 231, 238.5].map((x) => rect(x, 6.6, 4.2, 4.4)),
+    };
+
     // o: x, y (screen position of the gun centre), s (px per mm), rot, blue
     // (0 solid → 1 blueprint), draw (outline draw-on), slide (mm back),
     // hammer (0 down, the traced pose → 1 cocked; the slide also cocks it as it
     // opens), mag ({dx, dy, rot} or null), alpha.
+    // Division kit, all off by default: optic (0..1 drops a slide-mounted red
+    // dot in and draws it on), comp (0..1 slides a compensator onto the
+    // muzzle), extMag (0..1 a long base pad), flush (0..1 flattens the pad),
+    // ghost ({ optic, comp }: 0..1 a dashed outline, then a red cross, for
+    // parts a division does not allow).
     function drawGun(o) {
       const s = o.s;
       const blue = o.blue ?? 0;
@@ -1137,15 +1246,159 @@
         ctx.fill();
         dot(fx, fy, 1.3, `rgba(255,90,110,${glow})`);
       }
+      // A slide-mounted red dot: it drops onto the slide as its outline draws
+      // on, then fills in; the emitter glints once it is seated.
+      const optic = o.optic ?? 0;
+      if (optic > 0) {
+        ctx.save();
+        ctx.translate(0, -(1 - ease.out3(seg(optic, 0, 0.6))) * 12);
+        const fill = ease.out3(seg(optic, 0.35, 0.9));
+        solidLayer(() => {
+          ctx.globalAlpha *= fill;
+          fillShape(
+            GUN_KIT.optic,
+            g(-14.2, 7.4, "#454a52", "#24272c", "#131518"),
+          );
+          // the hood's window, tinted like coated glass, with a glare line
+          fillShape(GUN_KIT.hood, g(-11.4, -3.6, "#1d2a3c", "#0b1018"));
+          line(68, -10.2, 74, -4.6, "rgba(170,200,255,0.35)", 0.7);
+          line(65, -13.5, 84, -13.5, "rgba(255,255,255,0.32)", 0.5);
+          line(93.4, -8.4, 98.1, 0.2, "rgba(140,180,255,0.6)", 0.9);
+          dot(61.2, 3.6, 1.1, "#4f545c");
+          dot(94.2, 3.6, 1.1, "#4f545c");
+        });
+        strokeShape(
+          GUN_KIT.optic,
+          0.9 - 0.62 * fill * solid,
+          1.4,
+          Math.min(drawOn, seg(optic, 0, 0.55)),
+        );
+        if (blue > 0)
+          strokeShape(GUN_KIT.hood, blue * 0.6, 1.1, seg(optic, 0.2, 0.7));
+        const glint = seg(optic, 0.8, 1) * solid;
+        if (glint > 0) {
+          const gr = ctx.createRadialGradient(95.6, -4.4, 0, 95.6, -4.4, 5);
+          gr.addColorStop(0, rgba(C.red, 0.9 * glint));
+          gr.addColorStop(1, rgba(C.red, 0));
+          ctx.fillStyle = gr;
+          ctx.beginPath();
+          ctx.arc(95.6, -4.4, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
       ctx.restore();
 
-      // Base pad, always in place unless the magazine is dropping.
-      withMag(() =>
+      // A compensator slides onto the muzzle from the front.
+      const comp = o.comp ?? 0;
+      if (comp > 0) {
+        ctx.save();
+        ctx.translate((1 - ease.out3(comp)) * 36, 0);
+        ctx.globalAlpha *= clamp(comp / 0.3);
+        solidLayer(() => {
+          fillShape(
+            GUN_KIT.comp,
+            g(6.6, 27.4, "#24272c", "#5d6168", "#8f949b", "#4a4f57", "#2a2d32"),
+          );
+          GUN_KIT.ports.forEach((sh) => fillShape(sh, "#0b0c0e"));
+          line(218, 7.3, 248, 7.3, "rgba(255,255,255,0.35)", 0.5);
+          line(249.6, 9.5, 249.6, 24.5, "rgba(0,0,0,0.45)", 0.7);
+          dot(221.5, 23.2, 1.1, "#2b2f36");
+          tracePath(ctx, GUN_KIT.comp);
+          ctx.strokeStyle = "rgba(255,255,255,0.3)";
+          ctx.lineWidth = px;
+          ctx.stroke();
+        });
+        if (blue > 0) strokeShape(GUN_KIT.comp, blue);
+        ctx.restore();
+      }
+
+      // Parts a division does not allow: a dashed outline, then a red cross.
+      const ghost = o.ghost ?? {};
+      [
+        [ghost.comp, GUN_KIT.comp, [212, 1, 257, 33]],
+        [ghost.optic, GUN_KIT.optic, [52, -19, 103, 12]],
+      ].forEach(([a = 0, sh, [x0, y0, x1, y1]]) => {
+        if (a <= 0) return;
+        ctx.save();
+        ctx.setLineDash([6 * px, 4 * px]);
+        strokeShape(sh, 0.75 * seg(a, 0, 0.4), 1.5, 1);
+        ctx.restore();
+        const p1 = ease.out3(seg(a, 0.4, 0.7));
+        const p2 = ease.out3(seg(a, 0.6, 0.9));
+        ctx.strokeStyle = C.red;
+        ctx.lineWidth = 3 * px;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        if (p1 > 0) {
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(lerp(x0, x1, p1), lerp(y0, y1, p1));
+        }
+        if (p2 > 0) {
+          ctx.moveTo(x1, y0);
+          ctx.lineTo(lerp(x1, x0, p2), lerp(y0, y1, p2));
+        }
+        ctx.stroke();
+        ctx.lineCap = "butt";
+      });
+
+      // Base pad, always in place unless the magazine is dropping. extMag
+      // lengthens it down the line of the grip; flush flattens it.
+      const ext = (o.extMag ?? 0) * 22;
+      const flat = 1 - 0.67 * (o.flush ?? 0);
+      const withPad = (fn) =>
+        withMag(() => {
+          if (ext) ctx.translate(-0.151 * ext, ext);
+          if (flat !== 1) {
+            ctx.translate(0, 141.5);
+            ctx.scale(1, flat);
+            ctx.translate(0, -141.5);
+          }
+          fn();
+        });
+      if (ext > 0) {
+        const body = [
+          [12.4, 140.5],
+          [58.8, 140.5],
+          [58.8 - 0.151 * ext, 142 + ext],
+          [12.4 - 0.151 * ext, 142 + ext],
+        ];
+        const trace = () => {
+          ctx.beginPath();
+          body.forEach(([x, y]) => ctx.lineTo(x, y));
+          ctx.closePath();
+        };
+        withMag(() => {
+          solidLayer(() => {
+            trace();
+            ctx.fillStyle = g(141, 142 + ext, "#2e3238", "#1d2024");
+            ctx.fill();
+            for (let k = 1; k < 4; k++) {
+              const y = 141.5 + (ext * k) / 4;
+              line(
+                13 - 0.151 * (y - 141.5),
+                y,
+                58 - 0.151 * (y - 141.5),
+                y,
+                "rgba(0,0,0,0.35)",
+                0.6,
+              );
+            }
+          });
+          if (blue > 0) {
+            trace();
+            ctx.strokeStyle = `rgba(244,245,247,${blue})`;
+            ctx.lineWidth = 1.6 * px;
+            ctx.stroke();
+          }
+        });
+      }
+      withPad(() =>
         solidLayer(() =>
           fillShape(GUN.magPad, g(141, 160, "#34383e", "#16181b")),
         ),
       );
-      if (blue > 0) withMag(() => strokeShape(GUN.magPad, blue));
+      if (blue > 0) withPad(() => strokeShape(GUN.magPad, blue));
 
       // A soft highlight sweeping along the metal.
       if (o.sheen > 0 && o.sheen < 1 && solid > 0) {
@@ -2743,6 +2996,1157 @@
           ctx.fillRect(0, y + (h * (1 - cover)) / 2, W, 2);
         }
       }
+    }
+
+    // Handgun divisions (DIV), in local time lt. One pistol morphs through
+    // five divisions beside an index rail and an equipment matrix (1–7 s);
+    // a power-factor beat pushes in (7–9.5 s); then the line-up of all five,
+    // with Classic and Revolver (9.5 s to the end).
+    const DIV_T = [1, 2, 3, 4.5, 5.5, 7]; // each division's entrance, then the push
+    const DIV_POSE = { x: 960, y: 548, s: 2.75 };
+    const DIV_SPECS = [
+      {
+        en: "PRODUCTION",
+        ko: "프로덕션",
+        about: [
+          "Approved-list guns · iron sights",
+          "승인 목록 권총 · 아이언 사이트",
+        ],
+        gear: ["IRON SIGHTS", "아이언 사이트"],
+        kit: {},
+        // matrix: optic, compensator, handgun, Major PF threshold (0: Minor only)
+        cells: ["no", "no", "list", 0],
+      },
+      {
+        en: "PRODUCTION OPTICS",
+        ko: "프로덕션 옵틱스",
+        about: [
+          "Approved-list guns · slide-mounted optic",
+          "승인 목록 권총 · 슬라이드 옵틱",
+        ],
+        gear: ["OPTIC", "옵틱"],
+        kit: { optic: 1 },
+        cells: ["req", "no", "list", 0],
+      },
+      {
+        en: "STANDARD",
+        ko: "스탠더드",
+        about: [
+          "Must fit the box gauge · iron sights",
+          "박스 게이지 통과 · 아이언 사이트",
+        ],
+        gear: ["BOX GAUGE", "박스 게이지"],
+        kit: { flush: 1 },
+        cells: ["no", "no", "box", 170],
+      },
+      {
+        en: "OPTICS",
+        ko: "옵틱스",
+        about: [
+          "Slide-mounted optic · no compensator",
+          "슬라이드 옵틱 · 컴펜세이터 불가",
+        ],
+        gear: ["OPTIC · NO COMP", "옵틱 · 컴펜세이터 불가"],
+        kit: { optic: 1 },
+        cells: ["req", "no", "any", 0],
+      },
+      {
+        en: "OPEN",
+        ko: "오픈",
+        about: [
+          "Optics and compensators · widest freedom",
+          "옵틱 · 컴펜세이터 허용, 장비가 가장 자유로움",
+        ],
+        gear: ["OPTIC + COMP", "옵틱 + 컴펜세이터"],
+        kit: { optic: 1, comp: 1, extMag: 1 },
+        cells: ["yes", "yes", "any", 160],
+      },
+    ];
+    const DIV_ROWS = [
+      ["OPTIC", "옵틱"],
+      ["COMPENSATOR", "컴펜세이터"],
+      ["HANDGUN", "총기"],
+      ["POWER FACTOR", "파워 팩터"],
+    ];
+    const DIV_WORDS = {
+      no: ["NO", "불가"],
+      req: ["REQUIRED", "필수"],
+      yes: ["ALLOWED", "허용"],
+      list: ["LISTED ONLY", "목록 권총만"],
+      box: ["BOX GAUGE", "박스 게이지"],
+      any: ["NOT LIMITED", "제한 없음"],
+    };
+    // [English, Korean] by the caption language (both: Korean).
+    const divPick = (pair) => pair[opt.lang === "en" ? 0 : 1];
+    const divFamily = () => (opt.lang === "en" ? SANS : KR);
+
+    // Red section label, big title and (Korean) subtitle, top left.
+    function divTitle(label, title, ko, t) {
+      kinetic(label, 100, 176, {
+        size: 13,
+        weight: 700,
+        tracking: 3,
+        color: C.red,
+        t,
+        stagger: 0.01,
+      });
+      kinetic(title, 96, 254, {
+        size: 80,
+        t: t - 0.05,
+        tracking: -2.5,
+        stagger: 0.02,
+      });
+      if (opt.lang === "en") return;
+      ctx.save();
+      ctx.globalAlpha *= ease.out3(seg(t, 0.25, 0.55));
+      text(ko, 99, 296, { size: 20, weight: 500, color: C.dim, family: KR });
+      ctx.restore();
+    }
+
+    // A technical callout: a dot on the anchor (ax, ay), a leader at 45° up
+    // or down to the label row ly, then along under the label to the right
+    // (dir 1) or left (dir −1). ct: seconds since it started.
+    function divCallout(ax, ay, dir, ly, title, sub, ct, a = 1) {
+      if (ct <= 0 || a <= 0) return;
+      const family = divFamily();
+      const str = divPick(sub);
+      const tw = layout(title, font(800, 14), 2).width;
+      const sw = layout(str, font(500, 15, family), 0).width;
+      const uy = ly + 12;
+      const ex = ax + dir * Math.abs(uy - ay);
+      const l1 = Math.hypot(ex - ax, uy - ay);
+      const d = ease.out3(clamp(ct / 0.3)) * (l1 + Math.max(tw, sw) + 16);
+      ctx.save();
+      ctx.globalAlpha *= a;
+      ctx.strokeStyle = "rgba(244,245,247,0.7)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      if (d < l1) ctx.lineTo(lerp(ax, ex, d / l1), lerp(ay, uy, d / l1));
+      else {
+        ctx.lineTo(ex, uy);
+        ctx.lineTo(ex + dir * (d - l1), uy);
+      }
+      ctx.stroke();
+      const pop = ease.outBack(clamp(ct / 0.2));
+      const ring = clamp(ct / 0.45);
+      ctx.strokeStyle = rgba(C.red, 1 - ring);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(ax, ay, 6 + ring * 18, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = C.red;
+      ctx.beginPath();
+      ctx.arc(ax, ay, 6 * pop, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = C.white;
+      ctx.beginPath();
+      ctx.arc(ax, ay, 2.5 * pop, 0, Math.PI * 2);
+      ctx.fill();
+      const tx = ex + dir * 8;
+      const align = dir > 0 ? "left" : "right";
+      kinetic(title, tx, ly, {
+        size: 14,
+        weight: 800,
+        tracking: 2,
+        t: ct - 0.12,
+        align,
+        stagger: 0.008,
+        dur: 0.35,
+      });
+      ctx.globalAlpha *= ease.out3(clamp((ct - 0.22) / 0.25));
+      text(str, tx, uy + 23, {
+        size: 15,
+        weight: 500,
+        color: C.dim,
+        align,
+        family,
+      });
+      ctx.restore();
+    }
+
+    // Standard's box gauge around gun pose g: 225 × 150 mm inside, 45 mm
+    // deep (drawn oblique, at half scale). layer "back" draws the depth edges
+    // and faces behind the gun, "front" the four walls, which fly in as close
+    // goes 0 → 1, and the dimensions (dims 0..1).
+    function divBox(g, close, dims, layer) {
+      if (close <= 0) return;
+      const [x0, y0] = gunPoint(g, -3.5, -1.25);
+      const [x1, y1] = gunPoint(g, 221.5, 148.75);
+      const ox = 19.5 * g.s;
+      const oy = -11.25 * g.s;
+      ctx.save();
+      if (layer === "back") {
+        ctx.globalAlpha *= seg(close, 0.7, 1);
+        ctx.fillStyle = "rgba(213,218,224,0.05)";
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0 + ox, y0 + oy);
+        ctx.lineTo(x1 + ox, y0 + oy);
+        ctx.lineTo(x1 + ox, y1 + oy);
+        ctx.lineTo(x1, y1);
+        ctx.lineTo(x1, y0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.22)";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x0 + ox, y0 + oy, x1 - x0, y1 - y0);
+        [
+          [x0, y0],
+          [x1, y0],
+          [x1, y1],
+          [x0, y1],
+        ].forEach(([x, y]) => line(x, y, x + ox, y + oy, ctx.strokeStyle, 1.5));
+        ctx.restore();
+        return;
+      }
+      const wall = 4 * g.s;
+      const fly = (n) =>
+        (1 - ease.outExpo(clamp((close - n * 0.1) / 0.7))) * 110 * g.s;
+      ctx.globalAlpha *= clamp(close * 3);
+      [
+        [x0 - wall, y0 - wall - fly(0), x1 - x0 + 2 * wall, wall],
+        [x0 - wall, y1 + fly(1), x1 - x0 + 2 * wall, wall],
+        [x0 - wall - fly(2), y0, wall, y1 - y0],
+        [x1 + fly(3), y0, wall, y1 - y0],
+      ].forEach(([x, y, w, h]) => {
+        ctx.fillStyle = "rgba(213,218,224,0.16)";
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = "rgba(244,245,247,0.8)";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x, y, w, h);
+      });
+      if (dims > 0) {
+        dimension(x0 + ox, x1 + ox, y0 + oy - 30, "225 mm", dims, true);
+        ctx.save();
+        ctx.translate(x1 + ox + 30, (y0 + y1) / 2 + oy);
+        ctx.rotate(-Math.PI / 2);
+        dimension(-(y1 - y0) / 2, (y1 - y0) / 2, 0, "150 mm", dims);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    // The value of matrix row r for one division, right-aligned at x and
+    // centred on y: ✓/✕ with a word, a word, or power-factor pills.
+    function divIcon(x, y, ok) {
+      ctx.beginPath();
+      ctx.arc(x, y, 14, 0, Math.PI * 2);
+      if (ok) {
+        ctx.fillStyle = C.red;
+        ctx.fill();
+        ctx.strokeStyle = C.white;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x - 6, y);
+        ctx.lineTo(x - 1.5, y + 5);
+        ctx.lineTo(x + 6.5, y - 5);
+        ctx.stroke();
+        return;
+      }
+      ctx.strokeStyle = "rgba(255,255,255,0.28)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.strokeStyle = C.dim;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y - 5);
+      ctx.lineTo(x + 5, y + 5);
+      ctx.moveTo(x + 5, y - 5);
+      ctx.lineTo(x - 5, y + 5);
+      ctx.stroke();
+    }
+    function divPill(xr, y, str, hot) {
+      const w = layout(str, font(800, 13), 1.5).width + 26;
+      ctx.beginPath();
+      ctx.roundRect(xr - w, y - 15, w, 30, 15);
+      if (hot) {
+        ctx.fillStyle = C.red;
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = "rgba(255,255,255,0.55)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      text(str, xr - w / 2, y + 5, {
+        size: 13,
+        weight: 800,
+        tracking: 1.5,
+        align: "center",
+      });
+      return w;
+    }
+    // Power-factor pills right-aligned at x; returns their width.
+    function divPills(x, y, major, numbers = true) {
+      let xr = x;
+      if (major)
+        xr -= divPill(xr, y, numbers ? `MAJOR ≥ ${major}` : "MAJOR", true) + 8;
+      return x - xr + divPill(xr, y, "MINOR", false);
+    }
+    function divCell(r, v, x, y) {
+      const en = opt.lang === "en";
+      const word = (str, color, dx) =>
+        text(str, x - dx, y + 6, {
+          size: en ? 14 : 17,
+          weight: en ? 800 : 700,
+          tracking: en ? 1.5 : 0,
+          align: "right",
+          color,
+          family: divFamily(),
+        });
+      if (r < 2) {
+        divIcon(x - 14, y, v !== "no");
+        word(divPick(DIV_WORDS[v]), v === "no" ? C.dim : C.white, 40);
+      } else if (r === 2)
+        word(divPick(DIV_WORDS[v]), v === "any" ? C.dim : C.white, 0);
+      else divPills(x, y, v);
+    }
+
+    // The equipment matrix, right column: rows build in, then each value
+    // flips over when a division changes it, with a red sweep behind.
+    function divMatrix(lt) {
+      const x0 = 1400;
+      const x1 = 1824;
+      const k = Math.min(
+        4,
+        DIV_T.findLastIndex((x) => lt >= x),
+      );
+      const ha = ease.out3(seg(lt, 0.6, 0.9));
+      ctx.save();
+      ctx.globalAlpha *= ha;
+      text("EQUIPMENT", x0, 386, {
+        size: 13,
+        weight: 700,
+        tracking: 3,
+        color: C.red,
+      });
+      if (k >= 0)
+        text(`${String(k + 1).padStart(2, "0")} / 05`, x1, 386, {
+          size: 13,
+          weight: 700,
+          tracking: 2,
+          color: C.dim,
+          align: "right",
+        });
+      ctx.restore();
+      line(
+        x0,
+        404,
+        x0 + (x1 - x0) * ease.outExpo(seg(lt, 0.6, 1.1)),
+        404,
+        "rgba(255,255,255,0.25)",
+        1,
+      );
+      DIV_ROWS.forEach((label, r) => {
+        const y = 456 + r * 92;
+        const ra = ease.out3(seg(lt, 0.7 + r * 0.06, 1.0 + r * 0.06));
+        if (ra <= 0) return;
+        const changed =
+          k >= 0 &&
+          (k === 0 || DIV_SPECS[k].cells[r] !== DIV_SPECS[k - 1].cells[r]);
+        const ft = k >= 0 ? DIV_T[k] + 0.1 + r * 0.07 : 0;
+        const flash = changed ? 1 - seg(lt, ft, ft + 0.7) : 0;
+        ctx.save();
+        ctx.globalAlpha *= ra;
+        ctx.translate((1 - ra) * 30, 0);
+        if (flash > 0 && lt >= ft) {
+          const sweep = ease.outExpo(seg(lt, ft, ft + 0.3));
+          ctx.fillStyle = rgba(C.red, 0.16 * flash);
+          ctx.fillRect(
+            x1 - (x1 - x0 + 16) * sweep,
+            y - 30,
+            (x1 - x0 + 16) * sweep,
+            70,
+          );
+        }
+        text(label[0], x0, y, { size: 15, weight: 800, tracking: 2 });
+        if (opt.lang !== "en")
+          text(label[1], x0, y + 25, {
+            size: 15,
+            weight: 500,
+            color: C.dim,
+            family: KR,
+          });
+        line(x0, y + 46, x1, y + 46, "rgba(255,255,255,0.08)", 1);
+        if (k >= 0) {
+          const q = changed ? seg(lt, ft, ft + 0.24) : 1;
+          const v =
+            q < 0.5
+              ? k > 0
+                ? DIV_SPECS[k - 1].cells[r]
+                : null
+              : DIV_SPECS[k].cells[r];
+          const yc = y + (opt.lang === "en" ? -5 : 7);
+          if (v !== null) {
+            ctx.translate(x1, yc);
+            ctx.scale(1, Math.max(0.02, Math.abs(Math.cos(q * Math.PI))));
+            divCell(r, v, 0, 0);
+          }
+        }
+        ctx.restore();
+      });
+    }
+
+    // The index rail, left column: the active division grows and shows its
+    // one-line summary; a red selector slides between them. act is the
+    // active index, continuous (−1: none yet).
+    function divRail(lt, act) {
+      let y = 424;
+      let selY = 0;
+      DIV_SPECS.forEach((d, n) => {
+        const e = ease.inOut3(clamp(1 - Math.abs(act - n)));
+        selY += e * y;
+        const pin = ease.out3(seg(lt, 0.5 + n * 0.07, 0.85 + n * 0.07));
+        if (pin > 0) {
+          ctx.save();
+          ctx.globalAlpha *= pin;
+          ctx.translate((1 - pin) * -36, 0);
+          digits(String(n + 1).padStart(2, "0"), 116, y, 14, {
+            weight: 700,
+            color: e > 0.5 ? C.red : C.faint,
+          });
+          ctx.save();
+          ctx.translate(152, y);
+          ctx.scale(1 + 0.45 * e, 1 + 0.45 * e);
+          text(d.en, 0, 0, {
+            size: 20,
+            weight: 800,
+            tracking: 0.5,
+            color: `rgba(244,245,247,${0.36 + 0.64 * e})`,
+          });
+          ctx.restore();
+          if (e > 0.02) {
+            ctx.globalAlpha *= e;
+            text(
+              opt.lang === "en" ? d.about[0] : `${d.ko} — ${d.about[1]}`,
+              154,
+              y + 32,
+              { size: 16, weight: 500, color: C.dim, family: divFamily() },
+            );
+          }
+          ctx.restore();
+        }
+        y += 54 + e * 42;
+      });
+      const sel = clamp(act + 1);
+      if (sel > 0) {
+        ctx.fillStyle = C.red;
+        ctx.fillRect(
+          96,
+          (act < 0 ? 424 : selY) - 26 + (1 - sel) * 20,
+          4,
+          64 * sel,
+        );
+      }
+    }
+
+    // A giant, faint index number behind the gun, rolling up on each change.
+    function divNumeral(lt) {
+      const k = DIV_T.findLastIndex((x) => lt >= x);
+      if (k < 0 || k > 4) return;
+      const q = ease.inOutExpo(seg(lt, DIV_T[k], DIV_T[k] + 0.45));
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 250, W, 600);
+      ctx.clip();
+      ctx.font = font(800, 600);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = "rgba(255,255,255,0.028)";
+      if (k > 0) ctx.fillText(`0${k}`, 1010, 800 - q * 600);
+      ctx.fillText(`0${k + 1}`, 1010, 800 + (1 - q) * 600);
+      ctx.restore();
+    }
+
+    // Section 1: the morphing pistol.
+    function divMorph(lt) {
+      let act = -1 + ease.inOut3(seg(lt, 0.9, 1.2));
+      for (let n = 1; n < 5; n++)
+        act += ease.inOut3(seg(lt, DIV_T[n] - 0.05, DIV_T[n] + 0.3));
+      divTitle("IPSC HANDGUN", "DIVISIONS", "IPSC 핸드건 디비전", lt + 1);
+      divNumeral(lt);
+      // every change lands with a small punch-in
+      const bump = [1, 2, 3, 3.75, 4.5, 5.5].reduce(
+        (b, at) => b + Math.max(0, 1 - Math.abs(lt - at - 0.08) / 0.16),
+        0,
+      );
+      const pose = {
+        ...DIV_POSE,
+        y: DIV_POSE.y + Math.sin(lt * Math.PI) * 2,
+        s: DIV_POSE.s * (1 + 0.016 * bump),
+      };
+      const optic =
+        lt < 3
+          ? seg(lt, 2.05, 2.5)
+          : lt < 4.5
+            ? 1 - seg(lt, 3.0, 3.25)
+            : seg(lt, 4.6, 5.0);
+      const flush =
+        lt < 4.5
+          ? ease.inOut3(seg(lt, 3.15, 3.4))
+          : 1 - ease.inOut3(seg(lt, 4.55, 4.8));
+      const box = lt < 4.5 ? seg(lt, 3.42, 3.8) : 1 - seg(lt, 4.5, 4.75);
+      const dims = ease.out3(seg(lt, 3.65, 4.05)) * (1 - seg(lt, 4.45, 4.55));
+      divBox(pose, box, 0, "back");
+      drawGun({
+        ...pose,
+        blue: 1 - ease.inOut3(seg(lt, 0.5, 0.9)),
+        sheen: seg(lt, 0.6, 1.15),
+        optic,
+        flush,
+        comp: seg(lt, 5.55, 5.9),
+        extMag: ease.outBack(seg(lt, 6.0, 6.3)),
+        ghost: {
+          comp: lt < 5.5 ? seg(lt, 5.0, 5.4) : 1 - seg(lt, 5.5, 5.62),
+        },
+      });
+      divBox(pose, box, dims, "front");
+      // the box locks with a flash, and carries its label
+      const lock = seg(lt, 3.8, 4.1);
+      const [bx0, by0] = gunPoint(pose, -3.5, -1.25);
+      const [bx1, by1] = gunPoint(pose, 221.5, 148.75);
+      if (lock > 0 && lock < 1) {
+        ctx.strokeStyle = `rgba(255,255,255,${1 - lock})`;
+        ctx.lineWidth = 3;
+        const gr = lock * 26;
+        ctx.strokeRect(
+          bx0 - gr,
+          by0 - gr,
+          bx1 - bx0 + 2 * gr,
+          by1 - by0 + 2 * gr,
+        );
+      }
+      if (dims > 0) {
+        ctx.save();
+        ctx.globalAlpha *= dims;
+        text("BOX GAUGE", bx0, 220, {
+          size: 13,
+          weight: 700,
+          tracking: 3,
+          color: C.red,
+        });
+        text("225 × 150 × 45 mm", bx0, 244, {
+          size: 15,
+          weight: 600,
+          color: C.dim,
+        });
+        ctx.restore();
+      }
+      // an inspection beam sweeps the gun on every change
+      DIV_T.slice(0, 5).forEach((at) => {
+        const q = seg(lt, at, at + 0.42);
+        if (q <= 0 || q >= 1) return;
+        const x = lerp(600, 1380, ease.inOut3(q));
+        const a = Math.sin(q * Math.PI);
+        const gr = ctx.createLinearGradient(x - 70, 0, x + 70, 0);
+        gr.addColorStop(0, rgba(C.red, 0));
+        gr.addColorStop(0.5, rgba(C.red, 0.16 * a));
+        gr.addColorStop(1, rgba(C.red, 0));
+        ctx.fillStyle = gr;
+        ctx.fillRect(x - 70, 270, 140, 540);
+        line(x, 270, x, 810, rgba(C.red, 0.85 * a), 2);
+      });
+      // callouts
+      const callout = (tIn, tOut, [mx, my], dir, ly, title, sub) => {
+        if (lt < tIn || lt > tOut + 0.15) return;
+        const [ax, ay] = gunPoint(pose, mx, my);
+        divCallout(
+          ax,
+          ay,
+          dir,
+          ly,
+          title,
+          sub,
+          lt - tIn,
+          1 - seg(lt, tOut, tOut + 0.15),
+        );
+      };
+      callout(1.15, 2.0, [40, 1.5], 1, 250, "IRON SIGHTS", [
+        "Rear notch and front post",
+        "가늠자와 가늠쇠",
+      ]);
+      callout(1.3, 3.0, [34, 156], -1, 828, "≤ 15 ROUNDS", [
+        "In the magazine at the start signal",
+        "시작 신호 때 탄창에 15발 이하",
+      ]);
+      const opticNote = [
+        "A red dot on the slide",
+        "슬라이드에 장착한 도트 사이트",
+      ];
+      callout(2.3, 3.0, [76, -14], -1, 238, "SLIDE-MOUNTED OPTIC", opticNote);
+      callout(4.85, 5.5, [76, -14], -1, 238, "SLIDE-MOUNTED OPTIC", opticNote);
+      callout(5.05, 5.5, [236, 17], 1, 250, "NO COMPENSATOR", [
+        "No barrel porting either",
+        "배럴 포팅도 불가",
+      ]);
+      callout(5.85, 7.2, [236, 7], 1, 250, "COMPENSATOR", [
+        "Allowed in Open",
+        "오픈에서 허용",
+      ]);
+      divRail(lt, act);
+      divMatrix(lt);
+    }
+
+    // A number rolling digit by digit, left to right, from `from` to `to`
+    // over [t0, t1]; from null, it is hidden until t0.
+    function divRoll(from, to, lt, t0, t1) {
+      if (lt < t0) return from;
+      if (lt >= t1) return to;
+      const r = rand(Math.floor(lt * 30) * 13 + to.length);
+      return [...to]
+        .map((ch, k) =>
+          lt >= t0 + ((t1 - t0) * (k + 1)) / to.length
+            ? ch
+            : String(Math.floor(r() * 10)),
+        )
+        .join("");
+    }
+
+    // A bullet pointing right, its tip at (x, y).
+    function divBullet(x, y, len) {
+      const h = len * 0.42;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(
+        x - len * 0.22,
+        y - h / 2,
+        x - len * 0.55,
+        y - h / 2,
+      );
+      ctx.lineTo(x - len, y - h / 2);
+      ctx.lineTo(x - len, y + h / 2);
+      ctx.lineTo(x - len * 0.55, y + h / 2);
+      ctx.quadraticCurveTo(x - len * 0.22, y + h / 2, x, y);
+      ctx.closePath();
+      const gr = ctx.createLinearGradient(0, y - h / 2, 0, y + h / 2);
+      gr.addColorStop(0, "#f2c592");
+      gr.addColorStop(0.5, "#c9824a");
+      gr.addColorStop(1, "#7a4a24");
+      ctx.fillStyle = gr;
+      ctx.fill();
+    }
+
+    // Section 2: power factor. Two example loads: 125 gr at 1040 ft/s makes
+    // 130 (Minor); 160 gr at 1075 ft/s makes 172 (Major in Open and Standard).
+    // The PF runs along a scale with the Minor and Major floors, and the C and
+    // D zone points step up with Major.
+    function divPower(lt) {
+      const family = divFamily();
+      divTitle(
+        "MINOR · MAJOR",
+        "POWER FACTOR",
+        "파워 팩터 — 마이너와 메이저",
+        lt - 7.05,
+      );
+      const S = 112;
+      const y = 500;
+      const late = lt >= 8.4;
+      const wt = late
+        ? divRoll("125", "160", lt, 8.4, 8.6)
+        : divRoll(null, "125", lt, 7.3, 7.5);
+      const vel = late
+        ? divRoll("1040", "1075", lt, 8.55, 8.8)
+        : divRoll(null, "1040", lt, 7.5, 7.75);
+      const pf = late
+        ? divRoll("130", "172", lt, 8.8, 9.0)
+        : divRoll(null, "130", lt, 7.8, 8.0);
+      [
+        [96, "BULLET WEIGHT", "탄두 무게", 7.2],
+        [470, "VELOCITY", "속도", 7.32],
+        [1170, "PF", "파워 팩터", 7.44],
+      ].forEach(([x, en, ko, at]) => {
+        kinetic(en, x + 2, 360, {
+          size: 14,
+          weight: 700,
+          tracking: 3,
+          t: lt - at,
+          color: C.red,
+          stagger: 0.01,
+        });
+        if (opt.lang === "en") return;
+        ctx.save();
+        ctx.globalAlpha *= ease.out3(seg(lt, at + 0.1, at + 0.35));
+        text(ko, x + 2, 385, {
+          size: 15,
+          weight: 500,
+          color: C.dim,
+          family: KR,
+        });
+        ctx.restore();
+      });
+      // digits read dimmer while they roll
+      const rolling = (...spans) =>
+        spans.some(([a, b]) => lt >= a && lt < b) ? 0.72 : 1;
+      const fade = (at) => ease.out3(seg(lt, at, at + 0.12));
+      ctx.save();
+      if (wt) {
+        digits(wt, 96, y, S, {
+          weight: 800,
+          color: `rgba(244,245,247,${rolling([7.3, 7.5], [8.4, 8.6])})`,
+        });
+        text("gr", 96 + 3 * 0.62 * S + 12, y, {
+          size: 30,
+          weight: 700,
+          color: C.dim,
+        });
+      }
+      if (vel) {
+        digits(vel, 748, y, S, {
+          weight: 800,
+          align: "right",
+          color: `rgba(244,245,247,${rolling([7.5, 7.75], [8.55, 8.8])})`,
+        });
+        text("ft/s", 760, y, { size: 30, weight: 700, color: C.dim });
+      }
+      if (pf) {
+        digits(pf, 1170, y, S, {
+          weight: 800,
+          color: `rgba(244,245,247,${rolling([7.8, 8.0], [8.8, 9.0])})`,
+        });
+        // underlined as it lands: white for Minor, red for Major
+        const ul = ease.outExpo(seg(lt, 8.0, 8.35));
+        const red = ease.outExpo(seg(lt, 9.0, 9.35));
+        ctx.fillStyle = "rgba(244,245,247,0.85)";
+        ctx.fillRect(1172, y + 24, 3 * 0.62 * S * ul, 6);
+        ctx.fillStyle = C.red;
+        ctx.fillRect(1172, y + 24, 3 * 0.62 * S * red, 6);
+      }
+      // operators slam in
+      [
+        ["×", 400, 7.45, 80],
+        ["÷", 850, 7.75, 56],
+        ["=", 1090, 7.8, 80],
+      ].forEach(([op, x, at, size]) => {
+        const p = fade(at);
+        if (p <= 0) return;
+        ctx.save();
+        ctx.globalAlpha *= p;
+        ctx.translate(x, y - size * 0.32);
+        ctx.scale(lerp(1.8, 1, p), lerp(1.8, 1, p));
+        text(op, 0, size * 0.32, {
+          size,
+          weight: 500,
+          align: "center",
+          color: C.dim,
+        });
+        ctx.restore();
+      });
+      if (fade(7.75) > 0) {
+        ctx.globalAlpha *= fade(7.75);
+        digits("1000", 878, y, 56, { weight: 700, color: C.dim });
+      }
+      ctx.restore();
+      // example tag
+      ctx.save();
+      ctx.globalAlpha *= ease.out3(seg(lt, 7.6, 7.9));
+      text(
+        opt.lang === "en" ? "EXAMPLE LOADS" : "EXAMPLE LOADS · 예시",
+        98,
+        560,
+        {
+          size: 12,
+          weight: 700,
+          tracking: 3,
+          color: C.dim,
+          family,
+        },
+      );
+      ctx.restore();
+      // the verdict
+      const vIn = ease.outBack(seg(lt, 8.0, 8.25));
+      if (vIn > 0) {
+        const fq = seg(lt, 9.0, 9.24);
+        const major = fq >= 0.5;
+        ctx.save();
+        ctx.globalAlpha *= clamp(vIn);
+        text("SCORED AS", 1824, 372, {
+          size: 13,
+          weight: 700,
+          tracking: 3,
+          color: C.red,
+          align: "right",
+        });
+        ctx.translate(1824 - 112, 462);
+        ctx.scale(vIn, vIn * Math.max(0.02, Math.abs(Math.cos(fq * Math.PI))));
+        ctx.beginPath();
+        ctx.roundRect(-112, -44, 224, 88, 44);
+        if (major) {
+          ctx.fillStyle = C.red;
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = C.white;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+        text(major ? "MAJOR" : "MINOR", 0, 15, {
+          size: 42,
+          weight: 800,
+          tracking: 1,
+          align: "center",
+        });
+        ctx.restore();
+      }
+      // the scale
+      const x0 = 96;
+      const x1 = 1824;
+      const sx = (v) => x0 + ((v - 100) / 100) * (x1 - x0);
+      const by = 664;
+      const reach = x0 + (x1 - x0) * ease.outExpo(seg(lt, 7.35, 7.85));
+      line(x0, by, reach, by, "rgba(255,255,255,0.3)", 2);
+      for (let v = 100; v <= 200; v += 5) {
+        if (sx(v) > reach) break;
+        const big = v % 25 === 0;
+        line(sx(v), by, sx(v), by + (big ? 12 : 6), "rgba(255,255,255,0.3)", 1);
+        if (big)
+          digits(String(v), sx(v), by + 38, 14, {
+            weight: 600,
+            color: C.dim,
+            align: "center",
+          });
+      }
+      const ba = ease.out3(seg(lt, 7.6, 7.95));
+      const pfv =
+        lt < 8.4
+          ? lerp(100, 130, ease.out3(seg(lt, 7.85, 8.2)))
+          : lerp(130, 172, ease.inOut3(seg(lt, 8.85, 9.15)));
+      if (ba > 0) {
+        ctx.save();
+        ctx.globalAlpha *= ba;
+        ctx.fillStyle = "rgba(255,255,255,0.1)";
+        ctx.fillRect(sx(125), by - 8, x1 - sx(125), 8);
+        ctx.fillStyle = rgba(C.red, 0.22);
+        ctx.fillRect(sx(160), by - 8, x1 - sx(160), 8);
+        ctx.fillStyle = rgba(C.red, 0.22);
+        ctx.fillRect(sx(170), by - 8, x1 - sx(170), 8);
+        [
+          [125, "MINOR ≥ 125", C.white, 0],
+          [160, "MAJOR ≥ 160 · OPEN", C.red, 1],
+          [170, "MAJOR ≥ 170 · STANDARD", C.red, 0],
+        ].forEach(([v, str, color, row], n) => {
+          const p = ease.out3(seg(lt, 7.65 + n * 0.08, 7.95 + n * 0.08));
+          const top = by - 36 - row * 28;
+          const hit = Math.max(0, 1 - Math.abs(pfv - v) / 5);
+          line(sx(v), by + 4, sx(v), lerp(by, top, p), color, 2 + hit * 2);
+          ctx.save();
+          ctx.globalAlpha *= p;
+          text(str, sx(v) + 8, top + 4, {
+            size: 13,
+            weight: 800,
+            tracking: 1.5,
+            color,
+          });
+          ctx.restore();
+          if (hit > 0) {
+            ctx.strokeStyle = rgba(color === C.red ? C.red : C.white, hit);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(sx(v), by - 4, 10 + (1 - hit) * 16, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        });
+        ctx.restore();
+      }
+      if (lt >= 7.85) {
+        const tip = sx(pfv);
+        const gr = ctx.createLinearGradient(x0, 0, tip, 0);
+        gr.addColorStop(0, "rgba(255,255,255,0.15)");
+        gr.addColorStop(1, pfv >= 160 ? C.red : C.white);
+        ctx.fillStyle = gr;
+        ctx.fillRect(x0, by - 3, tip - x0 - 30, 4);
+        divBullet(tip, by - 1, 52);
+      }
+      // points per hit: C and D step up with Major
+      ctx.save();
+      ctx.globalAlpha *= ease.out3(seg(lt, 7.6, 7.9));
+      text("POINTS PER HIT", 98, 740, {
+        size: 13,
+        weight: 700,
+        tracking: 3,
+        color: C.red,
+      });
+      if (opt.lang !== "en")
+        text("타격당 점수", 300, 740, {
+          size: 15,
+          weight: 500,
+          color: C.dim,
+          family: KR,
+        });
+      ctx.restore();
+      [
+        ["A", 5, 5],
+        ["C", 3, 4],
+        ["D", 1, 2],
+      ].forEach(([z, minor, major], n) => {
+        const tin = ease.out3(seg(lt, 7.62 + n * 0.06, 7.92 + n * 0.06));
+        if (tin <= 0) return;
+        const x = 96 + n * 172;
+        const top = 758;
+        const up = major !== minor;
+        const fq = up ? seg(lt, 9.0 + n * 0.06, 9.24 + n * 0.06) : 0;
+        const hot = fq >= 0.5;
+        ctx.save();
+        ctx.globalAlpha *= tin;
+        ctx.translate(0, (1 - tin) * 24);
+        ctx.beginPath();
+        ctx.roundRect(x, top, 156, 100, 8);
+        ctx.fillStyle = hot ? rgba(C.red, 0.92) : "rgba(255,255,255,0.05)";
+        ctx.fill();
+        ctx.strokeStyle = hot ? C.red : "rgba(255,255,255,0.16)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        text(z, x + 18, top + 34, {
+          size: 22,
+          weight: 800,
+          color: hot ? C.white : C.dim,
+        });
+        if (hot)
+          text(`+${major - minor}`, x + 18, top + 84, {
+            size: 15,
+            weight: 800,
+            color: "rgba(255,255,255,0.8)",
+          });
+        ctx.translate(x + 134, top + 80);
+        ctx.scale(1, Math.max(0.02, Math.abs(Math.cos(fq * Math.PI))));
+        digits(String(hot ? major : minor), 0, 0, 60, {
+          weight: 800,
+          align: "right",
+        });
+        ctx.restore();
+      });
+      // a Minor / Major switch
+      const sa = ease.out3(seg(lt, 7.8, 8.1));
+      if (sa > 0) {
+        const k = ease.inOut3(seg(lt, 8.92, 9.12));
+        ctx.save();
+        ctx.globalAlpha *= sa;
+        text("MINOR", 640, 815, {
+          size: 14,
+          weight: 800,
+          tracking: 2,
+          color: k < 0.5 ? C.white : C.faint,
+        });
+        ctx.beginPath();
+        ctx.roundRect(732, 786, 96, 44, 22);
+        ctx.fillStyle = k > 0 ? rgba(C.red, k) : "rgba(255,255,255,0.08)";
+        ctx.fill();
+        ctx.strokeStyle = k > 0.5 ? C.red : "rgba(255,255,255,0.4)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = C.white;
+        ctx.beginPath();
+        ctx.arc(lerp(754, 806, k), 808, 16, 0, Math.PI * 2);
+        ctx.fill();
+        text("MAJOR", 846, 815, {
+          size: 14,
+          weight: 800,
+          tracking: 2,
+          color: k >= 0.5 ? C.white : C.faint,
+        });
+        // where C and D are on the target: they light up with Major
+        drawTarget(1010, 806, 2.4, {
+          letters: 1,
+          texture: 0,
+          hiC: k * 0.85,
+          hiD: k * 0.85,
+        });
+        ctx.restore();
+      }
+    }
+
+    // Classic's single-stack magazine and Revolver's cylinder, as glyphs.
+    function divGlyph(kind, x, y) {
+      ctx.strokeStyle = C.white;
+      ctx.lineWidth = 1.5;
+      ctx.fillStyle = C.white;
+      if (kind === "stack") {
+        ctx.beginPath();
+        ctx.roundRect(x - 9, y - 22, 18, 44, 3);
+        ctx.stroke();
+        for (let k = 0; k < 4; k++) {
+          ctx.beginPath();
+          ctx.arc(x, y - 13 + k * 9, 3.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        return;
+      }
+      ctx.beginPath();
+      ctx.arc(x, y, 20, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * Math.PI * 2 - Math.PI / 2;
+        ctx.beginPath();
+        ctx.arc(
+          x + Math.cos(a) * 11.5,
+          y + Math.sin(a) * 11.5,
+          4.2,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      }
+    }
+
+    // Section 3: the line-up, each gun inked in as a blueprint, then solid,
+    // over its name, its kit and its power factors; Classic and Revolver below.
+    function divLineup(lt) {
+      const family = divFamily();
+      // the guns keep breathing through the hold with a slow push-in
+      const drift = lerp(1, 1.02, ease.inOut3(seg(lt, 10.4, DIV.dur)));
+      divTitle("IPSC HANDGUN", "DIVISIONS", "IPSC 핸드건 디비전", lt - 9.62);
+      DIV_SPECS.forEach((d, n) => {
+        const cx = 269 + n * 346;
+        const t0 = 9.75 + n * 0.08;
+        const draw = ease.out3(seg(lt, t0, t0 + 0.45));
+        if (draw <= 0) return;
+        const gx = cx - (d.kit.comp ? 28 : 0);
+        const g = { x: W / 2 + (gx - W / 2) * drift, y: 474, s: 1.25 * drift };
+        const blue = 1 - ease.inOut3(seg(lt, t0 + 0.3, t0 + 0.65));
+        if (d.kit.flush) divBox(g, draw, 0, "back");
+        drawGun({ ...g, ...d.kit, blue, draw, fiber: 1 - blue });
+        if (d.kit.flush) divBox(g, draw, 0, "front");
+        const lt2 = lt - t0 - 0.2;
+        kinetic(d.en, cx, 652, {
+          size: 18,
+          weight: 800,
+          tracking: 1,
+          t: lt2,
+          align: "center",
+          stagger: 0.012,
+        });
+        ctx.save();
+        ctx.globalAlpha *= ease.out3(seg(lt2, 0.15, 0.45));
+        // English has no second name line, so its rows close up
+        const en = opt.lang === "en";
+        if (!en)
+          text(d.ko, cx, 680, {
+            size: 15,
+            weight: 500,
+            color: C.dim,
+            align: "center",
+            family: KR,
+          });
+        text(divPick(d.gear), cx, en ? 686 : 714, {
+          size: en ? 12 : 14,
+          weight: 700,
+          tracking: en ? 2 : 0,
+          color: C.dim,
+          align: "center",
+          family,
+        });
+        const major = d.cells[3];
+        const pw =
+          layout("MINOR", font(800, 13), 1.5).width +
+          26 +
+          (major ? layout("MAJOR", font(800, 13), 1.5).width + 34 : 0);
+        divPills(cx + pw / 2, en ? 724 : 750, major, false);
+        ctx.restore();
+      });
+      // Classic and Revolver
+      const rule = ease.outExpo(seg(lt, 10.35, 10.85));
+      line(96, 792, 96 + (1824 - 96) * rule, 792, "rgba(255,255,255,0.14)", 1);
+      [
+        [
+          96,
+          "stack",
+          "CLASSIC",
+          ["1911-style single-stack pistols", "1911 스타일 싱글 스택 권총"],
+          10.5,
+        ],
+        [900, "cylinder", "REVOLVER", ["Revolvers", "리볼버"], 10.62],
+      ].forEach(([x, glyph, name, sub, at]) => {
+        const p = ease.out3(seg(lt, at, at + 0.3));
+        if (p <= 0) return;
+        ctx.save();
+        ctx.globalAlpha *= p;
+        divGlyph(glyph, x + 20, 840);
+        ctx.restore();
+        kinetic(`+ ${name}`, x + 56, 849, {
+          size: 24,
+          weight: 800,
+          tracking: 1,
+          t: lt - at,
+          stagger: 0.015,
+        });
+        const nw = layout(`+ ${name}`, font(800, 24), 1).width;
+        ctx.save();
+        ctx.globalAlpha *= ease.out3(seg(lt, at + 0.15, at + 0.45));
+        text(divPick(sub), x + 56 + nw + 16, 848, {
+          size: 18,
+          weight: 500,
+          color: C.dim,
+          family,
+        });
+        ctx.restore();
+      });
+    }
+
+    // The whole chapter. Sections push up out of frame, each with a red seam.
+    function sceneDivisions(lt) {
+      if (lt < 0 || lt > DIV.dur) return;
+      const push1 = ease.inOutExpo(seg(lt, 7.0, 7.4));
+      const push2 = ease.inOutExpo(seg(lt, 9.5, 9.9));
+      blueprintGrid(0.45);
+      if (push1 < 1) {
+        ctx.save();
+        ctx.translate(0, -push1 * H);
+        divMorph(lt);
+        ctx.restore();
+      }
+      if (push1 > 0 && push2 < 1) {
+        ctx.save();
+        ctx.translate(0, (1 - push1 - push2) * H);
+        divPower(lt);
+        ctx.restore();
+      }
+      if (push2 > 0) {
+        ctx.save();
+        ctx.translate(0, (1 - push2) * H);
+        divLineup(lt);
+        ctx.restore();
+      }
+      [push1, push2].forEach((p) => {
+        if (p > 0 && p < 1) line(0, (1 - p) * H, W, (1 - p) * H, C.red, 3);
+      });
+    }
+
+    // Captions for renderDivisions, as caption() draws the reel's.
+    function divCaption(lt) {
+      const lang = opt.lang;
+      DIV.captions.forEach(([a, b, ko, en], i) => {
+        const next = DIV.captions[i + 1]?.[0] ?? Infinity;
+        const exit = clamp(next - b - 0.02, 0.06, 0.3);
+        if (lt < a || lt > b + exit) return;
+        const ct = lt - a;
+        const fade = 1 - seg(lt, b, b + exit);
+        ctx.save();
+        const scrim = ctx.createLinearGradient(0, H - 300, 0, H);
+        scrim.addColorStop(0, "rgba(8,10,13,0)");
+        scrim.addColorStop(1, "rgba(8,10,13,0.62)");
+        ctx.globalAlpha = fade * ease.out3(seg(ct, 0, 0.3));
+        ctx.fillStyle = scrim;
+        ctx.fillRect(0, H - 300, W, 300);
+        ctx.globalAlpha = fade;
+        const y = lang === "both" ? H - 128 : H - 96;
+        const bar = ease.outExpo(seg(ct, 0, 0.35));
+        ctx.fillStyle = C.red;
+        ctx.fillRect(96, y - 30 * bar, 4, 36 * bar);
+        kinetic(lang === "en" ? en : ko, 120, y, {
+          size: 30,
+          weight: lang === "en" ? 600 : 700,
+          family: lang === "en" ? SANS : KR,
+          t: ct,
+          out: lt > b ? lt - b : -1,
+          stagger: 0.008,
+          dur: 0.4,
+          outDur: exit * 0.8,
+          outStagger: 0,
+        });
+        if (lang === "both") {
+          ctx.globalAlpha = fade * ease.out3(seg(ct, 0.15, 0.5));
+          text(en, 120, y + 40, { size: 20, weight: 500, color: C.dim });
+        }
+        ctx.restore();
+      });
     }
 
     // S4 — targets and scoring.
@@ -4547,9 +5951,31 @@
       hud(t);
     }
 
+    // Preview of the divisions chapter alone, at local time lt, framed as in
+    // the reel: the frozen shot timer (on the same beat), the blinds in and
+    // out, the chapter's own captions and the chrome.
+    function renderDivisions(time) {
+      const lt = clamp(time, 0, DIV.dur);
+      const t = 7.5 + (lt % 8); // a reel time inside the freeze, clear of its flashes
+      const k = canvas.width / W;
+      ctx.setTransform(k, 0, 0, k, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      background(t);
+      sceneDivisions(lt);
+      blinds(lt, -0.2, 0.2);
+      blinds(lt, DIV.dur - 0.2, DIV.dur + 0.2);
+      overlays(t);
+      timerHud(t);
+      if (opt.captions) divCaption(lt);
+      hud(t);
+    }
+
     return {
       ready,
       render,
+      renderDivisions,
+      divisions: DIV,
       setLang(lang) {
         opt.lang = lang;
       },
