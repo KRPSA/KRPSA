@@ -4014,128 +4014,1347 @@
         );
     }
 
-    function drawShooter(cam, st) {
-      const sp = shooterPos(st);
-      const dir = aimDir(st);
-      const face = norm([dir[0], 0, dir[2]]);
-      const r = cross(UP, face);
-      const at = (h, side, fwd = 0) =>
-        add(add(add(sp, [0, h, 0]), mul(r, side)), mul(face, fwd));
-      const P = (pt) => project(cam, pt);
-      const body = "#232830";
-      const rim = "rgba(244,245,247,0.85)";
-      // ground ring
-      const ring = [];
-      for (let k = 0; k < 24; k++) {
-        const a = (k / 24) * Math.PI * 2;
-        ring.push([sp[0] + Math.cos(a) * 0.4, 0.01, sp[2] + Math.sin(a) * 0.4]);
+    // ---------------------------------------------- the shooter, rigged in 3D
+    // A 1.75 m right-handed shooter. shooterRig(st) poses the skeleton in world
+    // space (metres) at stage time st; drawShooter() dresses and draws it.
+    // Pairs are [left (support side), right (strong side)].
+    const BODY = {
+      thigh: 0.43,
+      shin: 0.42,
+      upper: 0.3, // shoulder to elbow
+      fore: 0.27, // elbow to wrist
+      hip: 0.095, // hip joints either side of the pelvis centre
+      shoulder: 0.19,
+    };
+    const STRIDE = 2.1; // metres per running cycle (two steps)...
+    const CADENCE = 2.4; // ...and at most this many cycles a second
+    const yawDir = (a) => [Math.sin(a), 0, Math.cos(a)];
+    const yawOf = (v) => Math.atan2(v[0], v[2]);
+    const lerpYaw = (a, b, p) =>
+      a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * p;
+    const dist3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    // o + F·f + R·r, raised by y
+    const offs = (o, F, R, f, r, y = 0) =>
+      add(add(add(o, mul(F, f)), mul(R, r)), [0, y, 0]);
+    // v turned by angle a about the unit axis k
+    function rotAbout(v, k, a) {
+      const c = Math.cos(a);
+      return add(
+        add(mul(v, c), mul(cross(k, v), Math.sin(a))),
+        mul(k, dot(k, v) * (1 - c)),
+      );
+    }
+    // Two-bone IK: [middle joint, end] of a limb from a reaching for c, with
+    // bones l1 and l2, bending towards pole. Out of reach, c is pulled in.
+    function ik2(a, c, l1, l2, pole) {
+      const d = sub(c, a);
+      let len = Math.hypot(d[0], d[1], d[2]);
+      const max = (l1 + l2) * 0.999;
+      if (len > max) {
+        c = add(a, mul(d, max / len));
+        len = max;
       }
-      poly3(cam, ring, rgba(C.white, 0.05), "rgba(255,255,255,0.35)", 1.5);
-      // running strides while moving between areas
+      len = Math.max(len, Math.abs(l1 - l2) + 0.01);
+      const n = norm(d);
+      const p = norm(sub(pole, mul(n, dot(pole, n))));
+      const x = (l1 * l1 - l2 * l2 + len * len) / (2 * len);
+      const h = Math.sqrt(Math.max(0, l1 * l1 - x * x));
+      return [add(add(a, mul(n, x)), mul(p, h)), c];
+    }
+    // The run near stage time st: the stride phase (cycles) and heading. The
+    // feet stay planted up to a sprinter's cadence and skate beyond it.
+    let runTable = null;
+    function runAt(st) {
+      runTable ??= EVENTS.moves.map(([a, b, from, to]) => {
+        const A = AREAS[from].pos;
+        const B = AREAS[to].pos;
+        const c = CTRL[from + to];
+        const len = [0];
+        let prev = A;
+        for (let k = 1; k <= 32; k++) {
+          const p = k / 32;
+          const u = 1 - p;
+          const q = [
+            u * u * A[0] + 2 * u * p * c[0] + p * p * B[0],
+            0,
+            u * u * A[2] + 2 * u * p * c[2] + p * p * B[2],
+          ];
+          len.push(len[k - 1] + Math.hypot(q[0] - prev[0], q[2] - prev[2]));
+          prev = q;
+        }
+        const at = (p) => {
+          const i = Math.min(31, Math.floor(p * 32));
+          return lerp(len[i], len[i + 1], p * 32 - i);
+        };
+        const ph = [0];
+        for (let k = 1; k <= 64; k++) {
+          const dd = at(ease.inOut3(k / 64)) - at(ease.inOut3((k - 1) / 64));
+          ph.push(ph[k - 1] + Math.min(dd / STRIDE, (CADENCE * (b - a)) / 64));
+        }
+        return { A, B, c, ph };
+      });
+      const k = EVENTS.moves.findIndex(
+        ([a, b]) => st > a - 0.6 && st < b + 0.6,
+      );
+      if (k < 0) return null;
+      const [a, b, , to] = EVENTS.moves[k];
+      const { A, B, c, ph } = runTable[k];
+      const p = ease.inOut3(seg(st, a, b));
+      const x = seg(st, a, b) * 64;
+      const i = Math.min(63, Math.floor(x));
+      return {
+        to,
+        phase: lerp(ph[i], ph[i + 1], x - i),
+        heading: yawOf(add(mul(sub(c, A), 1 - p), mul(sub(B, c), p))),
+      };
+    }
+    // Recoil of the latest shot: 0 → 1 in 30 ms, recovered by 150 ms.
+    function kickAt(st) {
+      let k = 0;
+      for (const s of SHOTS) {
+        const dt = st - s.st;
+        if (dt < 0 || dt > 0.15) continue;
+        k = Math.max(
+          k,
+          dt < 0.03
+            ? ease.out3(dt / 0.03)
+            : 1 - ease.inOut3(seg(dt, 0.03, 0.15)),
+        );
+      }
+      return k;
+    }
+    // A convex solid lofted between two rings of points, with outward normals.
+    function loft(a, b) {
+      const v = [...a, ...b];
+      const n = a.length;
+      const c = mul(v.reduce(add), 1 / v.length);
+      const faces = [
+        a.map((_, i) => i),
+        b.map((_, i) => n + i),
+        ...a.map((_, i) => [i, (i + 1) % n, n + ((i + 1) % n), n + i]),
+      ].map((idx) => {
+        const fc = mul(idx.map((k) => v[k]).reduce(add), 1 / idx.length);
+        let fn = norm(
+          cross(sub(v[idx[1]], v[idx[0]]), sub(v[idx[2]], v[idx[0]])),
+        );
+        if (dot(fn, sub(fc, c)) < 0) fn = mul(fn, -1);
+        return { idx, n: fn };
+      });
+      return { v, faces };
+    }
+    const rectRing = (x, y0, y1, z) => [
+      [x, y0, -z],
+      [x, y0, z],
+      [x, y1, z],
+      [x, y1, -z],
+    ];
+    const block = (x0, x1, y0, y1, z) =>
+      loft(rectRing(x0, y0, y1, z), rectRing(x1, y0, y1, z));
+    // The pistol in millimetres around the strong hand's grasp (GUN at 32, 88):
+    // x forward along the bore, y up, z to the shooter's right.
+    const slideRing = (x) => [
+      [x, 64.5, -14],
+      [x, 64.5, 14],
+      [x, 80, 14],
+      [x, 85, 10],
+      [x, 85, -10],
+      [x, 80, -14],
+    ];
+    const PISTOL = {
+      muzzle: [185, 68.7, 0],
+      rear: [-1, 89, 0], // top of the rear sight
+      magwell: [-6, -52, 0],
+      parts: {
+        grip: loft(
+          [
+            [-12, 40, -15],
+            [32, 40, -15],
+            [32, 40, 15],
+            [-12, 40, 15],
+          ],
+          [
+            [-27, -52, -15],
+            [12, -52, -15],
+            [12, -52, 15],
+            [-27, -52, 15],
+          ],
+        ),
+        frame: block(-32, 92, 38, 64.5, 13),
+        dust: block(92, 182, 44, 64.5, 12),
+        pad: block(-25, 27, -68, -52, 16),
+        slide: loft(slideRing(-13), slideRing(185)),
+        rear: block(-10, 4, 84, 90, 10),
+        front: block(166, 177, 84, 89, 2.5),
+        barrel: block(150, 185, 60, 77, 7.5),
+      },
+      guard: [
+        [90, 33],
+        [91, 12],
+        [72, 8],
+        [56, 11],
+        [50, 22],
+        [54, 33],
+        [62, 38],
+      ],
+      // the two hands: knuckle hulls, wrists, thumbs and the trigger finger
+      hand: [
+        [
+          [2, 32, -20],
+          [-18, 22, -32],
+          [42, 16, -4],
+          [40, -38, 0],
+          [12, -48, -16],
+          [-20, -40, -30],
+          [10, -6, -42],
+          [-14, 6, -40],
+        ],
+        [
+          [-30, 42, 6],
+          [-24, 38, 24],
+          [30, 32, 6],
+          [34, 26, -10],
+          [24, -40, -6],
+          [18, -44, 12],
+          [-28, -34, 14],
+          [-10, -8, 27],
+        ],
+      ],
+      wrist: [
+        [-44, -30, -46],
+        [-68, 14, 14],
+      ],
+      thumb: [
+        [
+          [-4, 36, -20],
+          [54, 46, -16],
+        ],
+        [
+          [-18, 46, 2],
+          [32, 52, -12],
+        ],
+      ],
+      index: [
+        [24, 36, 15], // knuckle
+        [92, 47, 14], // straight along the frame
+        [64, 26, 5], // on the trigger
+      ],
+      // the gaps between the fingers wrapped round the front of the grip
+      fingers: [
+        [2, -15, -31].map((y) => [
+          [8, y, -40],
+          [40, y - 3, -8],
+        ]),
+        [12, -6, -24].map((y) => [
+          [6, y, 24],
+          [32, y - 3, 8],
+        ]),
+      ],
+    };
+    // A magazine: base pad at the origin, up along y, front along x.
+    const MAG3 = {
+      pad: block(-20, 18, 0, 16, 14),
+      body: (top) => block(-16, 16, 16, Math.max(17, top), 11),
+    };
+    // A local frame (millimetres) at o with axes f, u, s, and its directions.
+    const frameAt =
+      (o, f, u, s, dx = 0) =>
+      (p) => [
+        o[0] + (f[0] * (p[0] + dx) + u[0] * p[1] + s[0] * p[2]) / 1000,
+        o[1] + (f[1] * (p[0] + dx) + u[1] * p[1] + s[1] * p[2]) / 1000,
+        o[2] + (f[2] * (p[0] + dx) + u[2] * p[1] + s[2] * p[2]) / 1000,
+      ];
+    const dirAt = (f, u, s) => (n) =>
+      add(add(mul(f, n[0]), mul(u, n[1])), mul(s, n[2]));
+
+    // The shooter's pose at stage time st, in world space (metres; y up,
+    // downrange +z). Pairs are [left (support side), right (strong side)].
+    //   pos            ground point, shooterPos(st)
+    //   facing         horizontal unit vector the chest faces
+    //   feet, heels, toes, knees, hips    ankle joints, shoe ends, joints
+    //   pelvis, chest, neck, head         spine points (head: skull centre)
+    //   eye            the dominant (right) eye, on the sight line when aiming:
+    //                  the first-person camera
+    //   eyes           both eyes
+    //   shoulders, elbows, wrists, hands  arm joints (hands: centre of each hand)
+    //   grip           the strong hand's grasp on the pistol
+    //   muzzle         the muzzle crown: where a tracer starts
+    //   forward, up, side   the pistol's unit axes (bore, top of the slide, right)
+    //   slide          slide travel in mm (cycling, or locked back to reload)
+    //   mag            whether a magazine is seated
+    //   weights        { aim, move, reload, kneel, recoil }, each 0–1
+    // The rest (axes, handPts, fingers, thumbs, index, pouch, pouches, hold)
+    // is for drawShooter().
+    function shooterRig(st) {
+      const sp = shooterPos(st);
       const m = moveAt(st);
-      const step = m
-        ? Math.sin(seg(st, m[0], m[1]) * Math.PI * 2 * (m[1] - m[0]) * 1.6) *
-          0.2 *
-          env(st, m[0], m[1], 0.12, 0.12)
-        : 0;
-      const fill = (pts, smooth = false) => {
-        const q = pts.map(P);
-        ctx.beginPath();
-        ctx.moveTo(q[0][0], q[0][1]);
-        if (smooth) {
-          for (let k = 1; k < q.length; k++) {
-            const n = q[(k + 1) % q.length];
-            ctx.quadraticCurveTo(
-              q[k][0],
-              q[k][1],
-              (q[k][0] + n[0]) / 2,
-              (q[k][1] + n[1]) / 2,
+      const move = m ? ease.inOut3(env(st, m[0], m[1], 0.15, 0.15)) : 0;
+      const run = runAt(st);
+      const [rl0, rOut, rIn, rFwd] = EVENTS.reload;
+      const reload = ease.inOut3(
+        Math.min(
+          seg(st, rl0 + 0.02, rl0 + 0.16),
+          1 - seg(st, rFwd, rFwd + 0.3),
+        ),
+      );
+      const kn = EVENTS.kneel;
+      const kneel = kn ? ease.inOut3(seg(st, kn[0], kn[1])) : 0;
+      const aim = (1 - move) * (1 - reload);
+      const kick = kickAt(st);
+      const wp = workPoint(st);
+
+      // Facing: the feet set up on the array, the hips and chest turn to the
+      // work; on the run the hips follow the path and the chest turns downrange.
+      const feetYaw = yawOf(sub(focusAt(st), sp));
+      const aimYaw = yawOf(sub(wp, sp));
+      const heading = run ? run.heading : feetYaw;
+      const phase = run ? run.phase : 0;
+      const sway = Math.sin(phase * 2 * Math.PI) * move;
+      const lookYaw = run ? yawOf(sub(FOCUS[run.to], sp)) : aimYaw;
+      const hipYaw = lerpYaw(
+        lerpYaw(feetYaw, aimYaw, 0.45),
+        lerpYaw(heading, 0, 0.25) + 0.12 * sway,
+        move,
+      );
+      const chestYaw = lerpYaw(
+        aimYaw,
+        lerpYaw(heading, 0, 0.55) - 0.05 * sway,
+        move,
+      );
+      const headYaw = lerpYaw(aimYaw, lerpYaw(heading, lookYaw, 0.6), move);
+
+      // Legs: an athletic stance, a running gait, or down on one knee.
+      const FF = yawDir(feetYaw);
+      const FR = cross(UP, FF);
+      let ankles = [
+        offs(sp, FF, FR, 0.06, -0.19, 0.08),
+        offs(sp, FF, FR, -0.07, 0.2, 0.08),
+      ];
+      let toes = [yawDir(feetYaw - 0.22), yawDir(feetYaw + 0.32)];
+      let pitch = [0, 0];
+      let poles = [toes[0], toes[1]];
+      let pelvis = offs(sp, FF, FR, -0.07, 0, 0.885);
+      if (move > 0) {
+        const HF = yawDir(heading);
+        const HR = cross(UP, HF);
+        const sig = 0.36; // share of the cycle a foot is on the ground
+        const reach = (sig * STRIDE) / 2;
+        const gait = (ph, side) => {
+          let x;
+          let y;
+          let pt;
+          if (ph < sig) {
+            const u = ph / sig;
+            x = lerp(reach, -reach, u);
+            // heel strike, the foot flat, then the heel peels off the ground
+            pt = 0.8 * seg(u, 0.45, 1) ** 2 - 0.25 * (1 - seg(u, 0, 0.15));
+            y = 0.14 * Math.max(0, Math.sin(pt));
+          } else {
+            const u = (ph - sig) / (1 - sig);
+            x = lerp(-reach, reach, ease.inOut3(u));
+            pt = 0.8 * (1 - u) ** 2 - 0.25 * seg(u, 0.7, 1);
+            y =
+              0.4 * Math.sin(Math.PI * (1 - (1 - u) ** 1.6)) +
+              0.14 * Math.max(0, Math.sin(pt));
+          }
+          return [offs(sp, HF, HR, x, side * 0.09, 0.08 + y), pt];
+        };
+        const g = [gait(phase % 1, -1), gait((phase + 0.5) % 1, 1)];
+        const bob = -0.025 * Math.cos(4 * Math.PI * (phase - sig / 2));
+        ankles = ankles.map((a, i) => lerp3(a, g[i][0], move));
+        toes = toes.map((t) => norm(lerp3(t, HF, move)));
+        pitch = pitch.map((p, i) => lerp(p, g[i][1], move));
+        poles = poles.map((p) => norm(lerp3(p, add(HF, [0, -0.1, 0]), move)));
+        pelvis = lerp3(pelvis, offs(sp, HF, HR, 0, 0, 0.87 + bob), move);
+      }
+      if (kneel > 0) {
+        // strong knee down, support foot forward
+        const kPel = offs(sp, FF, FR, -0.09, 0.02, 0.5);
+        const kAnk = [
+          offs(sp, FF, FR, 0.36, -0.2, 0.08),
+          offs(sp, FF, FR, -0.53, 0.18, 0.17),
+        ];
+        const knee = offs(sp, FF, FR, -0.12, 0.16, 0.06);
+        const mid = lerp3(add(kPel, mul(FR, BODY.hip)), kAnk[1], 0.5);
+        const kPole = [norm(add(FF, [0, 0.5, 0])), norm(sub(knee, mid))];
+        ankles = ankles.map((a, i) => lerp3(a, kAnk[i], kneel));
+        toes = [
+          norm(lerp3(toes[0], yawDir(feetYaw - 0.12), kneel)),
+          norm(lerp3(toes[1], FF, kneel)),
+        ];
+        pitch = [lerp(pitch[0], 0, kneel), lerp(pitch[1], 1.25, kneel)];
+        poles = poles.map((p, i) => norm(lerp3(p, kPole[i], kneel)));
+        pelvis = lerp3(pelvis, kPel, kneel);
+      }
+      const PF = yawDir(hipYaw);
+      const PR = cross(UP, PF);
+      const hips = [-1, 1].map((s) => add(pelvis, mul(PR, s * BODY.hip)));
+      const knees = [];
+      const heels = [];
+      const toeTips = [];
+      [0, 1].forEach((i) => {
+        const [knee, ankle] = ik2(
+          hips[i],
+          ankles[i],
+          BODY.thigh,
+          BODY.shin,
+          poles[i],
+        );
+        knees.push(knee);
+        ankles[i] = ankle;
+        const fr = cross(UP, toes[i]);
+        const d = rotAbout(toes[i], fr, pitch[i]);
+        const n = rotAbout(UP, fr, pitch[i]);
+        heels.push(sub(sub(ankle, mul(d, 0.05)), mul(n, 0.045)));
+        toeTips.push(add(sub(ankle, mul(n, 0.05)), mul(d, 0.16)));
+      });
+
+      // Torso: hips back, leaning into the gun (or into the run).
+      const lean = lerp(lerp(0.2, 0.33, move), 0.1, kneel);
+      const spine = rotAbout(UP, PR, lean);
+      const cf0 = yawDir(chestYaw);
+      const CF = norm(sub(cf0, mul(spine, dot(cf0, spine))));
+      const CR = cross(spine, CF);
+      const chest = add(pelvis, mul(spine, 0.36));
+      const neck = add(pelvis, mul(spine, 0.53));
+      const shoulders = [-1, 1].map((s) =>
+        add(
+          add(add(neck, mul(spine, -0.04)), mul(CR, s * BODY.shoulder)),
+          mul(CF, 0.01 + 0.03 * aim),
+        ),
+      );
+      // Head: upright over the gun, eyes on the work.
+      const neckDir = norm(add(spine, UP));
+      const hc = add(neck, mul(neckDir, 0.135));
+      const toWork = sub(wp, hc);
+      const lookY = lerp(
+        -0.14,
+        (0.8 * toWork[1]) / Math.max(1, Math.hypot(toWork[0], toWork[2])),
+        aim,
+      );
+      const hf = norm(add(yawDir(headYaw), [0, lookY, 0]));
+      const hu = norm(sub(UP, mul(hf, hf[1])));
+      const hr = cross(hu, hf);
+      const head = add(hc, mul(hf, 0.035));
+      const eyes = [-1, 1].map((s) =>
+        add(add(add(head, mul(hf, 0.082)), mul(hu, 0.012)), mul(hr, s * 0.032)),
+      );
+      const eye = eyes[1]; // the dominant eye, behind the sights
+
+      // The pistol: on the eye–target line when aiming, compressed at the
+      // chest on the move (muzzle downrange and down), in the workspace for
+      // the reload, canted so the magwell faces the support hand.
+      const gv = (f, u, p) =>
+        add(
+          add(mul(f, p[0] / 1000), mul(u, p[1] / 1000)),
+          mul(cross(u, f), p[2] / 1000),
+        );
+      const af = norm(sub(wp, eye));
+      const au = norm(sub(UP, mul(af, af[1])));
+      let aG = sub(add(eye, mul(af, 0.6)), gv(af, au, PISTOL.rear));
+      const over =
+        Math.max(
+          ...[0, 1].map((i) =>
+            dist3(shoulders[i], add(aG, gv(af, au, PISTOL.wrist[i]))),
+          ),
+        ) -
+        0.97 * (BODY.upper + BODY.fore);
+      if (over > 0) aG = sub(aG, mul(af, over));
+      const rf = norm([0, -0.42, 1]);
+      const ru = norm(sub(UP, mul(rf, rf[1])));
+      const rG = add(
+        add(add(chest, mul(CF, 0.21)), mul(CR, -0.03)),
+        mul(spine, 0.02),
+      );
+      const lf = norm([0, -0.1, 1]);
+      const lu = rotAbout(norm(sub(UP, mul(lf, lf[1]))), lf, 0.5);
+      const lG = add(
+        add(add(chest, mul(CF, 0.27)), mul(CR, -0.02)),
+        mul(spine, 0.1),
+      );
+      let G = lerp3(lerp3(aG, rG, move), lG, reload);
+      let gf = norm(lerp3(lerp3(af, rf, move), lf, reload));
+      let gu = lerp3(lerp3(au, ru, move), lu, reload);
+      gu = norm(sub(gu, mul(gf, dot(gu, gf))));
+      if (kick > 0) {
+        // muzzle flip of about 8°, the hands rising with it
+        const s0 = cross(gu, gf);
+        gf = rotAbout(gf, s0, -0.14 * kick);
+        gu = rotAbout(gu, s0, -0.14 * kick);
+        G = add(G, add(mul(gu, 0.014 * kick), mul(gf, -0.012 * kick)));
+      }
+      const gs = cross(gu, gf);
+      const gp = frameAt(G, gf, gu, gs);
+      // slide travel (mm): cycling on each shot, locked back on the empty magazine
+      let slide = 0;
+      for (const s of SHOTS) if (st >= s.st) slide = recoil(st - s.st).slide;
+      if (st >= rl0 + 0.03 && st < rFwd)
+        slide = 30 + 4 * ease.inOut3(seg(st, rFwd - 0.16, rFwd - 0.03));
+      else if (st >= rFwd && st < rFwd + 0.03)
+        slide = 34 * (1 - (st - rFwd) / 0.03);
+
+      // Hands: the strong hand never leaves the grip; for the reload the
+      // support hand goes to the pouch, seats the magazine, works the slide.
+      const hands = [0, 1].map((i) => PISTOL.hand[i].map(gp));
+      const wristAt = [0, 1].map((i) => gp(PISTOL.wrist[i]));
+      const belt = add(pelvis, [0, 0.075, 0]);
+      const pouch = (k) => {
+        const th = 0.5 + k * 0.32; // from the front round the support hip
+        return {
+          p: add(
+            add(belt, mul(PF, Math.cos(th) * 0.12)),
+            mul(PR, -Math.sin(th) * 0.17),
+          ),
+          n: norm(
+            add(mul(PF, Math.cos(th) / 0.12), mul(PR, -Math.sin(th) / 0.17)),
+          ),
+        };
+      };
+      let off = 0;
+      let hold = null;
+      if (st > rOut - 0.1 && st < rFwd + 0.3) {
+        off = ease.inOut3(
+          Math.min(
+            seg(st, rOut - 0.08, rOut + 0.04),
+            1 - seg(st, rFwd + 0.04, rFwd + 0.24),
+          ),
+        );
+        const pz = pouch(0);
+        const top = add(add(pz.p, mul(pz.n, 0.016)), [0, 0.02, 0]);
+        const mw = gp(PISTOL.magwell);
+        const ma = norm(add(mul(gf, 0.15), mul(gu, 0.99)));
+        const onGun = [gp([10, -8, -32]), norm(sub(gf, gu)), mul(gs, -1)];
+        const K = [
+          [rOut + 0.04, ...onGun],
+          [rOut + 0.24, add(top, [0, 0.035, 0]), [0, -1, 0], pz.n],
+          [
+            rOut + 0.34,
+            add(add(top, [0, 0.15, 0]), mul(pz.n, 0.05)),
+            norm(add([0, -1, 0], mul(PF, 0.7))),
+            mul(gs, -1),
+          ],
+          [rIn - 0.1, sub(mw, mul(ma, 0.17)), ma, mul(gs, -1)],
+          [rIn, sub(mw, mul(ma, 0.034)), ma, mul(gs, -1)],
+          [rIn + 0.22, gp([6, 112, -4]), gs, gu],
+          [rFwd - 0.03, gp([-30, 112, -4]), gs, gu],
+          [rFwd + 0.2, ...onGun],
+        ];
+        let k = 0;
+        while (k < K.length - 2 && st > K[k + 1][0]) k++;
+        const u = ease.inOut3(seg(st, K[k][0], K[k + 1][0]));
+        const c = lerp3(K[k][1], K[k + 1][1], u);
+        const a = norm(lerp3(K[k][2], K[k + 1][2], u));
+        let b = lerp3(K[k][3], K[k + 1][3], u);
+        b = norm(sub(b, mul(a, dot(a, b))));
+        const w = cross(a, b);
+        const fist = [];
+        for (const x of [-0.04, 0.042])
+          for (const y of [-0.02, 0.02])
+            for (const z of [-0.04, 0.04])
+              fist.push(
+                add(
+                  add(
+                    add(c, mul(a, x * (x > 0 && y < 0 ? 0.7 : 1))),
+                    mul(b, y),
+                  ),
+                  mul(w, z),
+                ),
+              );
+        hands[0] = hands[0].map((p, i) => lerp3(p, fist[i], off));
+        wristAt[0] = lerp3(wristAt[0], sub(c, mul(a, 0.065)), off);
+        // the fresh magazine, from the grab until it is seated
+        if (st > rOut + 0.27 && st < rIn) {
+          const base = add(c, mul(a, 0.016));
+          const front = norm(sub(gf, mul(a, dot(gf, a))));
+          hold = {
+            base,
+            up: a,
+            front,
+            // the length showing below the magwell, in mm
+            top: clamp(dot(sub(mw, base), a) * 1000, 0, 144),
+          };
+        }
+      }
+      // Arms: two-bone IK from the shoulders, elbows out on the gun and
+      // tucked on the run.
+      const tuck = Math.max(move, reload);
+      const poleArm = [-1, 1].map((s) =>
+        norm(
+          lerp3(
+            add(mul(CR, s), [0, -0.8, 0]),
+            add(add(mul(CR, 0.45 * s), [0, -1, 0]), mul(CF, -0.35)),
+            tuck,
+          ),
+        ),
+      );
+      poleArm[0] = norm(
+        lerp3(
+          poleArm[0],
+          add(add(mul(CR, -0.7), [0, -0.6, 0]), mul(CF, -0.6)),
+          off,
+        ),
+      );
+      const elbows = [];
+      const wrists = [];
+      [0, 1].forEach((i) => {
+        const [elbow, wrist] = ik2(
+          shoulders[i],
+          wristAt[i],
+          BODY.upper,
+          BODY.fore,
+          poleArm[i],
+        );
+        elbows.push(elbow);
+        wrists.push(wrist);
+      });
+      const trigger = clamp((aim - 0.6) / 0.4); // finger off the trigger unless aiming
+      return {
+        pos: sp,
+        facing: yawDir(chestYaw),
+        feet: ankles,
+        heels,
+        toes: toeTips,
+        knees,
+        hips,
+        pelvis,
+        chest,
+        neck,
+        head,
+        eye,
+        eyes,
+        shoulders,
+        elbows,
+        wrists,
+        hands: [0, 1].map((i) =>
+          mul(hands[i].reduce(add), 1 / hands[i].length),
+        ),
+        grip: G,
+        muzzle: gp(PISTOL.muzzle),
+        forward: gf,
+        up: gu,
+        side: gs,
+        slide,
+        mag: st < rOut || st >= rIn,
+        weights: { aim, move, reload, kneel, recoil: kick },
+        // for drawing
+        axes: { PF, PR, CF, CR, spine, hf, hu, hr },
+        handPts: hands,
+        fingers: [
+          off < 0.5 ? PISTOL.fingers[0].map((l) => l.map(gp)) : null,
+          PISTOL.fingers[1].map((l) => l.map(gp)),
+        ],
+        thumbs: [
+          off < 0.5 ? PISTOL.thumb[0].map(gp) : null,
+          PISTOL.thumb[1].map(gp),
+        ],
+        index: [
+          gp(PISTOL.index[0]),
+          lerp3(gp(PISTOL.index[1]), gp(PISTOL.index[2]), trigger),
+        ],
+        pouch,
+        pouches: st > rOut + 0.27 ? 2 : 3,
+        hold,
+      };
+    }
+
+    // -------------------------------------------------- drawing the figure
+    const FIG = {
+      cloth: [35, 40, 48], // #232830, the jersey
+      lit: [52, 58, 68], // the jersey's shoulders, lit from above
+      pants: [27, 31, 38],
+      shoe: [64, 68, 76],
+      far: [20, 23, 28],
+      skin: [66, 61, 60],
+      cap: [20, 23, 28],
+      muff: [163, 22, 47],
+      metal: [
+        [14, 16, 19],
+        [96, 103, 114],
+      ],
+      grip: [
+        [12, 20, 40],
+        [52, 92, 178],
+      ],
+      gear: [
+        [17, 19, 23],
+        [70, 76, 86],
+      ],
+      sight: [
+        [120, 14, 34],
+        [236, 34, 66],
+      ],
+    };
+    const LIGHT = norm([-0.3, 0.85, -0.45]);
+    // belt gear in millimetres: x along the belt, y up, z out from the body
+    const POUCH = block(-17, 17, -100, 6, 14);
+    const HOLSTER = block(-60, 45, -190, 12, 20);
+    let dropRig = null; // the pose as the empty magazine drops
+    const rgbOf = (c) => `rgb(${c.join(",")})`;
+    const mixRGB = (a, b, t) =>
+      `rgb(${a.map((v, i) => Math.round(lerp(v, b[i], t))).join(",")})`;
+    // Adds a tapered capsule from a to b (radii in metres) to the current path.
+    function capsule(cam, a, b, ra, rb) {
+      const cl = clipSeg(cam, a, b);
+      if (!cl) return;
+      const A = project(cam, cl[0]);
+      const B = project(cam, cl[1]);
+      const r1 = (ra * cam.focal) / A[2];
+      const r2 = (rb * cam.focal) / B[2];
+      const d = Math.hypot(B[0] - A[0], B[1] - A[1]);
+      if (d <= Math.abs(r1 - r2) + 0.5) {
+        const [x, y, r] = r1 > r2 ? [A[0], A[1], r1] : [B[0], B[1], r2];
+        ctx.moveTo(x + r, y);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        return;
+      }
+      const th = Math.atan2(B[1] - A[1], B[0] - A[0]);
+      const ph = Math.acos((r1 - r2) / d);
+      ctx.moveTo(A[0] + r1 * Math.cos(th + ph), A[1] + r1 * Math.sin(th + ph));
+      ctx.arc(A[0], A[1], r1, th + ph, th + 2 * Math.PI - ph);
+      ctx.arc(B[0], B[1], r2, th - ph, th + ph);
+      ctx.closePath();
+    }
+    // Adds the rounded convex hull of the projected points to the current
+    // path, cut by the near plane (where an edge may cross it, a point goes in).
+    function hullPath(cam, pts) {
+      const z = pts.map((p) => dot(sub(p, cam.pos), cam.f));
+      const keep = pts.filter((_, k) => z[k] >= 0.3);
+      if (keep.length < pts.length)
+        pts.forEach((a, i) => {
+          if (z[i] < 0.3) return;
+          pts.forEach((b, j) => {
+            if (z[j] < 0.3)
+              keep.push(add(a, mul(sub(b, a), (z[i] - 0.3) / (z[i] - z[j]))));
+          });
+        });
+      if (keep.length < 3) return;
+      const q = keep.map((p) => project(cam, p));
+      q.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      const cr = (o, a, b) =>
+        (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+      const h = [];
+      for (const pass of [q, [...q].reverse()]) {
+        const start = h.length;
+        for (const p of pass) {
+          while (
+            h.length >= start + 2 &&
+            cr(h[h.length - 2], h[h.length - 1], p) <= 0
+          )
+            h.pop();
+          h.push(p);
+        }
+        h.pop();
+      }
+      const n = h.length;
+      if (n < 3) return;
+      const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      const m0 = mid(h[n - 1], h[0]);
+      ctx.moveTo(m0[0], m0[1]);
+      for (let k = 0; k < n; k++) {
+        const m1 = mid(h[k], h[(k + 1) % n]);
+        ctx.quadraticCurveTo(h[k][0], h[k][1], m1[0], m1[1]);
+      }
+      ctx.closePath();
+    }
+    // Shapes drawn as one figure: a rim-lit outline, then the fill.
+    function silhouette(build, fill, rimA, rimW) {
+      ctx.beginPath();
+      build();
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = `rgba(244,245,247,${rimA})`;
+      ctx.lineWidth = rimW * 2;
+      ctx.stroke();
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+    // A plain fill, for a second tone inside a silhouette.
+    function tone(build, fill) {
+      ctx.beginPath();
+      build();
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+    // Convex solids ({s, at, n, col}) as one rim-lit silhouette, then their
+    // faces lit from above, far to near (or, when flat, one mid tone).
+    function drawSolids(cam, items, rimA, rimW, flat = false) {
+      const shown = [];
+      for (const it of items) {
+        const P = it.s.v.map(it.at);
+        const Q = P.map((p) => project(cam, p));
+        if (Q.some((q) => q[2] < 0.3)) continue;
+        const faces = [];
+        for (const f of it.s.faces) {
+          const n = it.n(f.n);
+          if (dot(n, sub(cam.pos, P[f.idx[0]])) <= 0) continue;
+          faces.push({
+            q: f.idx.map((k) => Q[k]),
+            lum: clamp(0.18 + 0.82 * dot(n, LIGHT)),
+          });
+        }
+        shown.push({
+          it,
+          faces,
+          z: Q.reduce((s, q) => s + q[2], 0) / Q.length,
+        });
+      }
+      const face = (q) => {
+        let area = 0;
+        q.forEach((a, k) => {
+          const b = q[(k + 1) % q.length];
+          area += a[0] * b[1] - b[0] * a[1];
+        });
+        const pts = area < 0 ? [...q].reverse() : q;
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k][0], pts[k][1]);
+        ctx.closePath();
+      };
+      if (!shown.length) return;
+      silhouette(
+        () => shown.forEach((s) => s.faces.forEach((f) => face(f.q))),
+        flat ? mixRGB(...shown[0].it.col, 0.35) : "#0e1013",
+        rimA,
+        rimW,
+      );
+      if (flat) return;
+      shown
+        .sort((a, b) => b.z - a.z)
+        .forEach((s) =>
+          s.faces.forEach((f) => {
+            ctx.beginPath();
+            face(f.q);
+            ctx.fillStyle = mixRGB(s.it.col[0], s.it.col[1], f.lum);
+            ctx.fill();
+          }),
+        );
+    }
+    // A ring of n points about c in the plane of F and R (half-sizes r, d).
+    function ellipse3(c, F, R, r, d, n = 10) {
+      const pts = [];
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2;
+        pts.push(add(add(c, mul(R, Math.cos(a) * r)), mul(F, Math.sin(a) * d)));
+      }
+      return pts;
+    }
+    // Starts a path along the points; their nearest depth, or 0 (and no path)
+    // when any of them is too close to the camera.
+    function polyPath(cam, pts) {
+      const q = pts.map((p) => project(cam, p));
+      ctx.beginPath();
+      if (q.some((v) => v[2] < 0.3)) return 0;
+      q.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      return Math.min(...q.map((v) => v[2]));
+    }
+    // A polyline of the points whose outward normals face the camera.
+    function frontLine(cam, pts, normals, width, color) {
+      ctx.strokeStyle = color;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      let open = false;
+      let z = 0;
+      ctx.beginPath();
+      pts.forEach((p, k) => {
+        const q = project(cam, p);
+        const seen = q[2] > 0.3 && dot(normals[k], sub(cam.pos, p)) > 0;
+        if (seen) {
+          if (open) ctx.lineTo(q[0], q[1]);
+          else ctx.moveTo(q[0], q[1]);
+          z = q[2];
+        }
+        open = seen;
+      });
+      if (z > 0) {
+        ctx.lineWidth = Math.max(1, (width * cam.focal) / z);
+        ctx.stroke();
+      }
+      ctx.lineCap = "butt";
+    }
+
+    // The head with a cap, shooting glasses and ear muffs.
+    function drawHead(cam, rig, rimW, ppm) {
+      const { hf, hu, hr } = rig.axes;
+      const c = rig.head;
+      const P = (f, u, r) =>
+        add(add(add(c, mul(hf, f)), mul(hu, u)), mul(hr, r));
+      // rings on an ellipsoid (half-sizes: r across, h up, d front to back)
+      const shell = (ys, r, h, d, grow = 0) => {
+        const pts = [];
+        for (const y of ys) {
+          const k = Math.sqrt(Math.max(0, 1 - (y / h) ** 2));
+          for (let i = 0; i < 10; i++) {
+            const a = (i / 10) * Math.PI * 2;
+            pts.push(
+              P(Math.cos(a) * (d * k + grow), y, Math.sin(a) * (r * k + grow)),
             );
           }
-        } else q.slice(1).forEach(([x, y]) => ctx.lineTo(x, y));
-        ctx.closePath();
-        ctx.fillStyle = body;
-        ctx.fill();
-        ctx.strokeStyle = rim;
-        ctx.lineWidth = 1.6;
-        ctx.stroke();
+        }
+        return pts;
       };
-      // legs
-      [-1, 1].forEach((side) => {
-        const stride = side * step;
-        fill([
-          at(0.98, side * 0.03),
-          at(0.98, side * 0.19),
-          at(0.05, side * 0.2, stride),
-          at(0.05, side * 0.08, stride),
-        ]);
+      const seen = (p, n) => dot(n, sub(cam.pos, p)) > 0;
+      const cups = [-1, 1].map((s) => {
+        const o = P(-0.006, -0.008, s * 0.07);
+        const n = mul(hr, s);
+        return {
+          o,
+          n,
+          pts: [
+            ...ellipse3(o, hf, hu, 0.05, 0.041),
+            ...ellipse3(add(o, mul(n, 0.034)), hf, hu, 0.044, 0.035),
+          ],
+        };
       });
-      // torso with rounded shoulders, leaning slightly into the gun
-      fill(
-        [
-          at(1.0, -0.17),
-          at(1.32, -0.21, 0.04),
-          at(1.5, -0.23, 0.06),
-          at(1.55, -0.12, 0.07),
-          at(1.57, 0, 0.07),
-          at(1.55, 0.12, 0.07),
-          at(1.5, 0.23, 0.06),
-          at(1.32, 0.21, 0.04),
-          at(1.0, 0.17),
-          at(0.97, 0),
-        ],
-        true,
+      const cup = (cp) =>
+        silhouette(() => hullPath(cam, cp.pts), rgbOf(FIG.muff), 0.8, rimW);
+      const brim = () => {
+        const pts = [];
+        for (let k = 0; k <= 8; k++) {
+          const a = lerp(-1.25, 1.25, k / 8);
+          pts.push(P(Math.cos(a) * 0.096, 0.034, Math.sin(a) * 0.08));
+        }
+        for (let k = 8; k >= 0; k--) {
+          const a = lerp(-1.25, 1.25, k / 8);
+          pts.push(
+            P(
+              Math.cos(a) * 0.096 + 0.07 * Math.cos(a * 0.9),
+              0.026 - 0.024 * Math.cos(a),
+              Math.sin(a) * 0.09,
+            ),
+          );
+        }
+        poly3(cam, pts, rgbOf(FIG.cap), "rgba(244,245,247,0.7)", rimW);
+      };
+      const brimFront = seen(P(0.1, 0.03, 0), hf);
+      cups.filter((cp) => !seen(cp.o, cp.n)).forEach(cup);
+      if (!brimFront) brim();
+      silhouette(
+        () => {
+          capsule(cam, rig.neck, lerp3(rig.neck, c, 0.7), 0.05, 0.047);
+          hullPath(cam, [
+            ...shell([-0.07, -0.03, 0.015, 0.055, 0.09], 0.074, 0.112, 0.094),
+            P(0.07, -0.1, 0),
+            P(0.03, -0.103, 0.045),
+            P(0.03, -0.103, -0.045),
+            P(0.1, 0, 0),
+          ]);
+        },
+        rgbOf(FIG.skin),
+        0.85,
+        rimW,
       );
-      // arms out to a two-handed grip
-      const hands = add([sp[0], 1.4, sp[2]], mul(dir, 0.62));
-      const H2 = P(hands);
-      const armW = Math.max(3, (0.085 * cam.focal) / H2[2]);
-      [-1, 1].forEach((side) => {
-        const S = P(at(1.47, side * 0.2, 0.06));
+      silhouette(
+        () =>
+          hullPath(cam, [
+            ...shell([0.03, 0.065, 0.095], 0.078, 0.122, 0.098, 0.004),
+            P(0, 0.124, 0),
+          ]),
+        rgbOf(FIG.cap),
+        0.45,
+        rimW * 0.7,
+      );
+      if (brimFront) brim();
+      // wraparound glasses, then the muffs' headband over the cap
+      const gl = [];
+      const gn = [];
+      for (let k = 0; k <= 12; k++) {
+        const a = lerp(-1.2, 1.2, k / 12);
+        gl.push(P(Math.cos(a) * 0.1, 0.012, Math.sin(a) * 0.08));
+        gn.push(norm(add(mul(hf, Math.cos(a)), mul(hr, Math.sin(a)))));
+      }
+      frontLine(cam, gl, gn, 0.026, "#090a0c");
+      if (ppm > 350)
+        frontLine(
+          cam,
+          gl.map((p) => add(p, mul(hu, 0.008))),
+          gn,
+          0.004,
+          "rgba(190,205,220,0.6)",
+        );
+      const band = [];
+      for (let k = 0; k <= 10; k++) {
+        // over the crown, from cup to cup
+        const a = lerp(0.28, Math.PI - 0.28, k / 10);
+        band.push(P(-0.012, 0.13 * Math.sin(a), 0.086 * Math.cos(a)));
+      }
+      const bz = polyPath(cam, band);
+      if (bz) {
+        const w = (0.014 * cam.focal) / bz;
         ctx.lineCap = "round";
-        ctx.strokeStyle = rim;
-        ctx.lineWidth = armW + 3;
-        ctx.beginPath();
-        ctx.moveTo(S[0], S[1]);
-        ctx.lineTo(H2[0], H2[1]);
-        ctx.stroke();
-        ctx.strokeStyle = body;
-        ctx.lineWidth = armW;
+        if (ppm > 350) {
+          ctx.strokeStyle = "rgba(244,245,247,0.6)";
+          ctx.lineWidth = w + rimW * 2;
+          ctx.stroke();
+        }
+        ctx.strokeStyle = ppm > 350 ? "#121418" : "rgba(244,245,247,0.45)";
+        ctx.lineWidth = w;
         ctx.stroke();
         ctx.lineCap = "butt";
+      }
+      cups.filter((cp) => seen(cp.o, cp.n)).forEach(cup);
+    }
+
+    function drawShooter(cam, st) {
+      const rig = shooterRig(st);
+      const sp = rig.pos;
+      const { PF, PR, CF, CR, spine } = rig.axes;
+      // ground ring
+      const ground = [];
+      for (let k = 0; k < 24; k++) {
+        const a = (k / 24) * Math.PI * 2;
+        ground.push([
+          sp[0] + Math.cos(a) * 0.4,
+          0.01,
+          sp[2] + Math.sin(a) * 0.4,
+        ]);
+      }
+      poly3(cam, ground, rgba(C.white, 0.05), "rgba(255,255,255,0.35)", 1.5);
+      const depth = (p) => project(cam, p)[2];
+      const zc = depth(rig.chest);
+      // pixels per metre, for the rim and the level of detail
+      const ppm = cam.focal / Math.max(zc, 0.5);
+      const rimW = clamp(0.0045 * ppm, 1.4, 2.2);
+      // the far side a shade darker, so the figure reads in depth
+      const shade = (z, base) => {
+        const k = clamp((z - zc) / 0.25);
+        return [mixRGB(base, FIG.far, k * 0.8), 0.85 - 0.3 * k];
+      };
+      const groups = [];
+
+      // legs: thigh, shin and shoe; behind the hips unless a knee comes
+      // well forward of them
+      const zp = depth(rig.pelvis);
+      [0, 1].forEach((i) => {
+        const zk = depth(rig.knees[i]);
+        groups.push({
+          z: zk - zp < -0.25 ? zk : zc + 0.05 + 0.01 * (zk - zc),
+          draw: () => {
+            const [fill, a] = shade(zk, FIG.pants);
+            const shoe = () =>
+              capsule(cam, rig.heels[i], rig.toes[i], 0.046, 0.04);
+            silhouette(
+              () => {
+                capsule(cam, rig.hips[i], rig.knees[i], 0.092, 0.062);
+                capsule(cam, rig.knees[i], rig.feet[i], 0.06, 0.043);
+                shoe();
+              },
+              fill,
+              a,
+              rimW,
+            );
+            tone(shoe, shade(zk, FIG.shoe)[0]);
+          },
+        });
       });
-      seg3(
-        cam,
-        hands,
-        add(hands, mul(dir, 0.17)),
-        C.red,
-        Math.max(3, armW * 0.8),
+
+      // torso, with the belt, the holster and the magazine pouches
+      groups.push({
+        z: zc,
+        draw: () => {
+          const gear = [];
+          for (let k = 0; k < 3; k++) {
+            const { p, n } = rig.pouch(k);
+            const t = cross(UP, n);
+            const at = frameAt(add(p, mul(n, 0.016)), t, UP, n);
+            const nd = dirAt(t, UP, n);
+            gear.push({
+              n,
+              p,
+              items: [{ s: POUCH, at, n: nd, col: FIG.gear }],
+            });
+            if (k >= 3 - rig.pouches)
+              gear[k].items.push({
+                s: MAG3.pad,
+                at: frameAt(add(p, mul(n, 0.016)), t, UP, n, 0),
+                n: nd,
+                col: FIG.metal,
+              });
+          }
+          {
+            const p = add(add(rig.pelvis, mul(PR, 0.18)), [0, 0.07, 0]);
+            const at = frameAt(add(p, mul(PF, -0.02)), PF, UP, PR);
+            gear.push({
+              n: PR,
+              p,
+              items: [{ s: HOLSTER, at, n: dirAt(PF, UP, PR), col: FIG.gear }],
+            });
+          }
+          const facing = (g) => dot(g.n, sub(cam.pos, g.p)) > 0;
+          const flat = ppm < 450;
+          const kit = (front) =>
+            gear.filter((g) => facing(g) === front).flatMap((g) => g.items);
+          drawSolids(cam, kit(false), 0.5, 1, flat);
+          const { pelvis } = rig;
+          const MF = norm(add(PF, CF));
+          const MR = cross(UP, MF);
+          const bc = add(pelvis, [0, 0.075, 0]);
+          // pants: the pelvis down to the tops of the thighs
+          const pants = () => {
+            const pts = [
+              ...ellipse3(add(pelvis, [0, -0.07, 0]), PF, PR, 0.14, 0.095, 8),
+              ...ellipse3(sub(pelvis, mul(PF, 0.015)), PF, PR, 0.178, 0.12),
+              ...ellipse3(bc, PF, PR, 0.172, 0.12),
+            ];
+            [0, 1].forEach((i) => {
+              const ax = norm(sub(rig.knees[i], rig.hips[i]));
+              const o = add(rig.hips[i], mul(ax, 0.13));
+              const r1 = norm(cross(ax, PR));
+              pts.push(...ellipse3(o, cross(ax, r1), r1, 0.085, 0.085, 6));
+            });
+            silhouette(() => hullPath(cam, pts), rgbOf(FIG.pants), 0.85, rimW);
+          };
+          // the jersey, lit from above
+          const jersey = () => {
+            const top = add(rig.neck, mul(spine, 0.035));
+            const A = project(cam, bc);
+            const B = project(cam, top);
+            let fill = rgbOf(FIG.cloth);
+            if (
+              A[2] > 0.3 &&
+              B[2] > 0.3 &&
+              Math.hypot(B[0] - A[0], B[1] - A[1]) > 4
+            ) {
+              fill = ctx.createLinearGradient(A[0], A[1], B[0], B[1]);
+              fill.addColorStop(0, rgbOf(FIG.cloth));
+              fill.addColorStop(0.55, rgbOf(FIG.cloth));
+              fill.addColorStop(1, rgbOf(FIG.lit));
+            }
+            silhouette(
+              () =>
+                hullPath(cam, [
+                  ...ellipse3(add(pelvis, [0, 0.07, 0]), PF, PR, 0.168, 0.116),
+                  ...ellipse3(
+                    add(pelvis, mul(spine, 0.2)),
+                    MF,
+                    MR,
+                    0.158,
+                    0.11,
+                  ),
+                  ...ellipse3(
+                    add(add(pelvis, mul(spine, 0.37)), mul(CF, 0.012)),
+                    CF,
+                    CR,
+                    0.19,
+                    0.135,
+                  ),
+                  ...ellipse3(
+                    add(rig.neck, mul(spine, -0.04)),
+                    CF,
+                    CR,
+                    0.222,
+                    0.1,
+                  ),
+                  ...ellipse3(top, CF, CR, 0.1, 0.07),
+                ]),
+              fill,
+              0.85,
+              rimW,
+            );
+          };
+          // whichever lies beyond the belt from the camera goes first
+          if (cam.pos[1] > bc[1]) {
+            pants();
+            jersey();
+          } else {
+            jersey();
+            pants();
+          }
+          // the belt
+          const bp = ellipse3(bc, PF, PR, 0.176, 0.124, 24);
+          bp.push(bp[0]);
+          const bn = bp.map((p) => norm(sub(p, bc)));
+          frontLine(cam, bp, bn, 0.04, "#0f1114");
+          if (ppm > 350)
+            frontLine(cam, bp, bn, 0.008, "rgba(244,245,247,0.35)");
+          drawSolids(cam, kit(true), 0.7, 1, flat);
+        },
+      });
+
+      // head: neck, cap, eye and ear protection
+      groups.push({
+        z: depth(rig.head),
+        draw: () => drawHead(cam, rig, rimW, ppm),
+      });
+
+      // arms: sleeve, bare forearm and hand; the thumbs forward on the frame
+      [0, 1].forEach((i) => {
+        const z = depth(rig.elbows[i]);
+        groups.push({
+          z,
+          arm: i,
+          draw: () => {
+            const [, a] = shade(z, FIG.cloth);
+            const k = clamp((z - zc) / 0.25) * 0.8;
+            const end = lerp3(rig.shoulders[i], rig.elbows[i], 0.55);
+            const sleeve = () =>
+              capsule(cam, rig.shoulders[i], end, 0.064, 0.055);
+            silhouette(
+              () => {
+                sleeve();
+                capsule(cam, rig.shoulders[i], rig.elbows[i], 0.048, 0.042);
+                capsule(cam, rig.elbows[i], rig.wrists[i], 0.042, 0.03);
+                hullPath(cam, [rig.wrists[i], ...rig.handPts[i]]);
+              },
+              mixRGB(FIG.skin, FIG.far, k),
+              a,
+              rimW,
+            );
+            tone(sleeve, mixRGB(FIG.cloth, FIG.far, k));
+            // close up, the fingers wrapped round the grip
+            const outer = i ? rig.side : mul(rig.side, -1);
+            if (
+              ppm > 600 &&
+              rig.fingers[i] &&
+              dot(outer, sub(cam.pos, rig.grip)) > 0
+            ) {
+              ctx.beginPath();
+              rig.fingers[i].forEach(([p, q]) => {
+                const A = project(cam, p);
+                const B = project(cam, q);
+                if (A[2] < 0.3 || B[2] < 0.3) return;
+                ctx.moveTo(A[0], A[1]);
+                ctx.lineTo(B[0], B[1]);
+              });
+              ctx.lineCap = "round";
+              ctx.strokeStyle = "rgba(0,0,0,0.4)";
+              ctx.lineWidth = Math.max(1, 0.003 * ppm);
+              ctx.stroke();
+              ctx.lineCap = "butt";
+            }
+          },
+        });
+      });
+
+      // the dropped magazine: out of the magwell, tumbling to the ground
+      const [, rOut] = EVENTS.reload;
+      if (st > rOut) {
+        if (!dropRig || dropRig.st !== rOut)
+          dropRig = { st: rOut, rig: shooterRig(rOut) };
+        const r0 = dropRig.rig;
+        const up0 = norm(add(mul(r0.forward, 0.15), mul(r0.up, 0.99)));
+        const b0 = frameAt(r0.grip, r0.forward, r0.up, r0.side)([-6, -68, 0]);
+        const v0 = mul(up0, -1.6);
+        // solve b0.y + v0.y t − g t²/2 = 0.012
+        const g = 9.81;
+        const tl =
+          (v0[1] + Math.sqrt(v0[1] * v0[1] + 2 * g * (b0[1] - 0.012))) / g;
+        const t = Math.min(st - rOut, tl);
+        const base = add(add(b0, mul(v0, t)), [0, -0.5 * g * t * t, 0]);
+        const th = (Math.PI / 2) * (t / tl);
+        const fr = r0.forward;
+        const up = rotAbout(up0, fr, th);
+        const sd = cross(up, fr);
+        groups.push({
+          z: depth(base),
+          draw: () =>
+            drawSolids(
+              cam,
+              [
+                {
+                  s: MAG3.body(144),
+                  at: frameAt(base, fr, up, sd),
+                  n: dirAt(fr, up, sd),
+                  col: FIG.metal,
+                },
+                {
+                  s: MAG3.pad,
+                  at: frameAt(base, fr, up, sd),
+                  n: dirAt(fr, up, sd),
+                  col: FIG.metal,
+                },
+              ],
+              0.6,
+              1,
+            ),
+        });
+      }
+
+      groups.sort((a, b) => b.z - a.z);
+      // the pistol goes in just before the first hand, which wraps its grip
+      const gun = {
+        draw: () => {
+          const { grip: G, forward: f, up: u, side: s } = rig;
+          const at = frameAt(G, f, u, s);
+          const atS = frameAt(G, f, u, s, -rig.slide);
+          const n = dirAt(f, u, s);
+          const P = PISTOL.parts;
+          // the trigger guard
+          const gz = polyPath(
+            cam,
+            PISTOL.guard.map(([x, y]) => at([x, y, 0])),
+          );
+          const gw = gz ? (0.0045 * cam.focal) / gz : 0;
+          ctx.lineJoin = "round";
+          ctx.strokeStyle = "rgba(244,245,247,0.8)";
+          ctx.lineWidth = gw + rimW * 2;
+          ctx.stroke();
+          if (ppm > 350) {
+            ctx.strokeStyle = "#16191d";
+            ctx.lineWidth = gw;
+            ctx.stroke();
+          }
+          const items = [
+            { s: P.grip, at, n, col: FIG.grip },
+            { s: P.frame, at, n, col: FIG.metal },
+            { s: P.dust, at, n, col: FIG.metal },
+            { s: P.slide, at: atS, n, col: FIG.metal },
+          ];
+          // the sights and the barrel only once they are big enough to see
+          if (ppm > 350)
+            items.push(
+              { s: P.rear, at: atS, n, col: FIG.metal },
+              { s: P.front, at: atS, n, col: FIG.sight },
+            );
+          if (rig.mag) items.push({ s: P.pad, at, n, col: FIG.metal });
+          if (rig.slide > 6 && ppm > 350)
+            items.push({ s: P.barrel, at, n, col: FIG.metal });
+          drawSolids(cam, items, 0.9, Math.max(1.2, rimW * 0.8));
+        },
+      };
+      const first = groups.findIndex((g) => g.arm !== undefined);
+      groups.splice(first, 0, gun);
+      // the thumbs lie along the left of the frame, the trigger finger on the
+      // right: behind the pistol, or over the hands, depending on the side seen
+      const right = dot(rig.side, sub(cam.pos, rig.grip)) > 0;
+      const digits = (pairs) => ({
+        draw: () =>
+          silhouette(
+            () => pairs.forEach(([a, b, r]) => capsule(cam, a, b, r, r * 0.85)),
+            rgbOf(FIG.skin),
+            0.85,
+            rimW,
+          ),
+      });
+      const thumbs = digits(
+        rig.thumbs.filter(Boolean).map(([a, b]) => [a, b, 0.0105]),
       );
-      // head with ear protection
-      const head = P(at(1.72, 0, 0.08));
-      const hr = Math.max(4, (0.105 * cam.focal) / head[2]);
-      ctx.fillStyle = body;
-      ctx.strokeStyle = rim;
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.arc(head[0], head[1], hr, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      const er = P(at(1.71, 0.1, 0.08));
-      const el = P(at(1.71, -0.1, 0.08));
-      ctx.strokeStyle = rim;
-      ctx.lineWidth = Math.max(1.5, hr * 0.18);
-      ctx.beginPath();
-      ctx.moveTo(el[0], el[1]);
-      ctx.quadraticCurveTo(head[0], head[1] - hr * 1.5, er[0], er[1]);
-      ctx.stroke();
-      [el, er].forEach(([x, y]) => {
-        ctx.fillStyle = "#2a2e35";
-        ctx.beginPath();
-        ctx.ellipse(x, y, hr * 0.24, hr * 0.36, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-      });
+      const index = digits([[...rig.index, 0.0095]]);
+      if (ppm > 380) {
+        groups.splice(first, 0, right ? thumbs : index);
+        groups.push(right ? index : thumbs);
+      }
+      if (rig.hold) {
+        const { base, up, front, top } = rig.hold;
+        const sd = cross(up, front);
+        const at = frameAt(base, front, up, sd);
+        const n = dirAt(front, up, sd);
+        groups.splice(
+          groups.findIndex((g) => g.arm === 0),
+          0,
+          {
+            draw: () =>
+              drawSolids(
+                cam,
+                [
+                  { s: MAG3.pad, at, n, col: FIG.metal },
+                  ...(top > 18
+                    ? [{ s: MAG3.body(top), at, n, col: FIG.metal }]
+                    : []),
+                ],
+                0.7,
+                1,
+              ),
+          },
+        );
+      }
+      groups.forEach((g) => g.draw());
     }
 
     // S6 — hit factor.
