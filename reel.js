@@ -3185,12 +3185,23 @@
         if (st > a) f = lerp3(f, FOCUS[to], ease.inOut3(seg(st, a, b)));
       return f;
     }
+    // The shooter's muzzle and eye, from the character rig when it is present.
+    function muzzleAt(st) {
+      if (typeof shooterRig === "function") return shooterRig(st).muzzle;
+      const sp = shooterPos(st);
+      return add([sp[0], 1.4, sp[2]], mul(aimDir(st), 0.72));
+    }
+    function eyeAt(st) {
+      if (typeof shooterRig === "function") return shooterRig(st).eye;
+      const sp = shooterPos(st);
+      return [sp[0], 1.65, sp[2] + 0.05];
+    }
     // Bullet time: the camera rides alongside one round from the muzzle to the
     // target while the clock crawls, swinging round as it goes.
     function bulletCam(s, from, to, o) {
       return (st) => {
         const sp = shooterPos(s.st);
-        const muzzle = add([sp[0], 1.4, sp[2]], mul(aimDir(s.st), 0.72));
+        const muzzle = muzzleAt(s.st);
         const hit = hitWorld(s);
         const pd = norm(sub(hit, muzzle));
         const perp = norm(cross(UP, pd));
@@ -3324,7 +3335,7 @@
       pov(st) {
         const sp = shooterPos(st);
         const wp = workPoint(st);
-        return [[sp[0], 1.65, sp[2] + 0.05], lerp3(FOCUS.B, wp, 0.6), 32, 0];
+        return [eyeAt(st), lerp3(FOCUS.B, wp, 0.6), 32, 0];
       },
       mover: closeUp("MV", {
         dist: 5.2,
@@ -3614,11 +3625,10 @@
       SHOTS.forEach((s) => {
         const dt = st - s.st;
         if (dt < 0 || dt > 0.9) return;
-        const sp0 = shooterPos(s.st);
         const hit = hitWorld(s);
-        const eye = [sp0[0], 1.65, sp0[2] + 0.05];
+        const eye = eyeAt(s.st);
         const muzzle = lerp3(
-          add([sp0[0], 1.4, sp0[2]], mul(aimDir(s.st), 0.72)),
+          muzzleAt(s.st),
           add(add(eye, mul(norm(sub(hit, eye)), 0.75)), [0, -0.035, 0]),
           cam.pov,
         );
