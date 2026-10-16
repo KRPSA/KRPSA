@@ -256,8 +256,8 @@
     [vt(2420), 0.5, "swinger"],
     [vt(3070), 0.3, "orbitSwinger"],
     [vt(3150), 0.35, "swinger"],
-    [vt(3480) - 0.08, 0.35, "side"],
-    [vt(5150), 0.4, "pov"],
+    [vt(3480) - 0.08, 0.16, "side"],
+    [vt(5150), 0.3, "shoulder"],
     [vt(7500), 0.35, "high"],
     [vt(10120), 0.4, "drone"],
     [vt(11120), 0.42, "mover"],
@@ -2789,20 +2789,6 @@
       line(-270, 1, -38, 1, "rgba(255,255,255,0.3)", 2);
       line(38, 1, 270, 1, "rgba(255,255,255,0.3)", 2);
     }
-    // The stage seen through the shooter's eyes: sights on the point being
-    // worked, lifting with each shot.
-    function povGun(x, y, G, dt) {
-      const rk = kick(dt);
-      ctx.save();
-      ctx.translate(x, y - rk.lift * G * 1.4);
-      ctx.rotate(rk.tilt);
-      ctx.scale(G, G);
-      frontPost(0, -rk.lift * 0.5);
-      rearSlide(0.32);
-      rearSight();
-      ctx.restore();
-    }
-
     // One first-person sight picture, centred on cx. kind: "iron" | "optic".
     function sightView(t, kind, cx, zoom) {
       const aimY = 430; // the A zone centre sits here when the sights are on
@@ -4580,11 +4566,20 @@
     function moveAt(st) {
       return EVENTS.moves.find(([a, b]) => st >= a && st <= b);
     }
+    // Accelerate, hold a running speed, decelerate: the feet can keep up.
+    function runProfile(x, r) {
+      r = Math.min(r, 0.45);
+      const v = 1 / (1 - r);
+      const S = (u) => r * v * (u * u * u - (u * u * u * u) / 2);
+      if (x < r) return S(x / r);
+      if (x > 1 - r) return 1 - S((1 - x) / r);
+      return v * (x - r / 2);
+    }
     function shooterPos(st) {
       let pos = AREAS.A.pos;
       for (const [a, b, from, to] of EVENTS.moves) {
         if (st < a) break;
-        const p = ease.inOut3(seg(st, a, b));
+        const p = runProfile(seg(st, a, b), 0.3 / (b - a));
         const A = AREAS[from].pos;
         const B = AREAS[to].pos;
         const c = CTRL[from + to];
@@ -4696,7 +4691,10 @@
       let k = SHOTS.findIndex((s) => s.st >= st - 0.06);
       if (k < 0) k = SHOTS.length - 1;
       const cur = hitWorld(SHOTS[k], Math.max(st, SHOTS[k].st - 0.3));
-      const prev = k > 0 ? hitWorld(SHOTS[k - 1]) : [-8.2, 1.1, 6.8];
+      const prev =
+        k > 0
+          ? hitWorld(SHOTS[k - 1], SHOTS[k - 1].st + 0.06)
+          : [-8.2, 1.1, 6.8];
       const from = k > 0 ? SHOTS[k - 1].st : 0.8;
       return lerp3(
         prev,
@@ -4704,17 +4702,9 @@
         ease.inOut3(seg(st, from + 0.05, SHOTS[k].st - 0.04)),
       );
     }
-    function aimDir(st) {
-      const sp = shooterPos(st);
-      // On the move the muzzle stays pointed downrange.
-      const m = moveAt(st);
-      const moving = m ? ease.inOut3(env(st, m[0], m[1], 0.15, 0.15)) : 0;
-      const d = norm(sub(workPoint(st), [sp[0], 1.4, sp[2]]));
-      return norm(lerp3(d, [0, -0.35, 1], moving));
-    }
     // Camera: rigs blended at cut points in video time — a drone behind the
-    // shooter, close-ups on the moving targets in slow motion, a high tracking
-    // shot on the runs and a look through the port.
+    // shooter, close-ups on the moving targets in slow motion, tracking shots
+    // on the runs and a look over the shoulder through the port.
     const FOCUS = Object.fromEntries(
       Object.keys(AREAS).map((name) => {
         const list = Object.values(TARGETS).filter((tg) => tg.from === name);
@@ -4729,22 +4719,14 @@
         if (st > a) f = lerp3(f, FOCUS[to], ease.inOut3(seg(st, a, b)));
       return f;
     }
-    // The shooter's muzzle and eye, from the character rig when it is present.
+    // The muzzle crown of the shooter's pistol, from the character rig.
     function muzzleAt(st) {
-      if (typeof shooterRig === "function") return shooterRig(st).muzzle;
-      const sp = shooterPos(st);
-      return add([sp[0], 1.4, sp[2]], mul(aimDir(st), 0.72));
-    }
-    function eyeAt(st) {
-      if (typeof shooterRig === "function") return shooterRig(st).eye;
-      const sp = shooterPos(st);
-      return [sp[0], 1.65, sp[2] + 0.05];
+      return shooterRig(st).muzzle;
     }
     // Bullet time: the camera rides alongside one round from the muzzle to the
     // target while the clock crawls, swinging round as it goes.
     function bulletCam(s, from, to, o) {
       return (st) => {
-        const sp = shooterPos(s.st);
         const muzzle = muzzleAt(s.st);
         const hit = hitWorld(s);
         const pd = norm(sub(hit, muzzle));
@@ -4810,7 +4792,9 @@
           sp,
           add(add(mul(dir, -6.2), mul(side, -1.6)), [0, 4.6, 0]),
         );
-        return [pos, lerp3(fc, [wp[0], 1.0, wp[2]], 0.35), 31, 0];
+        // tilted down enough to keep the shooter, gun and all, in frame
+        const look = lerp3(fc, [wp[0], 1.0, wp[2]], 0.35);
+        return [pos, lerp3(look, add(sp, [0, 1.2, 0]), 0.2), 34, 0];
       },
       high(st) {
         const sp = shooterPos(st);
@@ -4825,19 +4809,16 @@
           0,
         ];
       },
-      // a tracking shot alongside the run, from the uprange side
+      // a tracking shot leading the run, square to the muzzle so the pistol
+      // reads in profile at the chest
       side(st) {
         const sp = shooterPos(st);
-        const m = moveAt(st) ?? EVENTS.moves[0];
-        const A = AREAS[m[2]].pos;
-        const B = AREAS[m[3]].pos;
-        const d = norm([B[0] - A[0], 0, B[2] - A[2]]);
-        const n = [d[2], 0, -d[0]];
+        const p = seg(st, 3.4, 5.6);
         return [
-          add(sp, add(mul(n, 5.6), [0, 1.5, 0])),
-          add(sp, add(mul(d, 1.6), [0, 1.0, 0])),
-          38,
-          0,
+          add(sp, [lerp(4.6, 3.9, p), lerp(1.25, 1.4, p), 0.55]),
+          add(sp, [0.35, 1.05, 0.2]),
+          lerp(36, 33, p),
+          0.015,
         ];
       },
       // low and to the side for the kneeling position at the low port
@@ -4876,10 +4857,19 @@
         roll: -0.04,
       }),
       // the shooter's eyes, looking through the port
-      pov(st) {
-        const sp = shooterPos(st);
-        const wp = workPoint(st);
-        return [eyeAt(st), lerp3(FOCUS.B, wp, 0.6), 32, 0];
+      // over the strong shoulder: both hands on the pistol, through the port
+      shoulder(st) {
+        const r = shooterRig(st);
+        const right = norm(sub(r.shoulders[1], r.shoulders[0]));
+        const f = r.facing;
+        const back = lerp(1.15, 0.85, ease.inOut3(seg(st, 5.15, 7.5)));
+        const eye = add(r.head, add(mul(f, -back), mul(right, 0.62)));
+        return [
+          add(eye, [0, 0.02, 0]),
+          lerp3(FOCUS.B, workPoint(st), 0.65),
+          35,
+          -0.02,
+        ];
       },
       mover: closeUp("MV", {
         dist: 5.2,
@@ -4899,23 +4889,21 @@
     };
     function stageCamera(t, st) {
       let [pos, look, fov, roll] = RIGS.drone(st);
-      let pov = 0; // how much of the view is the shooter's own eyes
-      const blend = ([p2, l2, f2, r2], p, rig) => {
+      const blend = ([p2, l2, f2, r2], p) => {
         pos = lerp3(pos, p2, p);
         look = lerp3(look, l2, p);
         fov = lerp(fov, f2, p);
         roll = lerp(roll, r2, p);
-        pov = lerp(pov, rig === "pov" ? 1 : 0, p);
       };
       for (const [at, dur, rig] of CUTS) {
         const p = ease.inOut3(seg(t, at, at + dur));
         if (p <= 0) break;
-        blend(RIGS[rig](st), p, rig);
+        blend(RIGS[rig](st), p);
       }
       // the stage opens on the overview
       const e = 1 - ease.inOut3(seg(t, 15.9, 16.55));
-      if (e > 0) blend(RIGS.overview(), e, "overview");
-      return { ...camera(pos, look, fov, roll), pov };
+      if (e > 0) blend(RIGS.overview(), e);
+      return camera(pos, look, fov, roll);
     }
     function polyHole3(cam, outer, inner, fill, stroke) {
       ctx.beginPath();
@@ -4971,8 +4959,7 @@
       ctx.save();
       ctx.translate((1 - enter) * W * 1.1, 0);
       ctx.globalAlpha = 1 - leave;
-      const cam =
-        fly != null ? { ...flyCamera(fly), pov: 0 } : stageCamera(t, st);
+      const cam = fly != null ? flyCamera(fly) : stageCamera(t, st);
       hudLive = t > 16.05 && t < STAGE_END + 0.6;
       for (let x = -12; x <= 12; x++)
         seg3(
@@ -5120,16 +5107,10 @@
           draw: () => drawStageTarget(cam, key, st),
         });
       });
-      if (cam.pov < 0.98)
-        objects.push({
-          z: project(cam, add(sp, [0, 1, 0]))[2],
-          draw: () => {
-            ctx.save();
-            ctx.globalAlpha *= 1 - ease.in3(cam.pov);
-            drawShooter(cam, st);
-            ctx.restore();
-          },
-        });
+      objects.push({
+        z: project(cam, add(sp, [0, 1, 0]))[2],
+        draw: () => drawShooter(cam, st),
+      });
       objects
         .filter((o) => o.z > 0.5)
         .sort((a, b) => b.z - a.z)
@@ -5170,12 +5151,7 @@
         const dt = st - s.st;
         if (dt < 0 || dt > 0.9) return;
         const hit = hitWorld(s);
-        const eye = eyeAt(s.st);
-        const muzzle = lerp3(
-          muzzleAt(s.st),
-          add(add(eye, mul(norm(sub(hit, eye)), 0.75)), [0, -0.035, 0]),
-          cam.pov,
-        );
+        const muzzle = muzzleAt(s.st);
         const clipped =
           dt < IMPACT + 0.035 &&
           clipSeg(
@@ -5278,20 +5254,6 @@
           ctx.restore();
         }
       });
-      const gunIn = seg(cam.pov, 0.9, 1); // the last metre or so into the eyes
-      const aim = project(cam, workPoint(st));
-      if (gunIn > 0 && aim[2] > 0.5) {
-        const last = [...SHOTS].reverse().find((s) => st >= s.st);
-        ctx.save();
-        ctx.globalAlpha *= ease.out3(gunIn);
-        povGun(
-          aim[0],
-          aim[1] + 6 + (1 - gunIn) * 520,
-          0.34,
-          last ? st - last.st : 9,
-        );
-        ctx.restore();
-      }
       ctx.restore();
       if (fly != null) courseCard(fly);
 
@@ -7815,7 +7777,9 @@
       }
       ctx.restore();
       overlays(t);
-      timerHud(t);
+      // the frozen timer keeps blinking through the inserts (each lasts a
+      // whole number of blinks, so the beat is seamless on the way out)
+      timerHud(t, tl.insert ? tl.insert.at + tl.lt : t);
       if (opt.captions) caption(tf);
       hud(tf);
     }

@@ -554,7 +554,7 @@ voice.pad(6.0, AM, 2.0, 1, 1400);
 {
   const prog = [F, C, G, AM];
   for (let k = 0, t = DIVI.at; t < DIVI.at + DIVI.dur - 0.5; k++, t += 3) voice.pad(t, prog[k % 4], Math.min(3, DIVI.at + DIVI.dur - t), 0.85, 900);
-  const t0 = Math.ceil(DIVI.at * 2) / 2;
+  const t0 = DIVI.at; // on the chapter's own beat, with its cues
   for (let t = t0; t < DIVI.at + DIVI.dur - 0.3; t += BEAT) {
     const beat = Math.round((t - t0) / BEAT);
     if (beat % 2 === 0) voice.kick(t, 0.6);
