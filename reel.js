@@ -1957,13 +1957,16 @@
         const out = t > b ? t - b : -1;
         const fade = 1 - seg(t, b, b + exit);
         ctx.save();
-        // a soft scrim keeps the caption legible over busy scenes
-        const scrim = ctx.createLinearGradient(0, H - 300, 0, H);
-        scrim.addColorStop(0, "rgba(8,10,13,0)");
-        scrim.addColorStop(1, "rgba(8,10,13,0.62)");
-        ctx.globalAlpha = fade * ease.out3(seg(lt, 0, 0.3));
-        ctx.fillStyle = scrim;
-        ctx.fillRect(0, H - 300, W, 300);
+        // a soft scrim keeps the caption legible over busy scenes; the end
+        // card is plain and holds still, so its closing line goes without
+        if (i < CAPTIONS.length - 1) {
+          const scrim = ctx.createLinearGradient(0, H - 300, 0, H);
+          scrim.addColorStop(0, "rgba(8,10,13,0)");
+          scrim.addColorStop(1, "rgba(8,10,13,0.62)");
+          ctx.globalAlpha = fade * ease.out3(seg(lt, 0, 0.3));
+          ctx.fillStyle = scrim;
+          ctx.fillRect(0, H - 300, W, 300);
+        }
         ctx.globalAlpha = fade;
         const y = lang === "both" ? H - 128 : H - 96;
         const bar = ease.outExpo(seg(lt, 0, 0.35));
@@ -4292,10 +4295,14 @@
       });
     }
 
+    // The push from scoring to the stage: one eased value moves both scenes,
+    // so the stage's left edge follows the scoring panel's right edge.
+    const stagePush = (t) => ease.inOut3(seg(t, 15.7, 16.0));
+
     // S4 — targets and scoring.
     function sceneTargets(t) {
       if (t < 12.9 || t > 16.1) return;
-      const whip = ease.in3(seg(t, 15.7, 16.0));
+      const whip = stagePush(t);
       ctx.save();
       ctx.translate(-whip * W * 1.1, 0);
       const lt = t - 13.0;
@@ -4318,9 +4325,9 @@
         hiC: zone(13.75),
         hiD: zone(14.0),
       });
-      // dimensions
+      // dimensions: the width goes on top, clear of the caption band
       const da = seg(lt, 0.3, 0.7);
-      dimension(tx - 23 * s, tx + 23 * s, ty + 29 * s + 40, "46 cm", da, false);
+      dimension(tx - 23 * s, tx + 23 * s, ty - 29 * s - 40, "46 cm", da);
       ctx.save();
       ctx.translate(tx - 23 * s - 40, ty);
       ctx.rotate(-Math.PI / 2);
@@ -4964,17 +4971,31 @@
       [W - 96 - 334, 34, W - 96 + 34, 640],
       [86, 158, 526, 408],
     ];
+    // the course card's panel over the walk, and how far it is up (0..1)
+    const CARD_RECT = [86, 136, 686, 454];
+    let cardUp = 0;
+    // How much of a stage label to show, from its box (w × h, centred on x,
+    // standing on y): none under a HUD panel or above one, where it would sit
+    // on the panel's border, and fading out within about 60 px of the frame.
+    function labelAlpha(x, y, w, h) {
+      const under = ([x0, , x1, y1]) =>
+        x > x0 - 40 && x < x1 + 40 && y < y1 + 10;
+      if (hudLive && HUD_RECTS.some(under)) return 0;
+      const edge = seg(
+        Math.min(x - w / 2, W - x - w / 2, y - h, H - y),
+        20,
+        60,
+      );
+      return under(CARD_RECT) ? edge * (1 - cardUp) : edge;
+    }
     function label3(cam, p, str, color = "rgba(255,255,255,0.75)", size = 13) {
       const q = project(cam, p);
       if (q[2] < 0.5) return;
-      if (
-        hudLive &&
-        HUD_RECTS.some(
-          ([x0, y0, x1, y1]) =>
-            q[0] > x0 - 40 && q[0] < x1 + 40 && q[1] > y0 && q[1] < y1 + 10,
-        )
-      )
-        return;
+      const w = layout(str, font(800, size), 1.5).width;
+      const a = labelAlpha(q[0], q[1], w, size);
+      if (a <= 0) return;
+      ctx.save();
+      ctx.globalAlpha *= a;
       text(str, q[0], q[1], {
         size,
         weight: 800,
@@ -4982,6 +5003,7 @@
         align: "center",
         color,
       });
+      ctx.restore();
     }
 
     // fly: local time inside the course-walk insert (the clock stays frozen)
@@ -4991,13 +5013,20 @@
         fly != null
           ? FREEZE_MS / 1000
           : stageOfVideo(Math.max(t, RESUME)) / 1000;
-      const enter = fly != null ? 1 : ease.out3(seg(t, 15.7, 16.05));
+      const enter = fly != null ? 1 : stagePush(t);
       const leave = ease.in3(seg(t, STAGE_END + 0.45, STAGE_END + 0.9));
       ctx.save();
       ctx.translate((1 - enter) * W * 1.1, 0);
+      if (enter < 1) {
+        // and keeps to its own frame, off the scoring panel
+        ctx.beginPath();
+        ctx.rect(0, 0, W, H);
+        ctx.clip();
+      }
       ctx.globalAlpha = 1 - leave;
       const cam = fly != null ? flyCamera(fly) : stageCamera(t, st);
       hudLive = t > 16.05 && t < STAGE_END + 0.6;
+      cardUp = fly != null ? cardPanel(fly) : 0;
       for (let x = -12; x <= 12; x++)
         seg3(
           cam,
@@ -5272,10 +5301,10 @@
             0,
           );
           const pa = ease.out3(seg(dt, 0.05, 0.15)) * (1 - seg(dt, 0.55, 0.9));
-          ctx.save();
-          ctx.globalAlpha *= pa;
           const lbl = s.zone === "S" ? "+5" : `+${s.points} ${s.zone}`;
           const w = layout(lbl, font(800, 22), 1).width + 20;
+          ctx.save();
+          ctx.globalAlpha *= pa * labelAlpha(P[0], P[1] + 8, w, 38);
           const hot = s.zone === "A" || s.zone === "S";
           ctx.fillStyle = hot ? C.red : "rgba(255,255,255,0.92)";
           ctx.beginPath();
@@ -5298,8 +5327,16 @@
         ease.out3(seg(t, 16.0, 16.3)) *
         (1 - seg(t, STAGE_END + 0.45, STAGE_END + 0.7));
       if (la <= 0) return;
+      // in bullet time the panel steps back to let the round and its target
+      // through; the clock and the ramp badge stay readable
+      const bullet = Math.max(
+        ...RAMPS.filter(([, , r]) => r < 0.1).map(([a, b]) =>
+          env(t, vt(a), vt(b), 0.25, 0.25),
+        ),
+      );
+      const back = la * (1 - 0.7 * bullet);
       ctx.save();
-      ctx.globalAlpha = la;
+      ctx.globalAlpha = back;
       // a panel behind the shot timer, the shot list and the totals
       const x1 = W - 96;
       const y0 = 236;
@@ -5312,6 +5349,7 @@
       ctx.stroke();
       // speed ramp badge under the shot timer
       const rate = rateAt(st * 1000);
+      ctx.globalAlpha = la;
       if (rate !== 1 && st < STAGE_TIME) {
         const label =
           rate > 1 ? `▶▶  ×${rate.toFixed(1)}` : `SLOW ×${rate.toFixed(2)}`;
@@ -5328,6 +5366,7 @@
         });
       }
       // shot list (last eight), points and rounds
+      ctx.globalAlpha = back;
       text("SHOT", x1 - 300, y0, {
         size: 12,
         weight: 700,
@@ -5366,12 +5405,17 @@
           weight: 500,
           color: C.dim,
         });
-        text(s.zone === "S" ? "■" : s.zone, x1, y, {
-          size: 18,
-          weight: 800,
-          align: "right",
-          color: s.zone === "A" || s.zone === "S" ? C.red : C.white,
-        });
+        // the time and split come with the shot, the zone once it lands
+        const landed = seg(st, s.st + IMPACT, s.st + IMPACT + 0.05);
+        if (landed > 0) {
+          ctx.globalAlpha *= ease.out3(landed);
+          text(s.zone === "S" ? "■" : s.zone, x1, y, {
+            size: 18,
+            weight: 800,
+            align: "right",
+            color: s.zone === "A" || s.zone === "S" ? C.red : C.white,
+          });
+        }
         ctx.restore();
       });
       const ry = y0 + 44 + 8 * 32 + 10;
@@ -5382,8 +5426,9 @@
         tracking: 2,
         color: C.dim,
       });
+      const scored = fired.filter((s) => st >= s.st + IMPACT);
       digits(
-        String(fired.reduce((a, s) => a + s.points, 0)).padStart(3, "0"),
+        String(scored.reduce((a, s) => a + s.points, 0)).padStart(3, "0"),
         x1,
         ry + 14,
         34,
@@ -5504,10 +5549,31 @@
       ctx.restore();
     }
 
+    // how far the course card's panel is up at lt (inside the walk): it
+    // stays until the card has risen out, and hands over to the slide-cycle
+    // panel that fades in at the same corner
+    const cardPanel = (lt) =>
+      ease.out3(seg(lt, 0.05, 0.35)) * (1 - seg(lt, FLY.dur - 0.15, FLY.dur));
+
     // The course card over the walk: what this stage asks of the shooter.
     function courseCard(lt) {
       const out = lt - (FLY.dur - 0.35);
       const lang = opt.lang;
+      // a panel, as behind the shot timer, keeps the course off the card
+      const up = cardPanel(lt);
+      if (up > 0) {
+        const [x0, y0, x1, y1] = CARD_RECT;
+        ctx.save();
+        ctx.globalAlpha *= up;
+        ctx.fillStyle = "rgba(10,12,15,0.9)";
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(x0, y0, x1 - x0, y1 - y0, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
       kinetic("STAGE 01", 120, 250, {
         size: 112,
         t: lt - 0.2,
