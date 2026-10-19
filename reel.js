@@ -176,6 +176,7 @@
     split: i ? ms - list[i - 1][0] : ms,
     points: ZONE_POINTS[zone],
   }));
+  const IMPACT = 0.045; // s from a shot to its bullet arriving, for the picture and the hit cues
   const MAG = 15; // Production: at most 15 rounds in a magazine at the start signal
   // Stage-time events (seconds).
   const EVENTS = {
@@ -500,17 +501,19 @@
     // the moving targets, the reload and the speed ramps
     // Each hit sounds like its kind of target and lands as the target reacts on
     // screen, in stage time so slow motion stretches it: paper thuds, a popper
-    // rings and falls over (see drawStageTarget), plates ping. `target` and `k`
-    // (which plate) let reel-audio.mjs place it in stereo.
+    // rings and falls over (see drawStageTarget), plates ping. The hit is the
+    // bullet arriving (IMPACT), so bullet time cannot pull it ahead of the
+    // picture. `target` and `k` (which plate) let reel-audio.mjs place it in stereo.
     ...SHOTS.flatMap((s) => {
       const at = (ms) => ({ t: vt(s.ms + ms), target: s.target });
+      const hit = at(IMPACT * 1000);
       if (TARGETS[s.target].kind === "popper")
         return [
-          { ...at(50), type: "popper" },
+          { ...hit, type: "popper" },
           { ...at(450), type: "fall", v: 0.7 },
         ];
-      if (s.zone === "S") return [{ ...at(45), type: "plates", k: s.hit }];
-      return [{ ...at(40), type: "paper", v: s.zone === "A" ? 0.9 : 0.7 }];
+      if (s.zone === "S") return [{ ...hit, type: "plates", k: s.hit }];
+      return [{ ...hit, type: "paper", v: s.zone === "A" ? 0.9 : 0.7 }];
     }),
     // The swinger's latch lets go (its swings, and the mover, are sampled in
     // reel-audio.mjs). The drop turner (see turnerAngle) is released, swings
@@ -4657,7 +4660,6 @@
       return add([tg.pos[0], 1.24, tg.pos[2]], mul(right, moverOffset(st)));
     }
 
-    const IMPACT = 0.045; // s from the shot to the bullet arriving (the audio uses 40–50 ms)
     // Where a shot lands, in world space, at stage time st (moving targets carry their holes).
     function hitWorld(s, st = s.st) {
       const tg = TARGETS[s.target];
