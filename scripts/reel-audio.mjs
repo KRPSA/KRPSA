@@ -717,7 +717,12 @@ if (MOVER && EV.mover) {
 
 // Camera cuts: a soft swish through each move, swinging left or right in turn
 // and kept clear of the next shot (starting earlier instead of running into it).
+// A hard cut gets a short rise that stops on the cut instead.
 (MARKS.cuts ?? []).forEach(([at, dur, rig], i) => {
+  if (dur < 0.01) {
+    swish(at - 0.16, 0.16, (p) => 700 + 2600 * p * p, (p) => p * p * 0.8, { gain: 0.24, k: 1.5, send: 0.35 });
+    return;
+  }
   const next = SHOTS.find((s) => s.t > at)?.t ?? Infinity;
   const end = Math.min(at + dur + 0.1, next - 0.035);
   const start = Math.min(at - 0.04, end - 0.3);
@@ -730,6 +735,8 @@ if (MOVER && EV.mover) {
 // picks up again at the new tempo.
 for (const [a, , rate] of MARKS.ramps) {
   if (rate >= 1) continue;
+  // speeding up out of bullet time is not another stop
+  if (MARKS.ramps.some(([, b, r]) => Math.abs(b - a) < 1e-6 && r < rate)) continue;
   const n = Math.round((0.22 + 0.25 * (1 - rate)) * SR);
   const floor = rate ** 1.5;
   const i1 = Math.round(a * SR);

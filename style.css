@@ -3286,6 +3286,17 @@ html[lang="en"] .latest-announcements-heading h2 {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Below 1440 px the names no longer fit: the rail shows numbers, as on
+   tablets (each button keeps its name in title and aria-label, and the reel
+   itself names the current chapter). */
+@media (min-width: 1001px) and (max-width: 1439px) {
+  .hero-reel-chapters button {
+    justify-content: center;
+  }
+  .hero-reel-chapters .reel-chapter-name {
+    display: none;
+  }
+}
 .hero-reel-skip {
   flex: none;
   padding: 14px 0 6px;

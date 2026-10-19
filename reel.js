@@ -255,9 +255,9 @@
   };
   const HARD = 0.001;
   const CUTS = [
-    // [at, blend (s), rig, how]: a blend runs in a straight line, "lift"
-    // cranes up over the props on the way, "arc" swings round the shooter;
-    // a blend of HARD is a hard cut
+    // [at, blend (s), rig, how]: a blend runs in a straight line, "arc"
+    // swings round the shooter the short way, "arcBack" round behind him
+    // (never in front of the muzzle); a blend of HARD is a hard cut
     [vt(2420), HARD, "swinger"],
     [vt(3070), 0.3, "orbitSwinger"],
     [vt(3150), HARD, "swinger"],
@@ -266,8 +266,8 @@
     [vt(7500), HARD, "reload"],
     [vt(10120), 0.45, "drone", "arc"],
     [vt(11120), 0.42, "mover"],
-    [vt(12000), 0.45, "side", "lift"],
-    [vt(12900), 0.45, "low", "arc"],
+    [vt(12000), HARD, "side"],
+    [vt(12900), 0.45, "low", "arcBack"],
     [vt(14540) - 0.12, 0.35, "orbitEnd", "arc"],
     [STAGE_END + 0.05, HARD, "overview"],
   ];
@@ -355,7 +355,7 @@
       2.0,
       4.1,
       "“Make Ready” → “Are You Ready?”",
-      "“Make ready” → “Are you ready?”",
+      "“Make Ready” → “Are You Ready?”",
     ],
     [
       4.2,
@@ -375,7 +375,7 @@
       10.3,
       12.9,
       "옵틱 — 초점은 표적에. 디비전도 조준기에 따라 나뉩니다.",
-      "Optic: focus on the target. Sights split divisions.",
+      "Optic: eyes on the target. Sights set the division.",
     ],
     [13.0, 14.07, "종이 표적: A·C·D 존.", "Paper: A, C, D zones."],
     [
@@ -479,7 +479,7 @@
     ...[13.5, 13.75, 14.0].map((t) => ({ t, type: "blip", v: 0.55 })),
     ...[14.5, 14.75, 15.0].map((t) => ({ t, type: "tick", v: 0.6 })),
     { t: 15.25, type: "steel" },
-    { t: 15.42, type: "clank", v: 0.5 },
+    { t: 15.55, type: "clank", v: 0.5 }, // as the steel icon lands
     { t: 15.62, type: "riser", dur: 0.38 },
     { t: RESUME, type: "drop" },
     ...SHOTS.flatMap((s) => [
@@ -534,16 +534,20 @@
     { t: vt(EVENTS.reload[3] * 1000), type: "slidefwd" },
     // Speed ramps: a tape stop into slow motion (deeper the slower it gets), a
     // riser into fast forward and a tape flutter while it lasts.
-    ...RAMPS.map(([a, b, rate]) =>
-      rate < 1
+    ...RAMPS.map(([a, b, rate], i) => {
+      // out of bullet time into a slow ramp: spin back up, not another stop
+      const prev = i > 0 && RAMPS[i - 1][1] === a ? RAMPS[i - 1][2] : 1;
+      if (rate < 1 && rate > prev)
+        return { t: vt(a), type: "ffwd", v: 0.3, dur: 0 };
+      return rate < 1
         ? { t: vt(a), type: "slowmo", v: 1 - rate }
         : {
             t: vt(a),
             type: "ffwd",
             v: Math.min(1, 0.4 + (rate - 1) * 0.35),
             dur: vt(b) - vt(a),
-          },
-    ),
+          };
+    }),
     { t: 19.95 + SHIFT, type: "whoosh", v: 0.8 },
     ...Array.from({ length: 9 }, (_, i) => ({
       t: 20.05 + SHIFT + i * 0.045,
@@ -560,11 +564,13 @@
     ...[21.5, 21.75, 22.0].map((t) => ({ t: t + SHIFT, type: "blip", v: 0.5 })),
     { t: 22.5 + SHIFT, type: "stab", v: 0.8 },
     { t: 22.62 + SHIFT, type: "clank", v: 0.6 },
-    { t: 22.88 + SHIFT, type: "slide", v: 0.6 },
+    { t: 22.82 + SHIFT, type: "slide", v: 0.6 }, // on the lock
     { t: 23.25 + SHIFT, type: "stab", v: 0.8 },
-    { t: 23.32 + SHIFT, type: "slide", v: 0.8 },
+    { t: 23.27 + SHIFT, type: "slide", v: 0.8 }, // the slide going home
     { t: 23.47 + SHIFT, type: "click", v: 0.9 },
     { t: 24.0 + SHIFT, type: "stab", v: 1 },
+    // the iris opening onto the end card, rising into the logo hit
+    { t: 24.3 + SHIFT + END_HOLD, type: "whoosh", v: 0.5 },
     { t: 24.5 + SHIFT + END_HOLD, type: "logo" },
   ];
 
@@ -1972,9 +1978,11 @@
           outDur: exit * 0.8,
           outStagger: 0,
         });
-        if (lang === "both") {
+        if (lang === "both" && en.toLowerCase() !== ko.toLowerCase()) {
           ctx.globalAlpha = fade * ease.out3(seg(lt, 0.15, 0.5));
-          text(en, 120, y + 40, { size: 20, weight: 500, color: C.dim });
+          ctx.shadowColor = "rgba(0,0,0,0.8)";
+          ctx.shadowBlur = 6;
+          text(en, 120, y + 40, { size: 20, weight: 500, color: "#a4a8af" });
         }
         ctx.restore();
       });
@@ -2207,8 +2215,8 @@
       ctx.restore();
 
       const cmds = [
-        ["MAKE READY", 2.05, 3.0],
-        ["ARE YOU READY?", 3.05, 4.0],
+        ["MAKE READY", 2.05, 2.9],
+        ["ARE YOU READY?", 3.05, 3.9],
       ];
       cmds.forEach(([str, a, b], k) => {
         if (t < a || t > b + 0.4) return;
@@ -2218,6 +2226,9 @@
           out: t - b,
           tracking: -5,
           stagger: 0.025,
+          // each command is gone before the next one lands
+          outDur: 0.14,
+          outStagger: 0,
         });
         ctx.save();
         ctx.globalAlpha = 1 - seg(t, b, b + 0.2);
@@ -2806,7 +2817,7 @@
       const tilt = rk.tilt;
       // at the end both guns lower out of frame, leaving two bare targets
       const lowered = ease.in3(seg(t, SIGHT.lower, SIGHT.lower + 0.35));
-      sy += 760 * lowered;
+      sy += 1000 * lowered;
       // the range behind: horizon glow, floor lines, the target on its stand
       const hz = 640;
       const sky = ctx.createLinearGradient(0, 160, 0, hz);
@@ -4831,13 +4842,20 @@
         const wp = workPoint(st);
         const dir = norm([fc[0] - sp[0], 0, fc[2] - sp[2]]);
         const side = cross(UP, dir);
+        // wide enough off his line of fire that the pistol shows its slide in
+        // three-quarter view, never end-on
         const pos = add(
           sp,
-          add(add(mul(dir, -6.2), mul(side, -1.6)), [0, 4.6, 0]),
+          add(add(mul(dir, -5.4), mul(side, -3.0)), [0, 4.6, 0]),
         );
         // tilted down enough to keep the shooter, gun and all, in frame
         const look = lerp3(fc, [wp[0], 1.0, wp[2]], 0.35);
-        return [pos, lerp3(look, add(sp, [0, 1.2, 0]), 0.2), 34, 0];
+        return [
+          pos,
+          add(lerp3(look, add(sp, [0, 1.2, 0]), 0.2), mul(side, 1.3)),
+          34,
+          0,
+        ];
       },
       // the reload on the run: low and ahead of him on his support side, so
       // the magwell, the support hand and the pouch face the lens; while the
@@ -4938,14 +4956,16 @@
     function stageCamera(t, st) {
       let [pos, look, fov, roll] = RIGS.drone(st);
       const blend = ([p2, l2, f2, r2], p, how) => {
-        if (how === "arc") {
-          // swing round the shooter the short way instead of through him
+        if (how === "arc" || how === "arcBack") {
+          // swing round the shooter instead of through him
           const c = shooterPos(st);
           const a = sub(pos, c);
           const b = sub(p2, c);
           const ya = Math.atan2(a[2], a[0]);
           let dy = Math.atan2(b[2], b[0]) - ya;
           dy -= Math.round(dy / (2 * Math.PI)) * 2 * Math.PI;
+          if (how === "arcBack" && Math.sin(ya + dy / 2) > 0)
+            dy -= Math.sign(dy) * 2 * Math.PI;
           const y = ya + dy * p;
           const r = lerp(Math.hypot(a[0], a[2]), Math.hypot(b[0], b[2]), p);
           pos = [
@@ -4953,11 +4973,7 @@
             lerp(pos[1], p2[1], p),
             c[2] + Math.sin(y) * r,
           ];
-        } else {
-          pos = lerp3(pos, p2, p);
-          // crane up over the targets and walls on the way
-          if (how === "lift") pos[1] += 2.4 * Math.sin(Math.PI * p);
-        }
+        } else pos = lerp3(pos, p2, p);
         look = lerp3(look, l2, p);
         fov = lerp(fov, f2, p);
         roll = lerp(roll, r2, p);
@@ -5485,26 +5501,29 @@
       // the slide cycling and the reload, picture-in-picture; for the reload
       // it opens into a split screen
       const [rl0e, , , rl3e] = EVENTS.reload;
-      const split = ease.inOut3(env(st, rl0e - 0.05, rl3e + 0.1, 0.3, 0.3));
+      // held open long enough to see step 04 lit at full size
+      const split = ease.inOut3(env(st, rl0e - 0.05, rl3e + 0.4, 0.3, 0.3));
       const px = lerp(96, 60, split);
       const py = lerp(168, 150, split);
-      const pw = lerp(420, 860, split);
+      const pw = lerp(420, 740, split); // clear of the shooter on the right
       const ph = lerp(230, 640, split);
       HUD_RECTS[1] = [px - 10, py - 10, px + pw + 10, py + ph + 10];
       ctx.save();
       ctx.globalAlpha = la;
       ctx.fillStyle = "rgba(10,12,15,0.9)";
-      ctx.strokeStyle = reloading ? C.red : "rgba(255,255,255,0.16)";
-      ctx.lineWidth = reloading ? 2 : 1;
+      // red for the whole reload, until the panel starts to close
+      const reloadUi = reloading || (st >= rl3e && split > 0.9);
+      ctx.strokeStyle = reloadUi ? C.red : "rgba(255,255,255,0.16)";
+      ctx.lineWidth = reloadUi ? 2 : 1;
       ctx.beginPath();
       ctx.roundRect(px, py, pw, ph, 6);
       ctx.fill();
       ctx.stroke();
-      text(reloading ? "RELOAD" : "SLIDE CYCLE", px + 20, py + 32, {
+      text(reloadUi ? "RELOAD" : "SLIDE CYCLE", px + 20, py + 32, {
         size: lerp(12, 16, split),
         weight: 800,
         tracking: 2.4,
-        color: reloading ? C.red : C.dim,
+        color: reloadUi ? C.red : C.dim,
       });
       if (split > 0.02) {
         // the four steps of the reload, lit as they happen
@@ -5518,7 +5537,8 @@
           const on = st >= at;
           const y = py + ph - 120 + k * 26;
           ctx.save();
-          ctx.globalAlpha *= split;
+          // only on the open panel, clear of the grip on the way in and out
+          ctx.globalAlpha *= seg(split, 0.75, 1);
           ctx.fillStyle = on ? C.red : "rgba(255,255,255,0.18)";
           ctx.fillRect(px + 24, y - 11, 10, 10);
           text(
@@ -5629,14 +5649,14 @@
               ["swinger", "turner", "mover"].includes(tg.kind),
             ).length,
           ),
-          lang === "en" ? "MOVING TARGETS" : "무빙 타겟",
+          lang === "ko" ? "무빙 타겟" : "MOVING TARGETS",
         ],
       ];
       stats.forEach(([n, lbl], k) => {
         const at = 0.55 + k * 0.12;
         const a =
           ease.out3(seg(lt, at, at + 0.3)) *
-          (1 - seg(lt, FLY.dur - 0.3, FLY.dur - 0.05));
+          (1 - seg(lt, FLY.dur - 0.45, FLY.dur - 0.2));
         if (a <= 0) return;
         ctx.save();
         ctx.globalAlpha *= a;
@@ -7732,7 +7752,7 @@
         ctx.clip();
         // The light sweep is composited on the crest's own layer, so it only
         // touches the crest's pixels and never the background around it.
-        const sw = seg(lt, 0.4, 1.2);
+        const sw = seg(lt, 0.4, 1.6);
         if (sw > 0 && sw < 1) {
           logoLayer ||= document.createElement("canvas").getContext("2d");
           const lc = logoLayer;
@@ -7745,7 +7765,7 @@
           lc.globalCompositeOperation = "source-over";
           lc.clearRect(0, 0, iw, ih);
           lc.drawImage(img, 0, 0, iw, ih);
-          const sx = lerp(-0.2, 1.2, sw) * iw;
+          const sx = lerp(-0.5, 2.05, sw) * iw; // fully off the crest at both ends
           const g = lc.createLinearGradient(sx - 90, 0, sx + 90, ih * 0.25);
           g.addColorStop(0, "rgba(255,255,255,0)");
           g.addColorStop(0.5, "rgba(255,255,255,0.55)");
@@ -7985,7 +8005,7 @@
     let sound = false;
     let last = 0;
     let raf = 0;
-    let synced = 0;
+    let held = 0; // how long the picture has waited for the soundtrack
     let captionIndex = -2;
 
     const buttons = CHAPTERS.map((chapter, i) => {
@@ -8064,19 +8084,20 @@
     function frame(now) {
       raf = 0;
       if (!playing) return;
-      t += Math.min(0.1, (now - last) / 1000);
+      const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
-      // The picture keeps the clock; the soundtrack is nudged back if it drifts.
-      if (
-        sound &&
-        audio &&
-        !audio.paused &&
-        now - synced > 1000 &&
-        Math.abs(audio.currentTime - t) > 0.2
-      ) {
-        audio.currentTime = t;
-        synced = now;
-      }
+      // With sound on, the soundtrack keeps the clock: the picture holds while
+      // the track loads or seeks (up to 1.5 s), then eases onto it.
+      const live = sound && audio && !audio.paused;
+      if (live && !audio.seeking && audio.readyState >= 3) {
+        held = 0;
+        const drift = audio.currentTime - (t + dt);
+        if (Math.abs(drift) > 0.5) {
+          // a stall or a hidden tab: move the track to the picture instead
+          t += dt;
+          audio.currentTime = t;
+        } else t += dt + drift * 0.25;
+      } else if (!live || (held += dt) >= 1.5) t += dt;
       if (t >= DURATION) {
         t = DURATION;
         draw();
