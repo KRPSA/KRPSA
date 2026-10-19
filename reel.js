@@ -418,7 +418,7 @@
     [
       20.1 + SHIFT,
       22.4 + SHIFT,
-      "점수 ÷ 시간 = 히트 팩터. 가장 높으면 이깁니다.",
+      "점수 ÷ 시간 = 히트 팩터. 높을수록 이깁니다.",
       "Points ÷ time = hit factor. The highest wins.",
     ],
     [
