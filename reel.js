@@ -4746,7 +4746,14 @@
             0,
           ]),
         );
-        return [pos, c, o.fov, 0.06 * Math.sin(a)];
+        // looking a little ahead of the round brings the target into the
+        // frame early, clear of the shot timer
+        const look = lerp3(
+          c,
+          hit,
+          (o.lead ?? 0) * ease.inOut3(clamp(prog / 0.5)),
+        );
+        return [pos, look, o.fov, 0.06 * Math.sin(a)];
       };
     }
     // The course walk before the clock resumes: down from the overview, along
@@ -4842,6 +4849,7 @@
           a0: -0.7,
           a1: 0.45,
           fov: 42,
+          lead: 0.5,
         },
       ),
       orbitEnd: bulletCam(SHOTS[SHOTS.length - 1], 14.545, 14.612, {
