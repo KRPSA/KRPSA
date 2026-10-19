@@ -252,19 +252,23 @@
     period: 1.5,
     damping: 0.18,
   };
+  const HARD = 0.001;
   const CUTS = [
-    [vt(2420), 0.5, "swinger"],
+    // [at, blend (s), rig, how]: a blend runs in a straight line, "lift"
+    // cranes up over the props on the way, "arc" swings round the shooter;
+    // a blend of HARD is a hard cut
+    [vt(2420), HARD, "swinger"],
     [vt(3070), 0.3, "orbitSwinger"],
-    [vt(3150), 0.35, "swinger"],
-    [vt(3480) - 0.08, 0.16, "side"],
-    [vt(5150), 0.3, "shoulder"],
-    [vt(7500), 0.35, "high"],
-    [vt(10120), 0.4, "drone"],
+    [vt(3150), HARD, "swinger"],
+    [vt(3480) - 0.08, HARD, "side"],
+    [vt(5150), HARD, "shoulder"],
+    [vt(7500), HARD, "reload"],
+    [vt(10120), 0.45, "drone", "arc"],
     [vt(11120), 0.42, "mover"],
-    [vt(12000), 0.45, "drone"],
-    [vt(12900), 0.45, "low"],
-    [vt(14540) - 0.12, 0.3, "orbitEnd"],
-    [STAGE_END + 0.05, 0.6, "overview"],
+    [vt(12000), 0.45, "side", "lift"],
+    [vt(12900), 0.45, "low", "arc"],
+    [vt(14540) - 0.12, 0.35, "orbitEnd", "arc"],
+    [STAGE_END + 0.05, HARD, "overview"],
   ];
 
   // Stage time (ms) shown by the shot timer at video time t.
@@ -4796,24 +4800,26 @@
         const look = lerp3(fc, [wp[0], 1.0, wp[2]], 0.35);
         return [pos, lerp3(look, add(sp, [0, 1.2, 0]), 0.2), 34, 0];
       },
-      high(st) {
+      // the reload on the run: low and ahead of him on his support side, so
+      // the magwell, the support hand and the pouch face the lens; while the
+      // split screen covers the left half he is framed right of centre
+      reload(st) {
         const sp = shooterPos(st);
-        // during the reload the split screen covers the left half, so the
-        // shooter is framed right of centre
         const [r0, , , r3] = EVENTS.reload;
         const split = ease.inOut3(env(st, r0 - 0.05, r3 + 0.1, 0.3, 0.3));
-        return [
-          add(sp, [0.4 - 2.6 * split, 9.5, -5.8]),
-          add(sp, [-2.6 * split, 0, 3.4]),
-          44,
-          0,
-        ];
+        const pos = add(sp, [3.0, lerp(2.2, 2.6, seg(st, 7.5, 10.2)), 1.8]);
+        const look = add(sp, [0, 1.0, 0]);
+        const v = norm([look[0] - pos[0], 0, look[2] - pos[2]]);
+        const shift = mul([-v[2], 0, v[0]], 0.8 * split);
+        return [add(pos, shift), add(look, shift), 40, 0];
       },
       // a tracking shot leading the run, square to the muzzle so the pistol
       // reads in profile at the chest
       side(st) {
         const sp = shooterPos(st);
-        const p = seg(st, 3.4, 5.6);
+        const [a, b] =
+          EVENTS.moves.findLast(([a]) => st >= a - 0.3) ?? EVENTS.moves[0];
+        const p = seg(st, a - 0.08, b + 0.1);
         return [
           add(sp, [lerp(4.6, 3.9, p), lerp(1.25, 1.4, p), 0.55]),
           add(sp, [0.35, 1.05, 0.2]),
@@ -4863,9 +4869,11 @@
         const right = norm(sub(r.shoulders[1], r.shoulders[0]));
         const f = r.facing;
         const back = lerp(1.15, 0.85, ease.inOut3(seg(st, 5.15, 7.5)));
-        const eye = add(r.head, add(mul(f, -back), mul(right, 0.62)));
+        // high over the strong shoulder, so the pistol sits under the target
+        // it is working instead of across its neighbours
+        const eye = add(r.head, add(mul(f, -back), mul(right, 0.46)));
         return [
-          add(eye, [0, 0.02, 0]),
+          add(eye, [0, 0.3, 0]),
           lerp3(FOCUS.B, workPoint(st), 0.65),
           35,
           -0.02,
@@ -4889,16 +4897,35 @@
     };
     function stageCamera(t, st) {
       let [pos, look, fov, roll] = RIGS.drone(st);
-      const blend = ([p2, l2, f2, r2], p) => {
-        pos = lerp3(pos, p2, p);
+      const blend = ([p2, l2, f2, r2], p, how) => {
+        if (how === "arc") {
+          // swing round the shooter the short way instead of through him
+          const c = shooterPos(st);
+          const a = sub(pos, c);
+          const b = sub(p2, c);
+          const ya = Math.atan2(a[2], a[0]);
+          let dy = Math.atan2(b[2], b[0]) - ya;
+          dy -= Math.round(dy / (2 * Math.PI)) * 2 * Math.PI;
+          const y = ya + dy * p;
+          const r = lerp(Math.hypot(a[0], a[2]), Math.hypot(b[0], b[2]), p);
+          pos = [
+            c[0] + Math.cos(y) * r,
+            lerp(pos[1], p2[1], p),
+            c[2] + Math.sin(y) * r,
+          ];
+        } else {
+          pos = lerp3(pos, p2, p);
+          // crane up over the targets and walls on the way
+          if (how === "lift") pos[1] += 2.4 * Math.sin(Math.PI * p);
+        }
         look = lerp3(look, l2, p);
         fov = lerp(fov, f2, p);
         roll = lerp(roll, r2, p);
       };
-      for (const [at, dur, rig] of CUTS) {
+      for (const [at, dur, rig, how] of CUTS) {
         const p = ease.inOut3(seg(t, at, at + dur));
         if (p <= 0) break;
-        blend(RIGS[rig](st), p);
+        blend(RIGS[rig](st), p, how);
       }
       // the stage opens on the overview
       const e = 1 - ease.inOut3(seg(t, 15.9, 16.55));
@@ -7280,13 +7307,19 @@
       // The hands wrap the grip: the one on the camera's side of the pistol
       // goes over it, the other under it. The thumbs lie along the left of
       // the frame, the trigger finger on the right.
-      const right = dot(rig.side, sub(cam.pos, rig.grip)) > 0;
+      // Seen from behind the gun, both hands are nearer than the grip they
+      // wrap, whichever side the camera leans to.
+      const toCam = norm(sub(cam.pos, rig.grip));
+      const behind = dot(rig.forward, toCam) < -0.5;
+      const right = dot(rig.side, toCam) > 0;
       const fore = [0, 1].map((i) => groups.find((g) => g.arm === i));
       const near = right ? 1 : 0;
       const on = [!!rig.thumbs[0], true]; // which hands are on the pistol
       if (on[near]) fore[near].z = Math.min(fore[near].z, gun.z - 0.001);
       if (on[1 - near])
-        fore[1 - near].z = Math.max(fore[1 - near].z, gun.z + 0.001);
+        fore[1 - near].z = behind
+          ? Math.min(fore[1 - near].z, gun.z - 0.001)
+          : Math.max(fore[1 - near].z, gun.z + 0.001);
       const zHold = [0, 1].filter((i) => on[i]).map((i) => fore[i].z);
       const digits = (pairs) => ({
         draw: () =>
