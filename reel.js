@@ -280,6 +280,8 @@
     return Math.min(stageOfVideo(t), STAGE_MS);
   }
 
+  // `short` is the site rail's label where the full name does not fit; the
+  // full name stays in the button's title and aria-label.
   const CHAPTERS = [
     {
       t: 0,
@@ -291,12 +293,14 @@
       t: 2,
       ko: "레인지 커맨드",
       en: "Range commands",
+      short: { ko: "커맨드", en: "Ready" },
       sub: { ko: "Make Ready → Standby", en: "Make Ready → Standby" },
     },
     {
       t: BEEP,
       ko: "시작 신호",
       en: "Start signal",
+      short: { ko: "시작 신호", en: "Signal" },
       sub: { ko: "1~4초 후 신호음", en: "Beep in 1–4 s" },
     },
     {
@@ -309,6 +313,7 @@
       t: 13,
       ko: "표적과 채점",
       en: "Targets & scoring",
+      short: { ko: "채점", en: "Scoring" },
       sub: { ko: "A · C · D 존", en: "A · C · D zones" },
     },
     {
@@ -327,6 +332,7 @@
       t: 22.5 + SHIFT,
       ko: "레인지 클리어",
       en: "Range is clear",
+      short: { ko: "클리어", en: "Clear" },
       sub: { ko: "안전 확인", en: "Safety checks" },
     },
   ];
@@ -336,66 +342,47 @@
   const timeWidth = (str) =>
     [...str].reduce((w, ch) => w + (ch === "." || ch === " " ? 0.3 : 0.62), 0);
 
+  // Each line stays up long enough to read: at most about 20 characters a
+  // second in English and 15 in Korean (the on-screen graphics carry the rest).
   const CAPTIONS = [
     [
-      0.15,
-      1.85,
-      "정확, 파워, 속도. IPSC의 세 가지 원칙 — DVC.",
-      "Accuracy, power, speed — DVC, the three pillars of IPSC.",
+      0.1,
+      1.9,
+      "정확, 파워, 속도 — IPSC의 DVC.",
+      "Accuracy, power, speed: IPSC's DVC.",
     ],
     [
-      2.1,
-      2.95,
-      "“Make Ready” — 장전하고 시작 자세를 준비합니다.",
-      "“Make ready” — load and take the start position.",
-    ],
-    [
-      3.1,
-      3.95,
-      "“Are You Ready?” — 침묵은 준비 완료를 뜻합니다.",
-      "“Are you ready?” — silence means ready.",
-    ],
-    [
+      2.0,
       4.1,
+      "“Make Ready” → “Are You Ready?”",
+      "“Make ready” → “Are you ready?”",
+    ],
+    [
+      4.2,
       5.9,
-      "“Standby” — 1~4초 안에 시작 신호가 울립니다.",
-      "“Standby” — the start signal follows within 1–4 seconds.",
+      "“Standby” — 1~4초 안에 신호음.",
+      "“Standby” — a beep within 1–4 s.",
+    ],
+    [6.0, 6.8, "신호음 — 시작!", "Beep — go!"],
+    [6.9, 8.1, "시간을 멈추고, 사수의 눈으로.", "Freeze. Shooter's view."],
+    [
+      8.2,
+      10.2,
+      "아이언 사이트 — 초점은 가늠쇠에.",
+      "Iron sights: focus on the front sight.",
     ],
     [
-      6.05,
-      6.75,
-      "신호음과 함께 타이머가 시작됩니다.",
-      "The beep starts the clock.",
-    ],
-    [
-      6.9,
-      7.9,
-      "시간을 멈추고, 사수의 눈으로.",
-      "Freeze the clock. See it through the shooter's eyes.",
-    ],
-    [
-      8.1,
-      10.45,
-      "아이언 사이트 — 가늠자와 가늠쇠를 맞추고, 초점은 가늠쇠에.",
-      "Iron sights: line up rear and front, and focus on the front sight.",
-    ],
-    [
-      10.55,
-      12.85,
+      10.3,
+      12.9,
       "옵틱 — 초점은 표적에. 디비전도 조준기에 따라 나뉩니다.",
-      "Optic: focus on the target. Divisions are split by sights, too.",
+      "Optic: focus on the target. Sights split divisions.",
     ],
+    [13.0, 14.07, "종이 표적: A·C·D 존.", "Paper: A, C, D zones."],
     [
-      13.1,
-      14.4,
-      "종이 표적은 맞은 존에 따라 점수가 달라집니다.",
-      "Paper targets score by zone — A, C and D.",
-    ],
-    [
-      14.5,
-      15.85,
-      "철판은 넘어져야 득점. 노슛과 미스는 각 −10점.",
-      "Steel must fall to score. No-shoots and misses cost 10.",
+      14.17,
+      15.95,
+      "철판은 넘어져야 득점. 노슛·미스는 −10점.",
+      "Steel must fall. No-shoot/miss −10.",
     ],
     [16.1, vt(2300) - 0.14, "프리스타일 스테이지.", "A freestyle stage."],
     [
@@ -425,20 +412,21 @@
     [
       vt(12050) + 0.3,
       STAGE_END + 0.55,
-      "낮은 포트에서 무릎 쏴 — 마지막 발에 타이머가 멈춥니다.",
+      "낮은 포트에서 무릎쏴 — 마지막 발에 타이머가 멈춥니다.",
       "Down on one knee at the low port. The last shot stops the clock.",
     ],
     [
       20.1 + SHIFT,
-      22.35 + SHIFT,
-      "점수 ÷ 시간 = 히트 팩터. 스테이지는 가장 높은 히트 팩터가 이깁니다.",
-      "Points ÷ time = hit factor. The highest hit factor wins the stage.",
+      22.4 + SHIFT,
+      "점수 ÷ 시간 = 히트 팩터. 가장 높으면 이깁니다.",
+      "Points ÷ time = hit factor. The highest wins.",
     ],
     [
-      22.6 + SHIFT,
-      24.35 + SHIFT,
+      // through the RANGE IS CLEAR hold, until the iris to the end card
+      22.55 + SHIFT,
+      24.25 + SHIFT + END_HOLD,
       "끝까지 안전하게 — 언로드, 쇼 클리어, 해머 다운.",
-      "Safe to the very end — unload, show clear, hammer down.",
+      "Safe to the end: unload, show clear, hammer down.",
     ],
     [
       24.7 + SHIFT + END_HOLD,
@@ -746,7 +734,7 @@
       no: ["NO", "불가"],
       req: ["REQUIRED", "필수"],
       yes: ["ALLOWED", "허용"],
-      list: ["LISTED ONLY", "목록 권총만"],
+      list: ["LISTED ONLY", "승인 목록 권총만"],
       box: ["BOX GAUGE", "박스 게이지"],
       any: ["ANY MODEL", "모델 제한 없음"],
     },
@@ -774,7 +762,7 @@
         ],
         noComp: [
           "NO COMPENSATOR",
-          ["No barrel porting either", "배럴 포팅도 불가"],
+          ["No barrel porting either", "총열 포팅도 불가"],
         ],
         comp: ["COMPENSATOR", ["Allowed in Open", "오픈에서 허용"]],
       },
@@ -788,7 +776,7 @@
         example: ["EXAMPLE LOAD", "EXAMPLE LOAD · 예시"],
         scored: ["SCORED AS", "판정"],
         floors: ["MINOR ≥ 125", "MAJOR ≥ 160 · OPEN", "MAJOR ≥ 170 · STANDARD"],
-        points: ["POINTS PER HIT", "타격당 점수"],
+        points: ["POINTS PER HIT", "명중당 점수"],
       },
       others: [
         [
@@ -3066,8 +3054,8 @@
         [
           (W * 3) / 4,
           "PRODUCTION OPTICS",
-          "프로덕션 목록 권총 + 슬라이드 장착 옵틱",
-          "Production-list handgun + slide-mounted optic",
+          "승인 목록 권총 + 슬라이드 장착 옵틱",
+          "Approved-list handgun + slide-mounted optic",
         ],
       ];
       chips.forEach(([cx, name, ko, en], k) => {
@@ -5641,7 +5629,7 @@
               ["swinger", "turner", "mover"].includes(tg.kind),
             ).length,
           ),
-          "MOVERS",
+          lang === "en" ? "MOVING TARGETS" : "무빙 타겟",
         ],
       ];
       stats.forEach(([n, lbl], k) => {
@@ -8018,7 +8006,9 @@
       const lang = language();
       buttons.forEach((button, i) => {
         const chapter = CHAPTERS[i];
-        button.querySelector(".reel-chapter-name").textContent = chapter[lang];
+        button.querySelector(".reel-chapter-name").textContent =
+          chapter.short?.[lang] ?? chapter[lang];
+        button.title = chapter[lang];
         button.setAttribute(
           "aria-label",
           `${String(i + 1).padStart(2, "0")} ${chapter[lang]} — ${chapter.sub[lang]}`,
@@ -8251,7 +8241,7 @@
         insStart(fly) + 0.25,
         insStart(fly) + fly.dur - 0.35,
         "스테이지 01 — 사격 위치 네 곳, 26발 롱 코스.",
-        "Stage 01: four positions, a 26-round long course.",
+        "Stage 01: four positions, 26-round long course.",
       ],
     );
     CAPTIONS.sort((a, b) => a[0] - b[0]);
