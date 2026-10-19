@@ -635,10 +635,10 @@
         v: 0.35,
       })),
       // Production; Production Optics: the optic seats
-      { lt: 1.0, type: "stab", v: 0.7 },
-      { lt: 1.05, type: "blip", v: 0.45 },
-      { lt: 2.5, type: "blip", v: 0.6 },
-      { lt: 2.75, type: "click", v: 0.8 },
+      { lt: 0.75, type: "stab", v: 0.7 },
+      { lt: 0.8, type: "blip", v: 0.45 },
+      { lt: 2.0, type: "blip", v: 0.6 },
+      { lt: 2.25, type: "click", v: 0.8 },
       // Standard: the optic lifts off, the box gauge slams shut on the beat
       { lt: 3.5, type: "blip", v: 0.6 },
       { lt: 3.52, type: "slide", v: 0.45 },
@@ -3151,19 +3151,34 @@
     }
 
     // Handgun divisions (DIV), in local time lt. One pistol morphs through
-    // five divisions beside an index rail and an equipment matrix (1–8 s);
+    // five divisions beside an index rail and an equipment matrix (0.75–8 s);
     // a power-factor beat pushes in (8–10.5 s); then the line-up of all five,
     // with Classic and Revolver (10.5 s to the end).
-    const DIV_T = [1, 2.5, 3.5, 5, 6.5, 8]; // each division's entrance, then the push
+    const DIV_T = [0.75, 2, 3.5, 5, 6.5, 8]; // each division's entrance, then the push
     const DIV_PUSH = [8, 10.5]; // the power factor, then the line-up, push in
     const DIV_POSE = { x: 940, y: 548, s: 2.75 };
     const DIV_SPECS = DIV.specs;
     const DIV_ROWS = DIV.rows;
     const DIV_WORDS = DIV.words;
     const DIV_TEXT = DIV.text;
-    // [English, Korean] by the caption language (both: Korean).
-    const divPick = (pair) => pair[opt.lang === "en" ? 0 : 1];
-    const divFamily = () => (opt.lang === "en" ? SANS : KR);
+    // [English, Korean] by the caption language (both: English, and divText
+    // sets the Korean under it).
+    const divPick = (pair) => pair[opt.lang === "ko" ? 1 : 0];
+    const divFamily = () => (opt.lang === "ko" ? KR : SANS);
+    // A pair as text at (x, y), style o; in both, the Korean follows dy
+    // below in smaller (size ks), dimmer type, as under the matrix row labels.
+    function divText(pair, x, y, o, dy, ks = o.size - 2) {
+      text(divPick(pair), x, y, { ...o, family: divFamily() });
+      if (opt.lang === "both")
+        text(pair[1], x, y + dy, {
+          ...o,
+          size: ks,
+          weight: 500,
+          tracking: 0,
+          color: C.dim,
+          family: KR,
+        });
+    }
 
     // Red section label, big title and (Korean) subtitle, top left.
     function divTitle(label, title, ko, t) {
@@ -3194,10 +3209,11 @@
     // the title is in by 0.25 s, the line under it by 0.28 s.
     function divCallout(ax, ay, dir, ly, title, sub, ct, a = 1) {
       if (ct <= 0 || a <= 0) return;
-      const family = divFamily();
-      const str = divPick(sub);
       const tw = layout(title, font(800, 16), 2).width;
-      const sw = layout(str, font(500, 17, family), 0).width;
+      const sw = Math.max(
+        layout(divPick(sub), font(500, 17, divFamily()), 0).width,
+        opt.lang === "both" ? layout(sub[1], font(500, 15, KR), 0).width : 0,
+      );
       const uy = ly + 13;
       const ex = ax + dir * Math.abs(uy - ay);
       const l1 = Math.hypot(ex - ax, uy - ay);
@@ -3241,13 +3257,13 @@
         dur: 0.25,
       });
       ctx.globalAlpha *= ease.out3(clamp((ct - 0.1) / 0.18));
-      text(str, tx, uy + 25, {
-        size: 17,
-        weight: 500,
-        color: C.dim,
-        align,
-        family,
-      });
+      divText(
+        sub,
+        tx,
+        uy + 25,
+        { size: 17, weight: 500, color: C.dim, align },
+        22,
+      );
       ctx.restore();
     }
 
@@ -3373,33 +3389,44 @@
         xr -= divPill(xr, y, numbers ? `MAJOR ≥ ${major}` : "MAJOR", true) + 8;
       return x - xr + divPill(xr, y, "MINOR", false);
     }
+    // In both, the English word rises to the row label's line, the Korean
+    // to the line under it.
     function divCell(r, v, x, y) {
-      const en = opt.lang === "en";
-      const word = (str, color, dx) =>
-        text(str, x - dx, y + 6, {
-          size: en ? 16 : 18,
-          weight: en ? 800 : 700,
-          tracking: en ? 1.5 : 0,
-          align: "right",
-          color,
-          family: divFamily(),
-        });
+      const ko = opt.lang === "ko";
+      const both = opt.lang === "both";
+      const word = (pair, color, dx) =>
+        divText(
+          pair,
+          x - dx,
+          y + (both ? -7 : 6),
+          {
+            size: ko ? 18 : 16,
+            weight: ko ? 700 : 800,
+            tracking: ko ? 0 : 1.5,
+            align: "right",
+            color,
+          },
+          25,
+          15,
+        );
       if (r < 2) {
         divIcon(x - 14, y, v !== "no");
-        word(divPick(DIV_WORDS[v]), v === "no" ? C.dim : C.white, 40);
-      } else if (r === 2)
-        word(divPick(DIV_WORDS[v]), v === "any" ? C.dim : C.white, 0);
+        word(DIV_WORDS[v], v === "no" ? C.dim : C.white, 40);
+      } else if (r === 2) word(DIV_WORDS[v], v === "any" ? C.dim : C.white, 0);
       else divPills(x, y, v);
     }
 
     // The equipment matrix, right column: rows build in, then each value
-    // flips over when a division changes it, with a red sweep behind.
+    // flips over when a division changes it, with a red sweep behind. The
+    // flips start with the rail's selector (DIV_T − 0.05), and a value on its
+    // way out is dimmed, so no row shows the last division's spec for long.
+    const divFlipAt = (k, r) => DIV_T[k] - 0.05 + r * 0.04;
     function divMatrix(lt) {
       const x0 = 1400;
       const x1 = 1824;
       const k = Math.min(
         4,
-        DIV_T.findLastIndex((x) => lt >= x),
+        DIV_T.findLastIndex((x) => lt >= x - 0.05),
       );
       const ha = ease.out3(seg(lt, 0.6, 0.9));
       ctx.save();
@@ -3434,7 +3461,7 @@
         const changed =
           k >= 0 &&
           (k === 0 || DIV_SPECS[k].cells[r] !== DIV_SPECS[k - 1].cells[r]);
-        const ft = k >= 0 ? DIV_T[k] + 0.1 + r * 0.07 : 0;
+        const ft = k >= 0 ? divFlipAt(k, r) : 0;
         const flash = changed ? 1 - seg(lt, ft, ft + 0.7) : 0;
         ctx.save();
         ctx.globalAlpha *= ra;
@@ -3468,6 +3495,7 @@
               : DIV_SPECS[k].cells[r];
           const yc = y + (opt.lang === "en" ? -5 : 7);
           if (v !== null) {
+            if (q < 0.5 && changed) ctx.globalAlpha *= 0.45;
             ctx.translate(x1, yc);
             ctx.scale(1, Math.max(0.02, Math.abs(Math.cos(q * Math.PI))));
             divCell(r, v, 0, 0);
@@ -3475,18 +3503,22 @@
         }
         ctx.restore();
       });
-      // Standard's asterisk: Major there needs a calibre as well
-      const fn = ease.out3(seg(lt, 3.85, 4.15)) * (1 - seg(lt, 4.9, 5.05));
+      // Standard's asterisk: Major there needs a calibre as well; it holds
+      // until Optics has flipped the power factor (and its asterisk) away
+      const off = divFlipAt(3, 3) + 0.24;
+      const fn =
+        ease.out3(seg(lt, 3.85, 4.15)) * (1 - seg(lt, off, off + 0.15));
       if (fn > 0) {
         ctx.save();
         ctx.globalAlpha *= fn;
-        text(`* ${divPick(DIV_TEXT.standardMajor)}`, x1, 818, {
-          size: 15,
-          weight: 500,
-          color: C.dim,
-          align: "right",
-          family: divFamily(),
-        });
+        divText(
+          DIV_TEXT.standardMajor.map((s) => `* ${s}`),
+          x1,
+          818,
+          { size: 15, weight: 500, color: C.dim, align: "right" },
+          22,
+          14,
+        );
         ctx.restore();
       }
     }
@@ -3495,6 +3527,8 @@
     // one-line summary; a red selector slides between them. act is the
     // active index, continuous (−1: none yet).
     function divRail(lt, act) {
+      // in both, the Korean line under the summary needs a little more room
+      const extra = opt.lang === "both" ? 20 : 0;
       let y = 424;
       let selY = 0;
       DIV_SPECS.forEach((d, n) => {
@@ -3520,17 +3554,19 @@
           });
           ctx.restore();
           if (e > 0.02) {
-            ctx.globalAlpha *= e;
-            text(
-              opt.lang === "en" ? d.about[0] : `${d.ko} — ${d.about[1]}`,
+            // (with the Korean line, it waits until its row has room)
+            ctx.globalAlpha *= extra ? seg(e, 0.3, 1) : e;
+            divText(
+              [d.about[0], `${d.ko} — ${d.about[1]}`],
               154,
               y + 32,
-              { size: 16, weight: 500, color: C.dim, family: divFamily() },
+              { size: 16, weight: 500, color: C.dim },
+              22,
             );
           }
           ctx.restore();
         }
-        y += 54 + e * 42;
+        y += 54 + e * (42 + extra);
       });
       const sel = clamp(act + 1);
       if (sel > 0) {
@@ -3539,7 +3575,7 @@
           96,
           (act < 0 ? 424 : selY) - 26 + (1 - sel) * 20,
           4,
-          64 * sel,
+          (64 + extra) * sel,
         );
       }
     }
@@ -3563,17 +3599,17 @@
       ctx.restore();
     }
 
-    // Section 1: the morphing pistol. Each division holds 1–1.5 s, and each
-    // callout starts with its division and holds until the next one.
+    // Section 1: the morphing pistol. Each division holds 1.25–1.5 s, and
+    // each callout starts with its division and holds until the next one.
     function divMorph(lt) {
-      let act = -1 + ease.inOut3(seg(lt, 0.9, 1.2));
+      let act = -1 + ease.inOut3(seg(lt, 0.65, 0.95));
       for (let n = 1; n < 5; n++)
         act += ease.inOut3(seg(lt, DIV_T[n] - 0.05, DIV_T[n] + 0.3));
       divTitle(...DIV_TEXT.title, lt + 1);
       divNumeral(lt);
       // every change lands with a small punch-in; the box gauge strikes on
       // the beat at 4.0 with a hard one and a short shake
-      const bump = [1, 2.5, 3.5, 5, 6.5].reduce(
+      const bump = DIV_T.slice(0, 5).reduce(
         (b, at) => b + Math.max(0, 1 - Math.abs(lt - at - 0.08) / 0.16),
         0,
       );
@@ -3590,7 +3626,7 @@
       };
       const optic =
         lt < 3.5
-          ? seg(lt, 2.5, 2.92)
+          ? seg(lt, 2.0, 2.42)
           : lt < 5
             ? 1 - seg(lt, 3.5, 3.75)
             : seg(lt, 5.0, 5.42);
@@ -3675,9 +3711,9 @@
         );
       };
       const notes = DIV_TEXT.callouts;
-      callout(1.05, 2.5, [40, 1.5], 1, 226, notes.iron);
-      callout(1.2, 3.5, [34, 156], -1, 828, notes.rounds);
-      callout(2.5, 3.6, [78, -14], 1, 226, notes.optic);
+      callout(0.8, 2.0, [40, 1.5], 1, 226, notes.iron);
+      callout(0.95, 3.5, [34, 156], -1, 828, notes.rounds);
+      callout(2.0, 3.6, [78, -14], 1, 226, notes.optic);
       callout(5.05, 6.5, [78, -14], 1, 226, notes.optic);
       callout(5.3, 6.5, [236, 17], 1, 226, notes.noComp);
       callout(6.6, 8.1, [236, 7], 1, 226, notes.comp);
@@ -3686,7 +3722,8 @@
     }
 
     // A number rolling digit by digit, left to right, from `from` to `to`
-    // over [t0, t1]; from null, it is hidden until t0.
+    // over [t0, t1]; from null, it is hidden until t0. A rolling first digit
+    // is never 0.
     function divRoll(from, to, lt, t0, t1) {
       if (lt < t0) return from;
       if (lt >= t1) return to;
@@ -3695,7 +3732,7 @@
         .map((ch, k) =>
           lt >= t0 + ((t1 - t0) * (k + 1)) / to.length
             ? ch
-            : String(Math.floor(r() * 10)),
+            : String(Math.floor(r() * (k ? 10 : 9)) + (k ? 0 : 1)),
         )
         .join("");
     }
@@ -3725,10 +3762,12 @@
     }
 
     // Section 2: power factor. One example load, 160 gr at 1075 ft/s, rolls
-    // in and lands at 172 on 9.0; the bullet then runs up the PF scale past
-    // the Minor floor (125) and the Major floors (160 Open, 170 Standard),
-    // and on 9.5 everything flips to Major in one cascade: the verdict, the
-    // switch, the C and D points and the target, held until the push at 10.5.
+    // in; on 9.0 the bullet runs up the PF scale past the Minor floor (125)
+    // and the Major floors (160 Open, 170 Standard), the PF counting up with
+    // it, and lands at 172 on 9.5, where everything flips to Major in one
+    // cascade: the verdict, the switch, the C and D points and the target,
+    // held until the push at 10.5. The verdict slot stays empty until then,
+    // so it never contradicts the number.
     const DIV_PF = { t: 9.0, dur: 0.5, from: 100, to: 172, major: 9.5 };
     // the bullet's PF at lt (it eases out, so it slows into 172)
     const divPfAt = (lt) =>
@@ -3743,14 +3782,15 @@
       DIV_PF.dur *
         (1 - Math.cbrt(1 - (v - DIV_PF.from) / (DIV_PF.to - DIV_PF.from)));
     function divPower(lt) {
-      const family = divFamily();
       const P = DIV_TEXT.power;
       divTitle(...P.title, lt - 8.05);
       const S = 112;
       const y = 500;
       const wt = divRoll(null, "160", lt, 8.3, 8.5);
       const vel = divRoll(null, "1075", lt, 8.5, 8.75);
-      const pf = divRoll(null, "172", lt, 8.8, 9.0);
+      // the PF waits for its operands, then reads the bullet's PF (floored,
+      // so it reaches 172 only as the bullet lands)
+      const pf = lt >= DIV_PF.t ? String(Math.floor(divPfAt(lt))) : null;
       // the term labels, English over Korean, and the verdict's on the right
       [
         [96, ...P.terms[0], 8.2, "left"],
@@ -3805,10 +3845,10 @@
       if (pf) {
         digits(pf, 1170, y, S, {
           weight: 800,
-          color: `rgba(244,245,247,${rolling(8.8, 9.0)})`,
+          color: `rgba(244,245,247,${rolling(DIV_PF.t, DIV_PF.major)})`,
         });
-        // underlined as it lands, then red when it scores Major
-        const ul = ease.outExpo(seg(lt, 9.0, 9.35));
+        // underlined as it counts up, then red when it scores Major
+        const ul = ease.out3(seg(lt, DIV_PF.t, DIV_PF.t + DIV_PF.dur));
         const red = ease.outExpo(seg(lt, DIV_PF.major, DIV_PF.major + 0.3));
         ctx.fillStyle = "rgba(244,245,247,0.85)";
         ctx.fillRect(1172, y + 24, 3 * 0.62 * S * ul, 6);
@@ -3819,7 +3859,7 @@
       [
         ["×", 400, 8.45, 80],
         ["÷", 850, 8.75, 56],
-        ["=", 1090, 8.8, 80],
+        ["=", 1090, DIV_PF.t, 80],
       ].forEach(([op, x, at, size]) => {
         const p = fade(at);
         if (p <= 0) return;
@@ -3840,53 +3880,39 @@
         digits("1000", 878, y, 56, { weight: 700, color: C.dim });
       }
       ctx.restore();
-      // example tag
+      // example tag (its Korean already carries the English, so both uses it)
+      const en = opt.lang === "en";
       ctx.save();
       ctx.globalAlpha *= ease.out3(seg(lt, 8.6, 8.9));
-      text(divPick(P.example), 98, 560, {
+      text(P.example[en ? 0 : 1], 98, 560, {
         size: 14,
         weight: 700,
         tracking: 3,
         color: C.dim,
-        family,
+        family: en ? SANS : KR,
       });
       ctx.restore();
-      // the verdict: an empty slot, MINOR once the bullet clears 125, then
-      // MAJOR on the cascade
+      // the verdict: an empty slot while the PF counts up, flipping over to
+      // MAJOR as it lands, on the cascade
       const slot = ease.out3(seg(lt, 8.56, 8.86));
-      const vIn = ease.outBack(seg(lt, divPfCross(125), divPfCross(125) + 0.2));
       const fq = seg(lt, DIV_PF.major, DIV_PF.major + 0.2);
       if (slot > 0) {
         ctx.save();
         ctx.translate(1824 - 112, 462);
-        if (vIn < 1) {
-          ctx.globalAlpha *= slot * (1 - clamp(vIn));
+        ctx.scale(1, Math.max(0.02, Math.abs(Math.cos(fq * Math.PI))));
+        ctx.beginPath();
+        ctx.roundRect(-112, -44, 224, 88, 44);
+        if (fq < 0.5) {
+          ctx.globalAlpha *= slot;
           ctx.setLineDash([6, 6]);
-          ctx.beginPath();
-          ctx.roundRect(-112, -44, 224, 88, 44);
           ctx.strokeStyle = "rgba(255,255,255,0.3)";
           ctx.lineWidth = 1.5;
           ctx.stroke();
           ctx.setLineDash([]);
-          ctx.globalAlpha = 1;
-        }
-        if (vIn > 0) {
-          const major = fq >= 0.5;
-          ctx.scale(
-            vIn,
-            vIn * Math.max(0.02, Math.abs(Math.cos(fq * Math.PI))),
-          );
-          ctx.beginPath();
-          ctx.roundRect(-112, -44, 224, 88, 44);
-          if (major) {
-            ctx.fillStyle = C.red;
-            ctx.fill();
-          } else {
-            ctx.strokeStyle = C.white;
-            ctx.lineWidth = 2.5;
-            ctx.stroke();
-          }
-          text(major ? "MAJOR" : "MINOR", 0, 15, {
+        } else {
+          ctx.fillStyle = C.red;
+          ctx.fill();
+          text("MAJOR", 0, 15, {
             size: 42,
             weight: 800,
             tracking: 1,
@@ -4128,7 +4154,6 @@
     // Section 3: the line-up, each gun inked in as a blueprint, then solid,
     // over its name, its kit and its power factors; Classic and Revolver below.
     function divLineup(lt) {
-      const family = divFamily();
       const t0 = DIV_PUSH[1];
       // the line-up keeps breathing through the hold with a slow push-in
       // about the frame's centre; the labels ride with their guns
@@ -4161,9 +4186,11 @@
         });
         ctx.save();
         ctx.globalAlpha *= ease.out3(seg(lt2, 0.15, 0.45));
-        // English has no second name line, so its rows close up
+        // English has no second name line, so its rows close up; both sets
+        // the English kit with the Korean name and kit under it
+        const ko = opt.lang === "ko";
         const en = opt.lang === "en";
-        if (!en)
+        if (ko)
           text(d.ko, lx, 680, {
             size: 15,
             weight: 500,
@@ -4171,17 +4198,23 @@
             align: "center",
             family: KR,
           });
-        text(divPick(d.gear), lx, en ? 688 : 714, {
-          size: en ? 15 : 16,
-          weight: 700,
-          tracking: en ? 1.5 : 0,
-          color: C.dim,
-          align: "center",
-          family,
-        });
+        divText(
+          [d.gear[0], ko ? d.gear[1] : `${d.ko} — ${d.gear[1]}`],
+          lx,
+          ko ? 714 : en ? 688 : 682,
+          {
+            size: ko ? 16 : 15,
+            weight: 700,
+            tracking: ko ? 0 : 1.5,
+            color: C.dim,
+            align: "center",
+          },
+          24,
+          15,
+        );
         const major = d.cells[3];
         const pw = divPillW("MINOR") + (major ? divPillW("MAJOR") + 8 : 0);
-        divPills(lx + pw / 2, en ? 728 : 752, major, false);
+        divPills(lx + pw / 2, ko ? 752 : en ? 728 : 746, major, false);
         ctx.restore();
       });
       // Classic and Revolver
@@ -4206,12 +4239,14 @@
         const nw = layout(`+ ${name}`, font(800, 24), 1).width;
         ctx.save();
         ctx.globalAlpha *= ease.out3(seg(lt, ta + 0.15, ta + 0.45));
-        text(divPick(sub), x + 56 + nw + 16, 848, {
-          size: 18,
-          weight: 500,
-          color: C.dim,
-          family,
-        });
+        divText(
+          sub,
+          x + 56 + nw + 16,
+          848,
+          { size: 18, weight: 500, color: C.dim },
+          22,
+          16,
+        );
         ctx.restore();
       });
     }
