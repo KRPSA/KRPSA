@@ -12,7 +12,7 @@ vm.runInNewContext(await readFile(new URL('../reel.js', import.meta.url), 'utf8'
 const { CUES, DURATION, MARKS, SHOTS, TARGETS } = sandbox.window.KRPSAReel;
 
 const SR = 48000;
-const N = Math.ceil((DURATION + 0.5) * SR);
+const N = Math.round(DURATION * SR);
 // Music and effects go to separate buses, so the music alone can tape-stop into
 // slow motion and duck under the shots; each has a dry pair and a reverb send.
 const bus = () => ({
@@ -549,6 +549,9 @@ const [DIVI, FLYI] = MARKS.inserts;
 voice.pad(0, AM, 6.0, 0.8, 700);
 voice.pad(6.0, AM, 2.0, 1, 1400);
 [[8, AM], [10, F], [12, C]].forEach(([t, n]) => voice.pad(t, n, Math.min(2.0, DIVI.at - t), 0.9, 600));
+// The C bar that the Divisions chapter cuts into resumes after it, on the
+// Targets & scoring downbeat, so the music runs on into the G.
+voice.pad(I(13), C, I(14) - I(13), 0.9, 600);
 [[14, G]].forEach(([t, n]) => voice.pad(I(t), n, 2.0, 0.9, 600));
 // The Divisions chapter: a lighter groove under the equipment morphs.
 {
@@ -579,7 +582,9 @@ for (let t = 2; t < 5.75; t += BEAT / 2) voice.bass(t, 33, BEAT / 2, 0.7, 260 + 
 for (let t = 2; t < 5.75; t += BEAT / 4) voice.hat(t, (t * 4) % 2 < 1 ? 0.6 : 0.35);
 voice.kick(6.5, 0.9);
 for (let t = 8; t < 16; t += 1) if (t < DIVI.at - 0.2 || t >= DIVI.at + 0.2) voice.kick(I(t), 0.55);
-for (let t = 8; t < 16; t += 2) voice.bass(I(t), t < 10 ? 33 : t < 12 ? 29 : t < 14 ? 31 : 31, 1.8, 0.5, 300);
+// The bass stops at the Divisions chapter like the pads, and its bar resumes after it.
+for (let t = 8; t < 16; t += 2) voice.bass(I(t), t < 10 ? 33 : t < 12 ? 29 : t < 14 ? 31 : 31, t < DIVI.at ? Math.min(1.8, DIVI.at - t) : 1.8, 0.5, 300);
+voice.bass(I(13), 31, I(14) - I(13), 0.5, 300);
 // Stage drums follow the speed ramps: half time in slow motion, sixteenth
 // hats while fast-forwarding.
 for (let t = I(16); t < I(STAGE_OUT); t += BEAT) {
@@ -790,7 +795,7 @@ let peak = 0;
 for (let ch = 0; ch < 2; ch++) {
   for (let k = 0; k < N; k++) {
     const t = k / SR;
-    const fadeOut = t > DURATION - 1 ? Math.max(0, (DURATION + 0.4 - t) / 1.4) : 1;
+    const fadeOut = t > DURATION - 1.4 ? Math.max(0, (DURATION - t) / 1.4) : 1;
     const v = Math.tanh((dry[ch][k] + rv[ch][k] * 0.9) * 1.1) * fadeOut;
     mix[ch][k] = v;
     peak = Math.max(peak, Math.abs(v));
