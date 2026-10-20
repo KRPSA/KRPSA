@@ -53,8 +53,8 @@
     line: "rgba(255,255,255,0.09)",
     red: "#ec2242",
     redDeep: "#cf173c",
-    card: "#c79d66",
-    cardEdge: "#9c7643",
+    card: "#c8a57a", // kraft cardboard
+    cardEdge: "#8c6b45",
     steel: "#d5dae0",
     brass: "#d9a944",
     blue: "#2b55ad",
@@ -143,7 +143,7 @@
     [1050, "T1", "A", [-0.02, -0.06]],
     [1300, "T1", "A", [0.03, 0.02]],
     [1620, "T2", "A", [-0.04, -0.04]],
-    [1880, "T2", "C", [-0.12, 0.1]],
+    [1880, "T2", "C", [-0.11, 0.04]],
     [2260, "P1", "S", 0],
     [3100, "SW", "A", [0.01, -0.05]],
     [3360, "SW", "C", [0.1, 0.08]],
@@ -163,9 +163,9 @@
     [13200, "T4", "A", [-0.02, -0.05]],
     [13430, "T4", "A", [0.03, 0.01]],
     [13760, "T5", "A", [-0.04, -0.03]],
-    [13990, "T5", "A", [-0.06, 0.04]],
+    [13990, "T5", "A", [-0.05, 0.0]],
     [14330, "T8", "A", [0.01, -0.03]],
-    [14560, "T8", "D", [0.19, 0.2]],
+    [14560, "T8", "D", [0.17, 0.12]],
   ].map(([ms, target, zone, hit], i, list) => ({
     ms,
     st: ms / 1000,
@@ -843,14 +843,6 @@
     }
     return { pts, cum, len: cum[cum.length - 1], closed };
   }
-  const octagon = (w, h, c, cy = 0) => {
-    const x = w / 2;
-    const t = cy - h / 2;
-    const b = cy + h / 2;
-    return shape(
-      `M ${-x + c},${t} L ${x - c},${t} L ${x},${t + c} L ${x},${b - c} L ${x - c},${b} L ${-x + c},${b} L ${-x},${b - c} L ${-x},${t + c} Z`,
-    );
-  };
   const rect = (x, y, w, h) =>
     shape(`M ${x},${y} L ${x + w},${y} L ${x + w},${y + h} L ${x},${y + h} Z`);
 
@@ -955,17 +947,58 @@
     rail: shape("M 204.6,45.4 L 140.1,45.4"),
   };
 
-  // IPSC target (46 × 58 cm cardboard) in centimetres, centre origin, y down:
-  // A zone centre rectangle, C zone around it, D zone to the edge.
+  // The IPSC Target (rule book Appendix B2), in centimetres, centre of the
+  // cardboard at the origin, y down. The scoring area is a 45 × 57 octagon
+  // (the D line) with a 0.5 cm non-scoring border, so the cardboard is 46 × 58.
+  // The zones are not concentric: the C line starts at the two ends of the D
+  // line's top edge, so the D zone exists only at the sides and the bottom,
+  // and the A zone is a tall octagon (15 wide, 32.5 high) just under the top
+  // edge, narrow at the top and the bottom. All three zones' shoulders sit at
+  // the same height (19 cm below the top of the D line).
+  const TARGET_TOP = -28.5; // the D line's top edge
+  const tgtPts = (pairs, close) =>
+    shape(
+      pairs
+        .map(([x, y], k) => `${k ? "L" : "M"} ${x},${y + TARGET_TOP}`)
+        .join(" ") + (close ? " Z" : ""),
+    );
   const TGT = {
-    outer: octagon(46, 58, 8),
-    c: octagon(30, 45, 5, -2),
-    a: rect(-7.5, -20, 15, 28),
+    // cardboard: the D line pushed out by 0.5 cm
+    outer: shape(
+      "M -7.742,-29 L 7.742,-29 L 23,-9.674 L 23,9.674 L 7.742,29 L -7.742,29 L -23,9.674 L -23,-9.674 Z",
+    ),
+    d: tgtPts(
+      [[-7.5, 0], [7.5, 0], [22.5, 19], [22.5, 38], [7.5, 57], [-7.5, 57], [-22.5, 38], [-22.5, 19]],
+      true,
+    ),
+    // an open line from one end of the top edge to the other
+    c: tgtPts(
+      [[-7.5, 0], [-15, 19], [-15, 33.5], [-5, 45], [5, 45], [15, 33.5], [15, 19], [7.5, 0]],
+      false,
+    ),
+    a: tgtPts(
+      [[-2.5, 2.5], [2.5, 2.5], [7.5, 19], [7.5, 27.5], [2.5, 35], [-2.5, 35], [-7.5, 27.5], [-7.5, 19]],
+      true,
+    ),
+    aCentre: TARGET_TOP + 18.75, // the A zone runs from 2.5 to 35 cm below the top
   };
-  // IPSC Popper, 85 cm tall, centimetres, base-centre origin, y down.
-  const POPPER = shape(
-    "M -10,0 L 10,0 L 6,-57 Q 15,-58 15,-70 Q 15,-85 0,-85 Q -15,-85 -15,-70 Q -15,-58 -6,-57 Z",
-  );
+  // IPSC Popper (Appendix C2): 85 cm tall, a 30 cm disc whose centre is 70 cm
+  // up, on a body 20 cm wide at the disc and 15 cm at the ground. Centimetres,
+  // base-centre origin, y down.
+  const POPPER = (() => {
+    const r = 15;
+    const cy = 70;
+    const neck = 10;
+    const joint = cy - Math.sqrt(r * r - neck * neck); // 58.8 cm up
+    const a0 = Math.atan2(cy - joint, neck); // the right joint, seen from the disc centre (y down)
+    const pts = ["M -7.5,0", "L 7.5,0", `L ${neck},${-joint}`];
+    for (let k = 1; k < 40; k++) {
+      const a = a0 - (k / 40) * (Math.PI + 2 * Math.abs(a0));
+      pts.push(`L ${(r * Math.cos(a)).toFixed(3)},${(-cy + r * Math.sin(a)).toFixed(3)}`);
+    }
+    pts.push(`L ${-neck},${-joint}`, "Z");
+    return shape(pts.join(" "));
+  })();
 
   // ------------------------------------------------------------------ factory
   function create(canvas, options = {}) {
@@ -1716,7 +1749,9 @@
         ctx.fillStyle = rgba(C.red, a);
         ctx.fill("evenodd");
       };
-      ring(TGT.outer, TGT.c, o.hiD ?? 0);
+      // the D zone is the scoring area outside the C line: the open C line
+      // closes along the top edge, where it meets the D line anyway
+      ring(TGT.d, TGT.c, o.hiD ?? 0);
       ring(TGT.c, TGT.a, o.hiC ?? 0);
       ring(TGT.a, null, o.hiA ?? 0);
       tracePath(ctx, TGT.outer, build);
@@ -1725,13 +1760,14 @@
         : rgba(o.edge ?? C.cardEdge, 1);
       ctx.lineWidth = (o.edgeW ?? 2) * px;
       ctx.stroke();
+      // zone lines: thin and faint, as the rules want them (not visible from 10 m)
       ctx.setLineDash([1.6, 1.1]);
       ctx.strokeStyle = o.noShoot ? "rgba(0,0,0,0.18)" : "rgba(70,45,15,0.6)";
       ctx.lineWidth = Math.max(0.28, 1.2 * px);
-      tracePath(ctx, TGT.c, o.zones ?? 1);
-      ctx.stroke();
-      tracePath(ctx, TGT.a, o.zones ?? 1);
-      ctx.stroke();
+      [TGT.d, TGT.c, TGT.a].forEach((z) => {
+        tracePath(ctx, z, o.zones ?? 1);
+        ctx.stroke();
+      });
       ctx.setLineDash([]);
       if (o.letters) {
         ctx.globalAlpha *= o.letters;
@@ -1739,9 +1775,9 @@
         ctx.fillStyle = o.noShoot ? "rgba(0,0,0,0.3)" : "rgba(70,45,15,0.75)";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("A", 0, -15.5);
-        ctx.fillText("C", 0, 15);
-        ctx.fillText("D", 0, 25);
+        ctx.fillText("A", 0, -3); // low in the A zone, clear of the holes
+        ctx.fillText("C", 0, 11.5);
+        ctx.fillText("D", 0, 22.5);
       }
       ctx.restore();
     }
@@ -1815,7 +1851,7 @@
       const B = project(cam, b);
       line(A[0], A[1], B[0], B[1], color, width);
     }
-    function poly3(cam, pts, fill, stroke, width = 1.5) {
+    function poly3(cam, pts, fill, stroke, width = 1.5, open = false) {
       pts = clipNear(cam, pts);
       if (pts.length < 2) return;
       ctx.beginPath();
@@ -1824,7 +1860,7 @@
         if (k) ctx.lineTo(q[0], q[1]);
         else ctx.moveTo(q[0], q[1]);
       });
-      ctx.closePath();
+      if (!open) ctx.closePath();
       if (fill) {
         ctx.fillStyle = fill;
         ctx.fill();
@@ -2595,7 +2631,7 @@
       if (ta > 0) {
         ctx.save();
         ctx.globalAlpha *= ta;
-        drawTarget(T[0], T[1] + 6 * 1.7, 1.7, { letters: 0 });
+        drawTarget(T[0], T[1] - TGT.aCentre * 1.7, 1.7, { letters: 0 });
         ctx.restore();
       }
       // nodes and labels as the line reaches each point
@@ -2803,7 +2839,7 @@
       const aimY = 430; // the A zone centre sits here when the sights are on
       const s = 6.4; // target px per cm
       const G = 0.56; // the gun's scale in the sight picture
-      const tgtY = aimY + 6 * s; // target centre (A zone centre is 6 cm above it)
+      const tgtY = aimY - TGT.aCentre * s; // target centre (the A zone centre is above it)
       const settle = ease.inOut3(seg(t, SIGHT.open, SIGHT.settle));
       const wob = (1 - settle) * (kind === "iron" ? 46 : 34);
       let sx =
@@ -4367,12 +4403,12 @@
       ctx.rotate(-Math.PI / 2);
       dimension(-29 * s, 29 * s, 0, "58 cm", da);
       ctx.restore();
-      // bullet holes
+      // bullet holes: two in A, one in C, one in D (cm from the centre)
       [
-        [-2, -9, 13.5],
-        [4, -4, 13.52],
-        [-12, 12, 13.75],
-        [17, 23, 14.0],
+        [-2, -12, 13.5],
+        [4, -6, 13.52],
+        [-12, 4, 13.75],
+        [17, 12, 14.0],
       ].forEach(([hx, hy, at]) => {
         if (t < at) return;
         ctx.fillStyle = "#14100b";
@@ -5706,6 +5742,7 @@
           null,
           zl,
           1,
+          true, // the C line is open: it starts and ends on the top edge
         );
         poly3(
           cam,
@@ -8288,6 +8325,14 @@
     CAPTIONS,
     SHOTS: SHOTS.map((shot) => ({ ...shot, t: ins(shot.t) })),
     TARGETS,
+    // target geometry in cm (centre origin, y down) for the tests
+    TARGET: {
+      outer: TGT.outer.pts,
+      d: TGT.d.pts,
+      c: TGT.c.pts,
+      a: TGT.a.pts,
+      popper: POPPER.pts,
+    },
     STAGE: {
       points: STAGE_POINTS,
       time: STAGE_TIME,
