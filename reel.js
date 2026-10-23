@@ -681,7 +681,7 @@
         gear: ["IRON SIGHTS", "아이언 사이트"],
         kit: {},
         // matrix: optic, compensator, handgun, Major PF threshold (0: Minor only)
-        cells: ["no", "no", "list", 0],
+        cells: ["no", "no", "list", 0, "no"],
       },
       {
         en: "PRODUCTION OPTICS",
@@ -692,7 +692,7 @@
         ],
         gear: ["OPTIC", "옵틱"],
         kit: { optic: 1 },
-        cells: ["req", "no", "list", 0],
+        cells: ["req", "no", "list", 0, "no"],
       },
       {
         en: "STANDARD",
@@ -702,9 +702,9 @@
           "박스 게이지 통과 · 아이언 사이트",
         ],
         gear: ["BOX GAUGE", "박스 게이지"],
-        kit: { flush: 1 },
+        kit: { flush: 1, magwell: 0.3 },
         // the asterisk: Major in Standard also needs a calibre (text.standardMajor)
-        cells: ["no", "no", "box", "170*"],
+        cells: ["no", "no", "box", "170*", "inBox"],
       },
       {
         en: "OPTICS",
@@ -714,8 +714,8 @@
           "슬라이드 옵틱 · 컴펜세이터 불가",
         ],
         gear: ["OPTIC · NO COMP", "옵틱 · 컴펜세이터 불가"],
-        kit: { optic: 1 },
-        cells: ["req", "no", "any", 0],
+        kit: { optic: 1, magwell: 0.65 },
+        cells: ["req", "no", "any", 0, "yes"],
       },
       {
         en: "OPEN",
@@ -725,8 +725,8 @@
           "옵틱 · 컴펜세이터 허용, 장비가 가장 자유로움",
         ],
         gear: ["OPTIC + COMP", "옵틱 + 컴펜세이터"],
-        kit: { optic: 1, comp: 1, extMag: 1 },
-        cells: ["yes", "yes", "any", 160],
+        kit: { optic: 1, comp: 1, extMag: 1, magwell: 1 },
+        cells: ["yes", "yes", "any", 160, "yes"],
       },
     ],
     // the equipment matrix: row labels and cell words
@@ -735,6 +735,7 @@
       ["COMPENSATOR", "컴펜세이터"],
       ["HANDGUN", "총기"],
       ["POWER FACTOR", "파워 팩터"],
+      ["MAGWELL", "맥웰"],
     ],
     words: {
       no: ["NO", "불가"],
@@ -743,6 +744,7 @@
       list: ["LISTED ONLY", "승인 목록 권총만"],
       box: ["BOX GAUGE", "박스 게이지"],
       any: ["ANY MODEL", "모델 제한 없음"],
+      inBox: ["IN THE BOX", "박스 안이면 허용"],
     },
     text: {
       title: ["IPSC HANDGUN", "DIVISIONS", "IPSC 핸드건 디비전"],
@@ -771,6 +773,14 @@
           ["No barrel porting either", "총열 포팅도 불가"],
         ],
         comp: ["COMPENSATOR", ["Allowed in Open", "오픈에서 허용"]],
+        magwell: [
+          "MAGWELL",
+          ["Allowed if it fits the box", "박스 안에 들어가면 허용"],
+        ],
+        magwellOpen: [
+          "MAGWELL",
+          ["Any size: no box in Optics and Open", "옵틱스·오픈은 박스가 없어 크기 제한 없음"],
+        ],
       },
       power: {
         title: ["MINOR · MAJOR", "POWER FACTOR", "파워 팩터 — 마이너와 메이저"],
@@ -1103,7 +1113,11 @@
           )
       : [];
     const ready = Promise.all(
-      [...fontLoads, loadImage("krpsa-logo.png")].map((p) => p.catch(() => {})),
+      [
+        ...fontLoads,
+        loadImage("krpsa-logo.png"),
+        loadImage("ipsc-crest.png"),
+      ].map((p) => p.catch(() => {})),
     ).then(() => {
       layoutCache.clear();
     });
@@ -1622,6 +1636,61 @@
         ),
       );
       if (blue > 0) withPad(() => strokeShape(GUN.magPad, blue));
+
+      // A magwell: a flared funnel around the base of the grip, sized 0..1
+      // (Standard's small enough to fit the box, Open's as big as it likes).
+      // magwellIn (0..1) drops it on from below, as the optic drops on from
+      // above. It sits on the frame, so it stays put when the magazine drops.
+      const mw = o.magwell ?? 0;
+      if (mw > 0) {
+        const inn = o.magwellIn ?? 1;
+        const h = 10 + 10 * mw;
+        const f = 2 + 9 * mw;
+        const e = 1 + 2 * mw;
+        const yt = GUN.pad.top - h;
+        const yb = GUN.pad.top + e;
+        // the grip's back and front straps near the base, from the frame outline
+        const xl = (y) => (y < 128 ? 6.8 - (y - 110) * 0.267 : 2.0);
+        const xr = (y) => (y < 128 ? 63.9 - (y - 110) * 0.317 : 58.2);
+        const pts = [
+          [xl(yt) + 1, yt],
+          [xl(yb) - f, yb],
+          [xr(yb) + 0.6 * f, yb],
+          [xr(yt) - 1, yt],
+        ];
+        const trace = () => {
+          ctx.beginPath();
+          pts.forEach(([x, y]) => ctx.lineTo(x, y));
+          ctx.closePath();
+        };
+        ctx.save();
+        ctx.translate(0, (1 - ease.out3(inn)) * 12);
+        ctx.globalAlpha *= clamp(inn / 0.3);
+        solidLayer(() => {
+          trace();
+          ctx.fillStyle = g(yt, yb, "#515b6e", "#2a303a", "#1b1f26");
+          ctx.fill();
+          line(
+            xl(yb) - f + 1.5,
+            yb - 1.3,
+            xr(yb) + 0.6 * f - 1.5,
+            yb - 1.3,
+            "rgba(0,0,0,0.45)",
+            0.7,
+          );
+          trace();
+          ctx.strokeStyle = "rgba(255,255,255,0.3)";
+          ctx.lineWidth = px;
+          ctx.stroke();
+        });
+        if (blue > 0) {
+          trace();
+          ctx.strokeStyle = `rgba(244,245,247,${blue})`;
+          ctx.lineWidth = 1.6 * px;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
 
       // A soft highlight sweeping along the metal.
       if (o.sheen > 0 && o.sheen < 1 && solid > 0) {
@@ -3479,7 +3548,7 @@
           25,
           15,
         );
-      if (r < 2) {
+      if (r < 2 || r === 4) {
         divIcon(x - 14, y, v !== "no");
         word(DIV_WORDS[v], v === "no" ? C.dim : C.white, 40);
       } else if (r === 2) word(DIV_WORDS[v], v === "any" ? C.dim : C.white, 0);
@@ -3584,7 +3653,7 @@
         divText(
           DIV_TEXT.standardMajor.map((s) => `* ${s}`),
           x1,
-          818,
+          908,
           { size: 15, weight: 500, color: C.dim, align: "right" },
           22,
           14,
@@ -3706,6 +3775,15 @@
           : 1 - ease.inOut3(seg(lt, 5.05, 5.3));
       const box = lt < 5 ? seg(lt, 3.72, 4.0) : 1 - seg(lt, 5.0, 5.25);
       const dims = ease.out3(seg(lt, 4.1, 4.5)) * (1 - seg(lt, 4.95, 5.05));
+      // the magwell: a small one drops on in Standard (it must fit the box),
+      // grows in Optics and again in Open, where there is no box at all
+      const magwell =
+        lt < 5.05
+          ? 0.3
+          : lt < 6.7
+            ? lerp(0.3, 0.65, ease.inOut3(seg(lt, 5.05, 5.35)))
+            : lerp(0.65, 1, ease.outBack(seg(lt, 6.7, 7.0)));
+      const magwellIn = ease.outBack(seg(lt, 3.55, 3.85));
       divBox(pose, box, 0, "back");
       drawGun({
         ...pose,
@@ -3713,6 +3791,8 @@
         sheen: seg(lt, 0.6, 1.15),
         optic,
         flush,
+        magwell,
+        magwellIn,
         comp: seg(lt, 6.5, 6.85),
         extMag: ease.outBack(seg(lt, 7.0, 7.3)),
         ghost: {
@@ -3787,6 +3867,8 @@
       callout(5.05, 6.5, [78, -14], 1, 226, notes.optic);
       callout(5.3, 6.5, [236, 17], 1, 226, notes.noComp);
       callout(6.6, 8.1, [236, 7], 1, 226, notes.comp);
+      callout(3.9, 4.9, [-2, 139], -1, 828, notes.magwell);
+      callout(7.05, 8.1, [-8, 141], -1, 828, notes.magwellOpen);
       divRail(lt, act);
       divMatrix(lt);
     }
@@ -5402,7 +5484,7 @@
             0,
           );
           const pa = ease.out3(seg(dt, 0.05, 0.15)) * (1 - seg(dt, 0.55, 0.9));
-          const lbl = s.zone === "S" ? "+5" : `+${s.points} ${s.zone}`;
+          const lbl = s.zone === "S" ? "+5 A" : `+${s.points} ${s.zone}`;
           const w = layout(lbl, font(800, 22), 1).width + 20;
           ctx.save();
           ctx.globalAlpha *= pa * labelAlpha(P[0], P[1] + 8, w, 38);
@@ -5510,7 +5592,8 @@
         const landed = seg(st, s.st + IMPACT, s.st + IMPACT + 0.05);
         if (landed > 0) {
           ctx.globalAlpha *= ease.out3(landed);
-          text(s.zone === "S" ? "■" : s.zone, x1, y, {
+          // steel that falls scores like an A hit, so it is listed as one
+          text(s.zone === "S" ? "A" : s.zone, x1, y, {
             size: 18,
             weight: 800,
             align: "right",
@@ -7800,8 +7883,9 @@
       }
     }
 
-    // S8 — end card.
-    let logoLayer = null;
+    // S8 — end card: the IPSC crest and the KRPSA crest side by side (the
+    // Confederation and its Region, no separator), then the lettering.
+    const logoLayers = {};
     function sceneEnd(t) {
       if (t < 24.3) return;
       const iris = ease.inOut3(seg(t, 24.3, 24.75));
@@ -7818,25 +7902,27 @@
       ctx.scale(push, push);
       ctx.translate(-W / 2, -H / 2);
       const lt = t - 24.5;
-      const img = images["krpsa-logo.png"];
       const fade = 1 - seg(t, 27.2 + TAIL, 28 + TAIL);
       ctx.globalAlpha = fade;
-      if (img) {
-        const h = 420;
+      // a crest rises into place, then a light sweeps across it
+      const crest = (name, cx, cy, h, d) => {
+        const img = images[name];
+        if (!img) return;
         const w = (img.width / img.height) * h;
-        const p = ease.out5(seg(lt, 0, 0.7));
+        const p = ease.out5(seg(lt, d, d + 0.7));
         ctx.save();
-        ctx.translate(560, 540);
+        ctx.translate(cx, cy);
         ctx.scale(lerp(0.86, 1, p), lerp(0.86, 1, p));
         ctx.beginPath();
         ctx.rect(-w / 2 - 10, h / 2 - (h + 20) * p, w + 20, (h + 20) * p);
         ctx.clip();
         // The light sweep is composited on the crest's own layer, so it only
         // touches the crest's pixels and never the background around it.
-        const sw = seg(lt, 0.4, 1.6);
+        const sw = seg(lt, d + 0.4, d + 1.6);
         if (sw > 0 && sw < 1) {
-          logoLayer ||= document.createElement("canvas").getContext("2d");
-          const lc = logoLayer;
+          const lc = (logoLayers[name] ||= document
+            .createElement("canvas")
+            .getContext("2d"));
           const iw = Math.round(w);
           const ih = Math.round(h);
           if (lc.canvas.width !== iw || lc.canvas.height !== ih) {
@@ -7857,8 +7943,14 @@
           ctx.drawImage(lc.canvas, -w / 2, -h / 2, w, h);
         } else ctx.drawImage(img, -w / 2, -h / 2, w, h);
         ctx.restore();
-      }
-      kinetic("KRPSA", 820, 545, {
+      };
+      // The two crests have the same outer height, but the KRPSA crest's black
+      // rim vanishes into the dark background, so its perceived outline is the
+      // yellow border inside it, about 6 % smaller. It is drawn 6 % taller so
+      // the two shields read as the same size.
+      crest("ipsc-crest.png", 410, 540, 380, 0);
+      crest("krpsa-logo.png", 773, 540, 402, 0.12);
+      kinetic("KRPSA", 1023, 545, {
         size: 190,
         t: lt - 0.15,
         tracking: -6,
@@ -7866,7 +7958,7 @@
       });
       ctx.save();
       ctx.globalAlpha *= ease.out3(seg(lt, 0.5, 0.8));
-      text("KOREA PRACTICAL SHOOTING ASSOCIATION", 826, 600, {
+      text("KOREA PRACTICAL SHOOTING ASSOCIATION", 1029, 600, {
         size: 20,
         weight: 700,
         tracking: 5,
@@ -7874,16 +7966,16 @@
       ctx.restore();
       const lw = ease.outExpo(seg(lt, 0.55, 1.1)) * 600;
       ctx.fillStyle = C.red;
-      ctx.fillRect(826, 628, lw, 4);
+      ctx.fillRect(1029, 628, lw, 4);
       ctx.save();
       ctx.globalAlpha *= ease.out3(seg(lt, 0.8, 1.1));
-      text("IPSC  1976 — 2026  ·  50 YEARS", 826, 678, {
+      text("IPSC  1976 — 2026  ·  50 YEARS", 1029, 678, {
         size: 20,
         weight: 700,
         tracking: 4,
         color: C.red,
       });
-      text("DILIGENTIA · VIS · CELERITAS", 826, 714, {
+      text("DILIGENTIA · VIS · CELERITAS", 1029, 714, {
         size: 16,
         weight: 600,
         tracking: 4,
