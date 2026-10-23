@@ -53,8 +53,8 @@
     line: "rgba(255,255,255,0.09)",
     red: "#ec2242",
     redDeep: "#cf173c",
-    card: "#c79d66",
-    cardEdge: "#9c7643",
+    card: "#c8a57a", // kraft cardboard
+    cardEdge: "#8c6b45",
     steel: "#d5dae0",
     brass: "#d9a944",
     blue: "#2b55ad",
@@ -143,7 +143,7 @@
     [1050, "T1", "A", [-0.02, -0.06]],
     [1300, "T1", "A", [0.03, 0.02]],
     [1620, "T2", "A", [-0.04, -0.04]],
-    [1880, "T2", "C", [-0.12, 0.1]],
+    [1880, "T2", "C", [-0.11, 0.04]],
     [2260, "P1", "S", 0],
     [3100, "SW", "A", [0.01, -0.05]],
     [3360, "SW", "C", [0.1, 0.08]],
@@ -163,9 +163,9 @@
     [13200, "T4", "A", [-0.02, -0.05]],
     [13430, "T4", "A", [0.03, 0.01]],
     [13760, "T5", "A", [-0.04, -0.03]],
-    [13990, "T5", "A", [-0.06, 0.04]],
+    [13990, "T5", "A", [-0.05, 0.0]],
     [14330, "T8", "A", [0.01, -0.03]],
-    [14560, "T8", "D", [0.19, 0.2]],
+    [14560, "T8", "D", [0.17, 0.12]],
   ].map(([ms, target, zone, hit], i, list) => ({
     ms,
     st: ms / 1000,
@@ -681,7 +681,7 @@
         gear: ["IRON SIGHTS", "아이언 사이트"],
         kit: {},
         // matrix: optic, compensator, handgun, Major PF threshold (0: Minor only)
-        cells: ["no", "no", "list", 0],
+        cells: ["no", "no", "list", 0, "no"],
       },
       {
         en: "PRODUCTION OPTICS",
@@ -692,7 +692,7 @@
         ],
         gear: ["OPTIC", "옵틱"],
         kit: { optic: 1 },
-        cells: ["req", "no", "list", 0],
+        cells: ["req", "no", "list", 0, "no"],
       },
       {
         en: "STANDARD",
@@ -702,9 +702,9 @@
           "박스 게이지 통과 · 아이언 사이트",
         ],
         gear: ["BOX GAUGE", "박스 게이지"],
-        kit: { flush: 1 },
+        kit: { flush: 1, magwell: 0.3 },
         // the asterisk: Major in Standard also needs a calibre (text.standardMajor)
-        cells: ["no", "no", "box", "170*"],
+        cells: ["no", "no", "box", "170*", "inBox"],
       },
       {
         en: "OPTICS",
@@ -714,8 +714,8 @@
           "슬라이드 옵틱 · 컴펜세이터 불가",
         ],
         gear: ["OPTIC · NO COMP", "옵틱 · 컴펜세이터 불가"],
-        kit: { optic: 1 },
-        cells: ["req", "no", "any", 0],
+        kit: { optic: 1, magwell: 0.65 },
+        cells: ["req", "no", "any", 0, "yes"],
       },
       {
         en: "OPEN",
@@ -725,8 +725,8 @@
           "옵틱 · 컴펜세이터 허용, 장비가 가장 자유로움",
         ],
         gear: ["OPTIC + COMP", "옵틱 + 컴펜세이터"],
-        kit: { optic: 1, comp: 1, extMag: 1 },
-        cells: ["yes", "yes", "any", 160],
+        kit: { optic: 1, comp: 1, extMag: 1, magwell: 1 },
+        cells: ["yes", "yes", "any", 160, "yes"],
       },
     ],
     // the equipment matrix: row labels and cell words
@@ -735,6 +735,7 @@
       ["COMPENSATOR", "컴펜세이터"],
       ["HANDGUN", "총기"],
       ["POWER FACTOR", "파워 팩터"],
+      ["MAGWELL", "맥웰"],
     ],
     words: {
       no: ["NO", "불가"],
@@ -743,6 +744,7 @@
       list: ["LISTED ONLY", "승인 목록 권총만"],
       box: ["BOX GAUGE", "박스 게이지"],
       any: ["ANY MODEL", "모델 제한 없음"],
+      inBox: ["IN THE BOX", "박스 안이면 허용"],
     },
     text: {
       title: ["IPSC HANDGUN", "DIVISIONS", "IPSC 핸드건 디비전"],
@@ -771,6 +773,14 @@
           ["No barrel porting either", "총열 포팅도 불가"],
         ],
         comp: ["COMPENSATOR", ["Allowed in Open", "오픈에서 허용"]],
+        magwell: [
+          "MAGWELL",
+          ["Allowed if it fits the box", "박스 안에 들어가면 허용"],
+        ],
+        magwellOpen: [
+          "MAGWELL",
+          ["Any size: no box in Optics and Open", "옵틱스·오픈은 박스가 없어 크기 제한 없음"],
+        ],
       },
       power: {
         title: ["MINOR · MAJOR", "POWER FACTOR", "파워 팩터 — 마이너와 메이저"],
@@ -843,14 +853,6 @@
     }
     return { pts, cum, len: cum[cum.length - 1], closed };
   }
-  const octagon = (w, h, c, cy = 0) => {
-    const x = w / 2;
-    const t = cy - h / 2;
-    const b = cy + h / 2;
-    return shape(
-      `M ${-x + c},${t} L ${x - c},${t} L ${x},${t + c} L ${x},${b - c} L ${x - c},${b} L ${-x + c},${b} L ${-x},${b - c} L ${-x},${t + c} Z`,
-    );
-  };
   const rect = (x, y, w, h) =>
     shape(`M ${x},${y} L ${x + w},${y} L ${x + w},${y + h} L ${x},${y + h} Z`);
 
@@ -873,99 +875,167 @@
     if (s.closed && p >= 1) ctx.closePath();
   }
 
-  // CZ Shadow 2, right side, muzzle to the right, in millimetres. Outline,
-  // trigger guard, grip panel and base pad are traced from a reference photo
-  // (mirrored) and scaled to the 217 mm overall length; the slide rides
-  // inside the frame rails, so only a narrow band of slide shows.
+  // CZ Shadow 2, right side (ejection port), muzzle to the right, in
+  // millimetres, slide top at y = 0. Every outline is traced from a side
+  // projection of a 3D model of the pistol (scratch pipeline: depth map →
+  // per-part masks → simplified polygons), scaled to the 217 mm overall
+  // length, so the slide/frame split, the squared trigger guard, the grip
+  // panel, the sights and the controls sit where they do on the real gun.
   const GUN = {
     cx: 108.5,
     cy: 80,
-    muzzle: [217, 19.3],
-    port: [119, 12.5],
-    sight: [211.3, 1.2],
-    barrel: rect(93, 12.4, 124, 13.8),
+    muzzle: [217.0, 16.6],
+    port: [111.3, 13.8], // centre of the ejection port
+    sight: [205.2, 4.6], // fibre-optic front sight
+    rearSight: [41.3, 3.5],
+    barrel: rect(93.6, 11.1, 124.9, 11.1),
     slide: shape(
-      "M 19.2,23.6 L 27.8,0.3 L 30.8,0.3 L 31.2,0.0 L 33.6,0.3 L 36.1,1.2 L 40.4,1.8 L 41.9,2.5 L 43.1,2.5 L 44.7,3.1 L 45.9,3.1 L 46.2,3.4 L 47.4,3.4 L 47.7,3.7 L 51.1,4.3 L 52.9,4.9 L 54.5,7.4 L 102.1,7.4 L 102.4,7.7 L 113.4,7.4 L 114.3,7.7 L 114.6,7.4 L 196.6,7.1 L 196.9,6.8 L 196.6,2.1 L 197.2,1.8 L 198.7,1.8 L 200.0,2.8 L 205.2,2.8 L 205.5,3.1 L 206.4,2.8 L 206.7,3.1 L 207.6,3.1 L 208.9,2.1 L 210.7,2.1 L 211.0,1.8 L 211.3,2.5 L 211.3,4.6 L 212.2,6.4 L 212.2,7.1 L 213.5,8.6 L 214.1,9.8 L 214.1,10.7 L 215.9,12.0 L 215.9,12.6 L 216.5,13.5 L 216.5,15.3 L 216.8,15.7 L 216.8,21.5 L 216.5,22.1 L 199.0,22.1 L 198.7,22.4 L 156.1,22.4 L 155.8,22.7 L 113.1,22.7 L 112.8,23.0 L 70.1,23.0 L 69.8,23.3 L 27.2,23.3 L 26.9,23.6 Z",
+      "M 29.2,0.0 L 32.7,0.0 L 33.0,0.8 L 36.5,1.5 L 37.8,2.5 L 51.1,5.0 L 52.4,5.5 L 54.1,7.8 L 198.9,7.6 L 199.6,7.0 L 199.4,4.0 L 198.9,3.5 L 198.9,2.3 L 199.6,1.3 L 203.4,2.8 L 208.9,2.8 L 210.5,1.8 L 211.5,1.8 L 212.7,2.8 L 212.7,5.5 L 214.7,10.6 L 215.2,11.1 L 216.2,11.1 L 216.7,11.6 L 216.7,13.1 L 217.5,13.3 L 217.5,14.9 L 216.7,15.1 L 216.7,23.7 L 24.4,23.7 L 24.4,22.4 L 27.4,13.3 L 27.4,10.6 L 29.7,9.6 Z",
     ),
     port_: shape(
-      "M 100,8.2 L 138,8.2 L 138,16.4 Q 138,17.6 136.8,17.6 L 101.2,17.6 Q 100,17.6 100,16.4 Z",
+      "M 126.9,7.6 L 126.9,12.3 L 122.6,17.4 L 120.1,18.9 L 117.8,19.6 L 110.8,20.1 L 97.7,19.9 L 97.4,17.1 L 95.7,16.6 L 95.7,7.8 Z",
     ),
-    hood: rect(102.5, 9.6, 33, 6.4),
-    extractor: shape("M 86,10.6 L 99,10.6 L 99,13.4 L 86,13.4 Z"),
+    hood: rect(97.0, 8.5, 29.6, 10.3), // the barrel hood seen through the port
+    extractor: rect(80.6, 11.6, 15.1, 5.5),
     frame: shape(
-      "M 216.5,22.4 L 215.9,25.5 L 214.4,27.3 L 214.4,37.4 L 214.1,37.8 L 213.8,40.8 L 212.9,42.4 L 213.2,45.4 L 211.3,48.8 L 207.3,50.0 L 174.8,50.0 L 174.2,48.5 L 173.3,48.5 L 169.6,49.7 L 144.1,49.7 L 140.7,48.5 L 136.7,47.9 L 135.5,48.5 L 134.9,49.4 L 134.0,49.4 L 133.1,50.0 L 132.7,50.6 L 131.2,51.9 L 129.7,54.6 L 129.4,57.1 L 129.1,57.4 L 129.1,58.9 L 128.8,59.2 L 128.8,64.1 L 129.1,64.5 L 129.1,69.1 L 129.4,69.4 L 129.1,70.6 L 129.4,70.9 L 129.4,74.0 L 129.7,74.3 L 129.4,75.2 L 130.0,77.0 L 129.7,77.0 L 126.6,80.4 L 125.1,81.3 L 124.2,82.6 L 123.2,82.6 L 122.3,83.2 L 119.2,84.1 L 116.5,84.1 L 116.2,84.4 L 98.4,83.8 L 98.1,83.5 L 96.5,83.5 L 96.2,83.2 L 94.1,82.9 L 90.4,81.6 L 81.8,77.3 L 80.9,77.3 L 80.6,77.0 L 77.5,77.0 L 75.0,78.0 L 72.3,80.4 L 72.3,81.3 L 72.0,81.3 L 70.7,82.9 L 71.1,84.7 L 70.4,86.2 L 70.1,88.7 L 69.5,89.3 L 68.9,93.0 L 68.3,93.6 L 67.4,98.2 L 66.8,99.1 L 65.8,103.7 L 64.9,105.9 L 64.9,107.7 L 64.3,108.3 L 63.7,111.7 L 63.1,112.6 L 62.5,116.0 L 61.8,116.9 L 60.9,121.5 L 60.3,122.8 L 60.3,124.0 L 59.7,124.9 L 59.4,126.5 L 57.9,127.7 L 57.2,133.2 L 57.5,133.5 L 57.5,135.7 L 58.2,137.5 L 58.2,139.3 L 58.8,140.3 L 58.8,141.2 L 12.4,141.2 L 12.1,140.9 L 9.7,140.6 L 8.4,140.0 L 7.5,139.0 L 6.9,139.0 L 6.0,138.4 L 4.5,136.6 L 4.1,132.6 L 3.8,132.3 L 3.8,130.4 L 4.1,130.1 L 3.8,126.1 L 4.5,124.3 L 4.1,123.4 L 4.8,123.1 L 5.7,118.5 L 6.3,117.6 L 6.3,116.6 L 7.2,113.9 L 7.2,112.6 L 8.1,110.8 L 8.1,109.3 L 8.7,108.0 L 8.7,107.1 L 8.4,106.8 L 8.7,106.8 L 9.4,105.9 L 9.7,103.4 L 10.3,102.8 L 10.6,100.4 L 10.9,100.1 L 11.8,95.5 L 12.4,94.5 L 14.3,85.9 L 14.9,85.3 L 15.2,82.9 L 16.7,82.0 L 17.3,80.4 L 22.9,71.5 L 25.9,65.7 L 26.5,63.8 L 26.5,62.6 L 26.9,62.3 L 26.9,57.7 L 26.5,57.4 L 26.2,55.2 L 24.7,52.2 L 23.2,51.0 L 23.2,50.3 L 20.1,47.9 L 16.7,46.7 L 9.7,46.0 L 9.4,45.7 L 7.5,45.7 L 5.4,45.1 L 2.9,43.6 L 1.1,43.0 L 1.1,42.4 L 0.5,41.7 L 0.5,40.5 L 0.8,40.2 L 4.8,40.2 L 6.9,40.8 L 11.2,41.1 L 11.5,40.8 L 12.4,40.8 L 14.9,39.0 L 16.1,37.8 L 17.3,35.3 L 17.6,32.2 L 18.6,29.8 L 19.2,23.9 L 26.9,23.9 L 27.2,23.6 L 69.8,23.6 L 70.1,23.3 L 112.8,23.3 L 113.1,23.0 L 155.8,23.0 L 156.1,22.7 L 198.7,22.7 L 199.0,22.4 Z",
+      "M 24.4,23.9 L 216.7,23.9 L 216.7,24.9 L 215.5,25.4 L 214.2,27.2 L 214.5,39.0 L 214.2,40.0 L 212.5,41.8 L 212.5,43.6 L 211.7,46.1 L 210.7,46.8 L 181.3,47.1 L 180.7,46.8 L 180.7,45.1 L 180.0,44.1 L 176.2,44.1 L 175.5,44.8 L 175.5,46.8 L 175.0,47.1 L 150.5,47.3 L 146.0,45.8 L 142.7,45.8 L 138.2,47.3 L 134.2,50.9 L 132.2,55.4 L 131.9,64.2 L 132.4,75.0 L 129.9,77.8 L 126.6,79.8 L 121.8,81.1 L 107.0,81.3 L 96.2,80.1 L 83.3,75.3 L 79.5,75.5 L 75.8,77.3 L 74.0,78.8 L 71.7,82.3 L 71.2,83.8 L 71.0,88.1 L 70.5,88.6 L 68.5,96.2 L 67.5,98.2 L 67.2,100.2 L 66.2,102.2 L 66.0,104.2 L 64.9,106.5 L 63.4,112.5 L 62.4,114.5 L 61.4,119.1 L 60.4,121.1 L 60.2,123.1 L 58.4,127.1 L 57.9,132.7 L 58.9,138.2 L 58.2,139.0 L 10.3,139.0 L 7.8,138.2 L 2.3,134.7 L 2.0,128.9 L 2.5,127.4 L 2.5,124.1 L 4.3,119.6 L 4.5,117.6 L 5.5,115.3 L 6.3,111.8 L 6.8,111.3 L 7.6,107.7 L 8.1,107.2 L 8.3,105.2 L 8.8,104.7 L 15.1,83.3 L 26.7,66.0 L 28.4,61.7 L 28.7,56.9 L 26.4,51.6 L 22.9,48.3 L 17.9,46.3 L 10.1,46.3 L 5.3,45.1 L 0.0,42.0 L 0.0,39.5 L 6.3,41.0 L 10.3,41.0 L 14.9,40.3 L 17.6,39.0 L 21.9,35.2 L 23.7,32.0 L 24.4,29.2 L 24.4,26.2 L 23.7,24.4 Z",
     ),
     guard: shape(
-      "M 121.7,54.6 L 120.5,52.8 L 118.0,50.3 L 114.3,48.2 L 113.4,48.2 L 113.1,47.9 L 108.5,47.9 L 106.0,49.1 L 103.9,49.7 L 104.2,53.1 L 103.9,53.4 L 103.6,57.1 L 103.3,57.4 L 103.3,60.8 L 104.8,65.4 L 105.7,66.0 L 105.7,66.9 L 107.6,69.1 L 108.2,69.1 L 108.5,70.0 L 110.6,71.5 L 111.3,71.5 L 111.9,72.1 L 113.7,72.7 L 113.4,73.7 L 112.5,73.7 L 112.2,74.0 L 109.1,74.0 L 108.8,73.7 L 107.9,73.7 L 106.4,72.7 L 104.8,72.4 L 104.8,71.8 L 101.4,68.8 L 99.3,64.8 L 98.1,60.5 L 98.1,58.9 L 97.1,58.3 L 97.1,57.7 L 96.5,57.1 L 96.5,55.9 L 97.1,54.9 L 97.8,56.2 L 99.0,63.2 L 99.6,64.5 L 100.5,64.8 L 100.8,64.5 L 100.5,61.4 L 100.2,61.1 L 100.2,56.8 L 100.8,54.9 L 100.5,49.7 L 100.2,49.4 L 97.1,49.4 L 96.8,49.7 L 96.5,51.9 L 95.6,52.2 L 95.6,51.6 L 94.4,50.6 L 94.1,49.7 L 92.5,49.7 L 91.9,50.3 L 91.9,51.0 L 91.6,50.6 L 90.7,50.6 L 88.5,51.9 L 88.2,52.8 L 87.3,52.8 L 83.6,56.8 L 82.1,60.8 L 82.1,62.6 L 81.8,62.9 L 81.8,65.7 L 82.1,66.0 L 82.1,67.2 L 82.7,69.4 L 84.6,72.7 L 85.5,73.0 L 85.5,73.7 L 86.1,74.6 L 89.8,77.3 L 94.4,79.2 L 97.1,79.5 L 97.5,79.8 L 99.3,79.8 L 99.6,80.1 L 104.2,80.1 L 104.5,80.4 L 119.9,80.4 L 121.1,79.8 L 122.3,78.6 L 122.3,77.7 L 123.2,77.3 L 123.8,76.1 L 123.8,74.6 L 124.2,74.3 L 123.5,60.8 L 123.2,60.5 L 122.9,57.7 L 122.3,55.9 L 121.7,55.2 Z",
+      "M 113.8,47.1 L 118.3,47.1 L 122.1,48.6 L 124.9,50.9 L 127.4,55.1 L 128.4,59.4 L 128.4,71.7 L 126.9,74.8 L 124.4,76.5 L 107.2,76.5 L 97.9,75.5 L 89.6,72.8 L 86.9,69.5 L 85.3,65.7 L 85.3,60.9 L 85.8,58.9 L 87.6,55.6 L 90.4,52.9 L 92.1,51.9 L 93.4,50.1 L 94.9,49.6 L 97.7,49.3 L 98.2,49.8 L 98.7,49.1 L 108.0,47.8 L 109.8,47.8 L 110.5,48.3 Z",
     ),
     grip: shape(
-      "M 62.8,47.9 L 63.7,48.5 L 63.7,50.3 L 63.4,50.6 L 63.4,51.9 L 62.8,53.1 L 62.5,54.9 L 61.8,55.2 L 61.8,57.1 L 60.9,59.2 L 60.9,60.8 L 60.3,62.3 L 60.3,64.1 L 59.1,64.8 L 56.6,67.5 L 56.3,72.1 L 56.9,72.4 L 56.9,74.9 L 55.7,78.3 L 55.4,80.7 L 54.2,83.2 L 54.2,85.0 L 53.6,85.9 L 52.6,90.9 L 51.7,92.7 L 51.1,96.4 L 50.5,97.3 L 50.2,99.8 L 49.0,102.8 L 49.0,104.0 L 48.3,105.3 L 48.3,106.2 L 47.4,106.8 L 47.4,109.3 L 46.2,112.6 L 45.9,115.4 L 45.3,116.3 L 44.7,119.7 L 43.4,122.2 L 43.1,125.2 L 42.2,126.5 L 42.2,129.8 L 41.9,130.1 L 42.2,142.7 L 39.4,143.0 L 39.1,142.7 L 36.7,142.7 L 35.1,142.1 L 30.5,142.4 L 29.6,141.8 L 26.2,141.8 L 25.9,142.1 L 13.7,141.8 L 13.4,140.9 L 11.5,140.9 L 8.4,139.7 L 7.5,138.7 L 6.6,136.0 L 6.6,134.1 L 6.3,133.8 L 6.3,126.5 L 6.6,126.1 L 6.9,122.2 L 7.8,120.6 L 8.1,117.2 L 9.1,115.7 L 9.4,113.0 L 10.0,111.7 L 10.6,108.7 L 11.2,107.7 L 11.2,106.2 L 11.8,105.0 L 11.8,103.4 L 13.0,100.4 L 13.0,97.3 L 13.7,97.0 L 14.3,95.8 L 16.1,88.4 L 17.3,86.6 L 18.3,83.8 L 18.9,82.9 L 19.8,82.3 L 19.8,81.6 L 20.4,81.0 L 21.3,78.6 L 24.1,74.6 L 25.3,71.8 L 27.5,69.1 L 30.2,63.8 L 30.8,60.8 L 31.2,60.5 L 31.5,57.4 L 31.8,57.1 L 31.8,54.9 L 34.2,54.6 L 34.8,53.1 L 36.1,53.1 L 37.3,52.2 L 40.1,51.3 L 40.7,50.6 L 42.8,50.0 L 47.7,47.6 L 59.7,47.6 L 60.0,47.9 Z",
+      "M 59.9,46.1 L 70.7,46.1 L 71.7,46.6 L 71.7,48.3 L 48.1,123.1 L 47.1,128.6 L 47.1,138.2 L 16.1,138.5 L 14.6,132.9 L 14.6,125.4 L 21.4,100.7 L 23.2,95.4 L 26.4,97.9 L 28.4,97.9 L 29.7,97.4 L 31.7,95.2 L 32.0,92.1 L 30.7,90.1 L 29.0,89.1 L 25.2,89.4 L 25.2,88.9 L 40.0,65.2 L 42.0,58.7 L 42.3,51.6 L 55.1,46.3 Z",
     ),
+    // the hammer, down: its spur between the slide and the beavertail, its
+    // body behind the frame; it swings about the hammer pin to cock
     hammer: shape(
-      "M 27.5,0.3 L 24.7,8.3 L 24.1,9.2 L 23.8,10.7 L 23.2,11.7 L 22.9,13.2 L 22.3,14.1 L 21.9,15.7 L 21.3,16.6 L 21.0,18.1 L 20.4,19.0 L 19.8,19.0 L 18.0,14.1 L 18.0,10.1 L 19.2,8.6 L 19.5,8.9 L 21.9,8.9 L 24.1,8.3 L 24.7,3.7 L 25.3,3.1 L 26.2,0.9 L 26.9,0.3 Z",
+      "M 21.6,10.6 L 25.7,9.9 L 27.4,11.1 L 27.4,24.2 L 28.7,27.2 L 32.7,34.2 L 34.0,38.3 L 32.4,42.3 L 28.7,41.8 L 26.7,37.3 L 23.7,28.2 L 19.6,24.7 L 19.1,20.1 L 20.1,14.1 Z",
     ),
     trigger: shape(
-      "M 94.4,49.7 L 96.5,49.7 L 96.8,49.4 L 99.3,49.4 L 99.6,49.1 L 102.1,49.1 L 102.4,48.8 L 104.5,48.8 L 104.8,48.5 L 107.3,48.5 L 107.6,48.2 L 108.2,48.2 L 107.6,48.2 L 106.0,49.1 L 104.2,49.4 L 103.9,49.7 L 104.2,53.1 L 103.9,53.4 L 103.6,57.1 L 103.3,57.4 L 103.3,60.8 L 103.6,61.1 L 103.6,62.0 L 103.9,62.3 L 103.9,63.2 L 104.5,64.1 L 104.5,64.8 L 104.8,65.4 L 105.7,66.0 L 105.7,66.9 L 106.4,67.8 L 107.6,69.1 L 108.2,69.1 L 108.2,69.7 L 110.6,71.5 L 111.3,71.5 L 111.9,72.1 L 113.4,72.4 L 113.7,72.7 L 113.7,73.4 L 113.4,73.7 L 112.5,73.7 L 112.2,74.0 L 109.1,74.0 L 108.8,73.7 L 107.9,73.7 L 106.4,72.7 L 104.8,72.4 L 104.8,71.8 L 101.4,68.8 L 99.3,64.8 L 99.3,64.1 L 98.7,62.9 L 98.7,62.0 L 98.4,61.7 L 98.4,60.8 L 98.1,60.5 L 98.1,58.9 L 97.1,58.3 L 97.1,57.7 L 96.5,57.1 L 96.5,55.9 L 97.1,54.9 L 97.8,56.2 L 97.8,57.4 L 98.4,58.9 L 98.4,60.8 L 98.7,61.1 L 99.0,63.2 L 99.9,64.8 L 100.5,64.8 L 100.8,64.5 L 100.5,61.4 L 100.2,61.1 L 100.2,56.8 L 100.5,56.5 L 100.5,55.2 L 100.8,54.9 L 100.5,49.7 L 100.2,49.4 L 97.1,49.4 L 96.8,49.7 L 96.5,51.9 L 95.9,51.9 L 95.6,52.2 L 95.6,51.6 L 94.4,50.6 Z",
+      "M 108.0,47.8 L 109.8,47.8 L 109.8,48.3 L 107.7,49.1 L 107.7,51.4 L 106.7,54.1 L 106.7,59.4 L 107.5,61.7 L 109.3,64.9 L 112.8,68.2 L 115.3,69.7 L 116.8,70.0 L 116.8,71.2 L 112.5,71.0 L 109.3,69.2 L 106.5,66.7 L 105.2,64.9 L 103.2,60.2 L 102.7,54.4 L 98.4,49.8 L 98.7,49.1 Z",
     ),
-    hammerPivot: [20.4, 20.6],
+    hammerPivot: [30.7, 38.6], // the hammer pin
     safety: shape(
-      "M 58.5,32.5 L 54.2,31.6 L 41.9,32.5 L 35.8,35.6 L 33.3,37.8 L 34.5,39.6 L 39.4,39.9 L 48.6,39.3 L 54.8,40.5 L 57.5,37.4 Z",
+      "M 49.1,26.4 L 56.4,26.4 L 65.7,30.0 L 66.5,31.0 L 66.5,33.0 L 64.7,38.0 L 62.4,39.0 L 48.1,39.5 L 45.6,39.5 L 44.3,39.0 L 42.3,37.0 L 41.3,34.7 L 41.0,32.7 L 41.5,30.5 L 42.3,29.0 L 44.8,26.7 Z",
     ),
-    stopPin: [83.9, 31.9],
-    screws: [
-      [64.9, 67.5],
-      [22.6, 93.6],
+    stopPin: [99.1, 31.7], // slide-stop pin, with its boss
+    // hammer pin, trigger pin and the sear pin: [x, y, r]
+    pins: [
+      [30.7, 38.6, 2.3],
+      [101.2, 40.8, 2.2],
+      [114.2, 30.2, 1.0],
     ],
-    magBody: shape("M 57.9,141.2 L 22.6,141.2 L 32.7,74.3 L 68.0,74.3 Z"),
+    screws: [
+      [23.7, 92.1],
+    ],
+    magBody: shape("M 55.9,139.0 L 16.6,139.0 L 34.7,78.5 L 74.0,78.5 Z"),
     magPad: shape(
-      "M 58.8,141.5 L 58.8,143.0 L 58.5,143.3 L 58.8,155.9 L 57.9,158.1 L 57.5,158.1 L 56.3,159.6 L 11.5,159.6 L 10.0,157.8 L 9.7,156.8 L 9.7,154.1 L 9.4,153.8 L 9.7,151.0 L 10.9,147.6 L 11.8,142.4 L 12.4,142.1 L 12.4,141.5 Z",
+      "M 11.1,139.2 L 58.2,139.2 L 57.9,156.1 L 56.6,157.6 L 55.4,158.1 L 33.5,158.1 L 33.2,158.8 L 14.3,158.8 L 14.3,158.3 L 11.8,156.1 L 11.6,152.6 L 15.4,140.2 Z",
     ),
-    magPivot: [36.4, 141.2],
+    magPivot: [36.3, 139.0],
+    // the base pad: its seam with the frame, its x extent there and the grip's
+    // slant (mm back per mm down), for the extended pad
+    pad: { top: 139.0, x0: 14.1, x1: 58.2, slope: 0.3 },
     serrRear: [
-      shape("M 64.3,11.0 L 61.8,20.0"),
-      shape("M 59.9,11.0 L 57.4,20.0"),
-      shape("M 55.4,11.0 L 52.9,20.0"),
-      shape("M 50.8,11.0 L 48.3,20.0"),
-      shape("M 46.2,11.0 L 43.7,20.0"),
-      shape("M 41.4,11.0 L 39.0,20.0"),
-      shape("M 37.1,11.0 L 34.7,20.0"),
-      shape("M 32.7,11.0 L 30.2,20.0"),
+      shape("M 41.0,9.6 L 36.7,20.6"),
+      shape("M 45.9,9.6 L 41.6,20.6"),
+      shape("M 50.9,9.6 L 46.5,20.6"),
+      shape("M 55.6,9.6 L 51.3,20.6"),
+      shape("M 59.9,9.6 L 55.6,20.6"),
+      shape("M 64.7,9.6 L 60.4,20.6"),
+      shape("M 69.4,9.6 L 65.0,20.6"),
+      shape("M 74.8,9.6 L 70.4,20.6"),
     ],
     serrFront: [
-      shape("M 192.1,11.0 L 188.1,21.8"),
-      shape("M 187.2,11.0 L 183.2,21.8"),
-      shape("M 182.2,11.0 L 178.2,21.8"),
-      shape("M 177.3,11.0 L 173.3,21.8"),
-      shape("M 172.2,11.0 L 168.2,21.8"),
-      shape("M 167.1,11.0 L 163.1,21.8"),
-      shape("M 162.4,11.0 L 158.4,21.8"),
-      shape("M 157.5,11.0 L 153.5,21.8"),
+      shape("M 166.7,9.6 L 162.3,20.6"),
+      shape("M 171.2,9.6 L 166.9,20.6"),
+      shape("M 176.2,9.6 L 171.9,20.6"),
+      shape("M 180.9,9.6 L 176.5,20.6"),
+      shape("M 186.0,9.6 L 181.7,20.6"),
+      shape("M 189.9,9.6 L 185.6,20.6"),
+      shape("M 194.9,9.6 L 190.6,20.6"),
+      shape("M 199.4,9.6 L 195.0,20.6"),
     ],
     grooves: [
-      shape("M 130.6,61.1 L 124.5,61.4"),
-      shape("M 130.6,62.9 L 124.5,63.2"),
-      shape("M 130.6,64.8 L 124.5,65.1"),
-      shape("M 130.6,66.6 L 124.5,66.9"),
-      shape("M 130.6,68.4 L 124.5,68.8"),
-      shape("M 130.6,70.3 L 124.5,70.6"),
-      shape("M 130.6,72.1 L 124.5,72.4"),
-      shape("M 130.6,74.0 L 124.5,74.3"),
-      shape("M 130.6,75.8 L 124.5,76.1"),
+      shape("M 67.5,82.6 L 71.5,82.6"),
+      shape("M 67.0,85.0 L 71.0,85.0"),
+      shape("M 66.8,87.4 L 70.8,87.4"),
+      shape("M 66.0,89.8 L 70.0,89.8"),
+      shape("M 65.3,92.2 L 69.3,92.2"),
+      shape("M 64.5,94.7 L 68.5,94.7"),
+      shape("M 63.7,97.1 L 67.8,97.1"),
+      shape("M 63.0,99.5 L 67.0,99.5"),
+      shape("M 62.2,101.9 L 66.3,101.9"),
+      shape("M 61.7,104.3 L 65.8,104.3"),
+      shape("M 60.7,106.7 L 64.7,106.7"),
+      shape("M 60.0,109.2 L 64.0,109.2"),
+      shape("M 59.2,111.6 L 63.2,111.6"),
+      shape("M 58.5,114.0 L 62.5,114.0"),
+      shape("M 58.0,116.4 L 62.0,116.4"),
+      shape("M 57.2,118.8 L 61.2,118.8"),
+      shape("M 56.2,121.2 L 60.2,121.2"),
+      shape("M 55.7,123.7 L 59.7,123.7"),
+      shape("M 54.9,126.1 L 59.0,126.1"),
+      shape("M 53.9,128.5 L 58.0,128.5"),
+      shape("M 53.7,130.9 L 57.7,130.9"),
+      shape("M 53.9,133.3 L 58.0,133.3"),
+      shape("M 54.2,135.7 L 58.2,135.7"),
     ],
-    rail: shape("M 204.6,45.4 L 140.1,45.4"),
+    rail: shape("M 139.0,45.3 L 212.5,45.3"), // the accessory rail's top edge
   };
 
-  // IPSC target (46 × 58 cm cardboard) in centimetres, centre origin, y down:
-  // A zone centre rectangle, C zone around it, D zone to the edge.
+  // The IPSC Target (rule book Appendix B2), in centimetres, centre of the
+  // cardboard at the origin, y down. The scoring area is a 45 × 57 octagon
+  // (the D line) with a 0.5 cm non-scoring border, so the cardboard is 46 × 58.
+  // The zones are not concentric: the C line starts at the two ends of the D
+  // line's top edge, so the D zone exists only at the sides and the bottom,
+  // and the A zone is a tall octagon (15 wide, 32.5 high) just under the top
+  // edge, narrow at the top and the bottom. All three zones' shoulders sit at
+  // the same height (19 cm below the top of the D line).
+  const TARGET_TOP = -28.5; // the D line's top edge
+  const tgtPts = (pairs, close) =>
+    shape(
+      pairs
+        .map(([x, y], k) => `${k ? "L" : "M"} ${x},${y + TARGET_TOP}`)
+        .join(" ") + (close ? " Z" : ""),
+    );
   const TGT = {
-    outer: octagon(46, 58, 8),
-    c: octagon(30, 45, 5, -2),
-    a: rect(-7.5, -20, 15, 28),
+    // cardboard: the D line pushed out by 0.5 cm
+    outer: shape(
+      "M -7.742,-29 L 7.742,-29 L 23,-9.674 L 23,9.674 L 7.742,29 L -7.742,29 L -23,9.674 L -23,-9.674 Z",
+    ),
+    d: tgtPts(
+      [[-7.5, 0], [7.5, 0], [22.5, 19], [22.5, 38], [7.5, 57], [-7.5, 57], [-22.5, 38], [-22.5, 19]],
+      true,
+    ),
+    // an open line from one end of the top edge to the other
+    c: tgtPts(
+      [[-7.5, 0], [-15, 19], [-15, 33.5], [-5, 45], [5, 45], [15, 33.5], [15, 19], [7.5, 0]],
+      false,
+    ),
+    a: tgtPts(
+      [[-2.5, 2.5], [2.5, 2.5], [7.5, 19], [7.5, 27.5], [2.5, 35], [-2.5, 35], [-7.5, 27.5], [-7.5, 19]],
+      true,
+    ),
+    aCentre: TARGET_TOP + 18.75, // the A zone runs from 2.5 to 35 cm below the top
   };
-  // IPSC Popper, 85 cm tall, centimetres, base-centre origin, y down.
-  const POPPER = shape(
-    "M -10,0 L 10,0 L 6,-57 Q 15,-58 15,-70 Q 15,-85 0,-85 Q -15,-85 -15,-70 Q -15,-58 -6,-57 Z",
-  );
+  // IPSC Popper (Appendix C2): 85 cm tall, a 30 cm disc whose centre is 70 cm
+  // up, on a body 20 cm wide at the disc and 15 cm at the ground. Centimetres,
+  // base-centre origin, y down.
+  const POPPER = (() => {
+    const r = 15;
+    const cy = 70;
+    const neck = 10;
+    const joint = cy - Math.sqrt(r * r - neck * neck); // 58.8 cm up
+    const a0 = Math.atan2(cy - joint, neck); // the right joint, seen from the disc centre (y down)
+    const pts = ["M -7.5,0", "L 7.5,0", `L ${neck},${-joint}`];
+    for (let k = 1; k < 40; k++) {
+      const a = a0 - (k / 40) * (Math.PI + 2 * Math.abs(a0));
+      pts.push(`L ${(r * Math.cos(a)).toFixed(3)},${(-cy + r * Math.sin(a)).toFixed(3)}`);
+    }
+    pts.push(`L ${-neck},${-joint}`, "Z");
+    return shape(pts.join(" "));
+  })();
 
   // ------------------------------------------------------------------ factory
   function create(canvas, options = {}) {
@@ -1043,7 +1113,11 @@
           )
       : [];
     const ready = Promise.all(
-      [...fontLoads, loadImage("krpsa-logo.png")].map((p) => p.catch(() => {})),
+      [
+        ...fontLoads,
+        loadImage("krpsa-logo.png"),
+        loadImage("ipsc-crest.png"),
+      ].map((p) => p.catch(() => {})),
     ).then(() => {
       layoutCache.clear();
     });
@@ -1178,7 +1252,7 @@
     // compensator on the muzzle.
     const GUN_KIT = {
       optic: shape(
-        "M 56,7.4 L 56.4,-1.5 Q 57,-12.5 64.5,-14.2 L 84.5,-14.2 Q 90,-14.2 92.8,-9.6 L 98.6,0.8 L 99,7.4 Z",
+        "M 56,7.8 L 56.4,-1.5 Q 57,-12.5 64.5,-14.2 L 84.5,-14.2 Q 90,-14.2 92.8,-9.6 L 98.6,0.8 L 99,7.8 Z",
       ),
       hood: shape(
         "M 62.5,-9.6 Q 63.6,-11.4 66,-11.4 L 83.6,-11.4 Q 87.2,-11.4 89.4,-8 L 91.6,-3.6 L 62.5,-3.6 Z",
@@ -1290,8 +1364,8 @@
         tracePath2(GUN.guard);
         // grey dust cover and rails above ≈46 mm, black guard, grip and tang below
         const fg = ctx.createLinearGradient(0, 22, 0, 160);
-        fg.addColorStop(0, "#73787f");
-        fg.addColorStop(0.15, "#5c6168");
+        fg.addColorStop(0, "#5f646c");
+        fg.addColorStop(0.15, "#4a4f57");
         fg.addColorStop(0.175, "#2a2d32");
         fg.addColorStop(0.2, "#212328");
         fg.addColorStop(1, "#16181b");
@@ -1333,14 +1407,21 @@
         ctx.lineWidth = 0.8;
         ctx.stroke();
         GUN.screws.forEach(([x, y]) => {
-          dot(x, y, 2.3, "#1b1d21");
-          dot(x, y, 0.9, "#4a4f57");
+          dot(x, y, 3.9, "#1b1d21");
+          dot(x, y, 2.6, "#2f3339");
+          dot(x, y, 1.4, "#4a4f57");
         });
         // ambidextrous safety and the slide-stop pin
-        fillShape(GUN.safety, g(30, 41, "#3c4047", "#1d2024"));
-        dot(GUN.stopPin[0], GUN.stopPin[1], 2.2, "#3a3e45");
+        fillShape(GUN.safety, g(26.5, 39.5, "#3c4047", "#1d2024"));
+        tracePath(ctx, GUN.safety);
+        ctx.strokeStyle = "rgba(255,255,255,0.22)";
+        ctx.lineWidth = 0.6 * px;
+        ctx.stroke();
+        dot(GUN.stopPin[0], GUN.stopPin[1], 4.6, "#1b1d21");
+        dot(GUN.stopPin[0], GUN.stopPin[1], 2.8, "#454a52");
+        GUN.pins.forEach(([x, y, r]) => dot(x, y, r, "#15171a"));
         // trigger blade, then a rim light so the black frame reads on dark backgrounds
-        fillShape(GUN.trigger, g(52, 78, "#5d636b", "#25282d"));
+        fillShape(GUN.trigger, g(47, 72, "#5d636b", "#25282d"));
         tracePath(ctx, GUN.trigger);
         ctx.strokeStyle = "rgba(255,255,255,0.35)";
         ctx.lineWidth = 0.8 * px;
@@ -1367,7 +1448,7 @@
       solidLayer(() => {
         fillShape(
           GUN.slide,
-          g(0, 23.6, "#1c1e22", "#2c2f34", "#5d6168", "#7d828a", "#8f949b"),
+          g(0, 24, "#1c1e22", "#2c2f34", "#5d6168", "#7d828a", "#8f949b"),
         );
         fillShape(GUN.port_, "#0c0e11");
         if (slide < 4) fillShape(GUN.hood, g(9.6, 16, "#a7adb5", "#5d636c"));
@@ -1378,7 +1459,7 @@
           tracePath(ctx, sh);
           ctx.stroke();
         });
-        line(32, 7.9, 197, 7.9, "rgba(255,255,255,0.28)", 0.5);
+        line(56, 8.0, 198, 8.0, "rgba(255,255,255,0.28)", 0.5);
       });
       if (blue > 0) {
         strokeShape(GUN.slide, blue);
@@ -1501,22 +1582,23 @@
       // lengthens it down the line of the grip; flush flattens it.
       const ext = (o.extMag ?? 0) * 22;
       const flat = 1 - 0.67 * (o.flush ?? 0);
+      const { top: padTop, x0: padX0, x1: padX1, slope: padSlope } = GUN.pad;
       const withPad = (fn) =>
         withMag(() => {
-          if (ext) ctx.translate(-0.151 * ext, ext);
+          if (ext) ctx.translate(-padSlope * ext, ext);
           if (flat !== 1) {
-            ctx.translate(0, 141.5);
+            ctx.translate(0, padTop);
             ctx.scale(1, flat);
-            ctx.translate(0, -141.5);
+            ctx.translate(0, -padTop);
           }
           fn();
         });
       if (ext > 0) {
         const body = [
-          [12.4, 140.5],
-          [58.8, 140.5],
-          [58.8 - 0.151 * ext, 142 + ext],
-          [12.4 - 0.151 * ext, 142 + ext],
+          [padX0, padTop - 1],
+          [padX1, padTop - 1],
+          [padX1 - padSlope * ext, padTop + 0.5 + ext],
+          [padX0 - padSlope * ext, padTop + 0.5 + ext],
         ];
         const trace = () => {
           ctx.beginPath();
@@ -1526,14 +1608,14 @@
         withMag(() => {
           solidLayer(() => {
             trace();
-            ctx.fillStyle = g(141, 142 + ext, "#2e3238", "#1d2024");
+            ctx.fillStyle = g(padTop, padTop + 1 + ext, "#2e3238", "#1d2024");
             ctx.fill();
             for (let k = 1; k < 4; k++) {
-              const y = 141.5 + (ext * k) / 4;
+              const y = padTop + (ext * k) / 4;
               line(
-                13 - 0.151 * (y - 141.5),
+                padX0 + 0.6 - padSlope * (y - padTop),
                 y,
-                58 - 0.151 * (y - 141.5),
+                padX1 - 0.8 - padSlope * (y - padTop),
                 y,
                 "rgba(0,0,0,0.35)",
                 0.6,
@@ -1550,10 +1632,65 @@
       }
       withPad(() =>
         solidLayer(() =>
-          fillShape(GUN.magPad, g(141, 160, "#34383e", "#16181b")),
+          fillShape(GUN.magPad, g(GUN.pad.top, 160, "#34383e", "#16181b")),
         ),
       );
       if (blue > 0) withPad(() => strokeShape(GUN.magPad, blue));
+
+      // A magwell: a flared funnel around the base of the grip, sized 0..1
+      // (Standard's small enough to fit the box, Open's as big as it likes).
+      // magwellIn (0..1) drops it on from below, as the optic drops on from
+      // above. It sits on the frame, so it stays put when the magazine drops.
+      const mw = o.magwell ?? 0;
+      if (mw > 0) {
+        const inn = o.magwellIn ?? 1;
+        const h = 10 + 10 * mw;
+        const f = 2 + 9 * mw;
+        const e = 1 + 2 * mw;
+        const yt = GUN.pad.top - h;
+        const yb = GUN.pad.top + e;
+        // the grip's back and front straps near the base, from the frame outline
+        const xl = (y) => (y < 128 ? 6.8 - (y - 110) * 0.267 : 2.0);
+        const xr = (y) => (y < 128 ? 63.9 - (y - 110) * 0.317 : 58.2);
+        const pts = [
+          [xl(yt) + 1, yt],
+          [xl(yb) - f, yb],
+          [xr(yb) + 0.6 * f, yb],
+          [xr(yt) - 1, yt],
+        ];
+        const trace = () => {
+          ctx.beginPath();
+          pts.forEach(([x, y]) => ctx.lineTo(x, y));
+          ctx.closePath();
+        };
+        ctx.save();
+        ctx.translate(0, (1 - ease.out3(inn)) * 12);
+        ctx.globalAlpha *= clamp(inn / 0.3);
+        solidLayer(() => {
+          trace();
+          ctx.fillStyle = g(yt, yb, "#515b6e", "#2a303a", "#1b1f26");
+          ctx.fill();
+          line(
+            xl(yb) - f + 1.5,
+            yb - 1.3,
+            xr(yb) + 0.6 * f - 1.5,
+            yb - 1.3,
+            "rgba(0,0,0,0.45)",
+            0.7,
+          );
+          trace();
+          ctx.strokeStyle = "rgba(255,255,255,0.3)";
+          ctx.lineWidth = px;
+          ctx.stroke();
+        });
+        if (blue > 0) {
+          trace();
+          ctx.strokeStyle = `rgba(244,245,247,${blue})`;
+          ctx.lineWidth = 1.6 * px;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
 
       // A soft highlight sweeping along the metal.
       if (o.sheen > 0 && o.sheen < 1 && solid > 0) {
@@ -1716,7 +1853,9 @@
         ctx.fillStyle = rgba(C.red, a);
         ctx.fill("evenodd");
       };
-      ring(TGT.outer, TGT.c, o.hiD ?? 0);
+      // the D zone is the scoring area outside the C line: the open C line
+      // closes along the top edge, where it meets the D line anyway
+      ring(TGT.d, TGT.c, o.hiD ?? 0);
       ring(TGT.c, TGT.a, o.hiC ?? 0);
       ring(TGT.a, null, o.hiA ?? 0);
       tracePath(ctx, TGT.outer, build);
@@ -1725,13 +1864,14 @@
         : rgba(o.edge ?? C.cardEdge, 1);
       ctx.lineWidth = (o.edgeW ?? 2) * px;
       ctx.stroke();
+      // zone lines: thin and faint, as the rules want them (not visible from 10 m)
       ctx.setLineDash([1.6, 1.1]);
       ctx.strokeStyle = o.noShoot ? "rgba(0,0,0,0.18)" : "rgba(70,45,15,0.6)";
       ctx.lineWidth = Math.max(0.28, 1.2 * px);
-      tracePath(ctx, TGT.c, o.zones ?? 1);
-      ctx.stroke();
-      tracePath(ctx, TGT.a, o.zones ?? 1);
-      ctx.stroke();
+      [TGT.d, TGT.c, TGT.a].forEach((z) => {
+        tracePath(ctx, z, o.zones ?? 1);
+        ctx.stroke();
+      });
       ctx.setLineDash([]);
       if (o.letters) {
         ctx.globalAlpha *= o.letters;
@@ -1739,9 +1879,9 @@
         ctx.fillStyle = o.noShoot ? "rgba(0,0,0,0.3)" : "rgba(70,45,15,0.75)";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("A", 0, -15.5);
-        ctx.fillText("C", 0, 15);
-        ctx.fillText("D", 0, 25);
+        ctx.fillText("A", 0, -3); // low in the A zone, clear of the holes
+        ctx.fillText("C", 0, 11.5);
+        ctx.fillText("D", 0, 22.5);
       }
       ctx.restore();
     }
@@ -1815,7 +1955,7 @@
       const B = project(cam, b);
       line(A[0], A[1], B[0], B[1], color, width);
     }
-    function poly3(cam, pts, fill, stroke, width = 1.5) {
+    function poly3(cam, pts, fill, stroke, width = 1.5, open = false) {
       pts = clipNear(cam, pts);
       if (pts.length < 2) return;
       ctx.beginPath();
@@ -1824,7 +1964,7 @@
         if (k) ctx.lineTo(q[0], q[1]);
         else ctx.moveTo(q[0], q[1]);
       });
-      ctx.closePath();
+      if (!open) ctx.closePath();
       if (fill) {
         ctx.fillStyle = fill;
         ctx.fill();
@@ -2420,7 +2560,7 @@
       // push into the rear sight: the camera becomes the shooter's eye
       const p = ease.inExpo(seg(t, 7.42, 8.0));
       if (p > 0) {
-        const [rx, ry] = [39, 2];
+        const [rx, ry] = GUN.rearSight;
         const fx = x + (rx - GUN.cx) * s;
         const fy = y + (ry - GUN.cy) * s;
         const ns = lerp(s, 34, p);
@@ -2552,8 +2692,8 @@
     function sceneLineOfSight(t) {
       if (t < 6.9 || t > 7.7) return;
       const o = gunPose(6.85);
-      const R = gunPoint(o, 39, 0.4);
-      const F = gunPoint(o, 211, 0.6);
+      const R = gunPoint(o, GUN.rearSight[0], 1.5);
+      const F = gunPoint(o, GUN.sight[0], GUN.sight[1] - 1.5);
       const E = [R[0] - 300, R[1] - 2];
       const T = [1760, R[1] + 6];
       const tip = ease.inOut3(seg(t, 6.95, 7.28));
@@ -2595,7 +2735,7 @@
       if (ta > 0) {
         ctx.save();
         ctx.globalAlpha *= ta;
-        drawTarget(T[0], T[1] + 6 * 1.7, 1.7, { letters: 0 });
+        drawTarget(T[0], T[1] - TGT.aCentre * 1.7, 1.7, { letters: 0 });
         ctx.restore();
       }
       // nodes and labels as the line reaches each point
@@ -2803,7 +2943,7 @@
       const aimY = 430; // the A zone centre sits here when the sights are on
       const s = 6.4; // target px per cm
       const G = 0.56; // the gun's scale in the sight picture
-      const tgtY = aimY + 6 * s; // target centre (A zone centre is 6 cm above it)
+      const tgtY = aimY - TGT.aCentre * s; // target centre (the A zone centre is above it)
       const settle = ease.inOut3(seg(t, SIGHT.open, SIGHT.settle));
       const wob = (1 - settle) * (kind === "iron" ? 46 : 34);
       let sx =
@@ -3408,7 +3548,7 @@
           25,
           15,
         );
-      if (r < 2) {
+      if (r < 2 || r === 4) {
         divIcon(x - 14, y, v !== "no");
         word(DIV_WORDS[v], v === "no" ? C.dim : C.white, 40);
       } else if (r === 2) word(DIV_WORDS[v], v === "any" ? C.dim : C.white, 0);
@@ -3513,7 +3653,7 @@
         divText(
           DIV_TEXT.standardMajor.map((s) => `* ${s}`),
           x1,
-          818,
+          908,
           { size: 15, weight: 500, color: C.dim, align: "right" },
           22,
           14,
@@ -3635,6 +3775,15 @@
           : 1 - ease.inOut3(seg(lt, 5.05, 5.3));
       const box = lt < 5 ? seg(lt, 3.72, 4.0) : 1 - seg(lt, 5.0, 5.25);
       const dims = ease.out3(seg(lt, 4.1, 4.5)) * (1 - seg(lt, 4.95, 5.05));
+      // the magwell: a small one drops on in Standard (it must fit the box),
+      // grows in Optics and again in Open, where there is no box at all
+      const magwell =
+        lt < 5.05
+          ? 0.3
+          : lt < 6.7
+            ? lerp(0.3, 0.65, ease.inOut3(seg(lt, 5.05, 5.35)))
+            : lerp(0.65, 1, ease.outBack(seg(lt, 6.7, 7.0)));
+      const magwellIn = ease.outBack(seg(lt, 3.55, 3.85));
       divBox(pose, box, 0, "back");
       drawGun({
         ...pose,
@@ -3642,6 +3791,8 @@
         sheen: seg(lt, 0.6, 1.15),
         optic,
         flush,
+        magwell,
+        magwellIn,
         comp: seg(lt, 6.5, 6.85),
         extMag: ease.outBack(seg(lt, 7.0, 7.3)),
         ghost: {
@@ -3710,12 +3861,14 @@
         );
       };
       const notes = DIV_TEXT.callouts;
-      callout(0.8, 2.0, [40, 1.5], 1, 226, notes.iron);
-      callout(0.95, 3.5, [34, 156], -1, 828, notes.rounds);
+      callout(0.8, 2.0, [GUN.rearSight[0], 1.5], 1, 226, notes.iron);
+      callout(0.95, 3.5, [34, 157], -1, 828, notes.rounds);
       callout(2.0, 3.6, [78, -14], 1, 226, notes.optic);
       callout(5.05, 6.5, [78, -14], 1, 226, notes.optic);
       callout(5.3, 6.5, [236, 17], 1, 226, notes.noComp);
       callout(6.6, 8.1, [236, 7], 1, 226, notes.comp);
+      callout(3.9, 4.9, [-2, 139], -1, 828, notes.magwell);
+      callout(7.05, 8.1, [-8, 141], -1, 828, notes.magwellOpen);
       divRail(lt, act);
       divMatrix(lt);
     }
@@ -4367,12 +4520,12 @@
       ctx.rotate(-Math.PI / 2);
       dimension(-29 * s, 29 * s, 0, "58 cm", da);
       ctx.restore();
-      // bullet holes
+      // bullet holes: two in A, one in C, one in D (cm from the centre)
       [
-        [-2, -9, 13.5],
-        [4, -4, 13.52],
-        [-12, 12, 13.75],
-        [17, 23, 14.0],
+        [-2, -12, 13.5],
+        [4, -6, 13.52],
+        [-12, 4, 13.75],
+        [17, 12, 14.0],
       ].forEach(([hx, hy, at]) => {
         if (t < at) return;
         ctx.fillStyle = "#14100b";
@@ -4535,16 +4688,6 @@
             ctx.setLineDash([]);
           }
           ctx.restore();
-          if (i === 1) {
-            ctx.strokeStyle = C.red;
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(cx + 34, cy + 64);
-            ctx.lineTo(cx + 78, cy + 144);
-            ctx.moveTo(cx + 78, cy + 64);
-            ctx.lineTo(cx + 34, cy + 144);
-            ctx.stroke();
-          }
         }
         text(name, cx + 112, cy + 48, { size: 15, weight: 800, tracking: 1.5 });
         text(sub, cx + 112, cy + 72, {
@@ -5168,7 +5311,8 @@
                 [px1, py1, WALL.z],
                 [px0, py1, WALL.z],
               ],
-              "#232831",
+              // translucent, so the targets behind the wall stay in view
+              "rgba(35,40,49,0.62)",
               "rgba(255,255,255,0.3)",
             );
             for (let y = 0.3; y < WALL.h; y += 0.3) {
@@ -5340,7 +5484,7 @@
             0,
           );
           const pa = ease.out3(seg(dt, 0.05, 0.15)) * (1 - seg(dt, 0.55, 0.9));
-          const lbl = s.zone === "S" ? "+5" : `+${s.points} ${s.zone}`;
+          const lbl = s.zone === "S" ? "+5 A" : `+${s.points} ${s.zone}`;
           const w = layout(lbl, font(800, 22), 1).width + 20;
           ctx.save();
           ctx.globalAlpha *= pa * labelAlpha(P[0], P[1] + 8, w, 38);
@@ -5448,7 +5592,8 @@
         const landed = seg(st, s.st + IMPACT, s.st + IMPACT + 0.05);
         if (landed > 0) {
           ctx.globalAlpha *= ease.out3(landed);
-          text(s.zone === "S" ? "■" : s.zone, x1, y, {
+          // steel that falls scores like an A hit, so it is listed as one
+          text(s.zone === "S" ? "A" : s.zone, x1, y, {
             size: 18,
             weight: 800,
             align: "right",
@@ -5706,6 +5851,7 @@
           null,
           zl,
           1,
+          true, // the C line is open: it starts and ends on the top edge
         );
         poly3(
           cam,
@@ -5730,13 +5876,28 @@
         );
         ctx.fill();
       };
+      // Two wooden laths, 34 cm apart, that the target is stapled to. They
+      // run up behind the cardboard to just under its top edge, so the target
+      // reads as carried by its stand rather than floating above it.
+      const LATH = "rgba(150,120,80,0.9)";
       const stand = (x0, x1) =>
         [x0, x1].forEach((u) =>
           seg3(
             cam,
             add([tg.pos[0], 0, tg.pos[2]], mul(right, u)),
-            add([tg.pos[0], 0.95, tg.pos[2]], mul(right, u)),
-            "rgba(150,120,80,0.9)",
+            add([tg.pos[0], 1.5, tg.pos[2]], mul(right, u)),
+            LATH,
+            2,
+          ),
+        );
+      // the same pair on a moving target, behind its paper (centre, local axes)
+      const laths = (centre, r2, up2) =>
+        [-0.17, 0.17].forEach((u) =>
+          seg3(
+            cam,
+            add(add(centre, mul(r2, u)), mul(up2, -0.3)),
+            add(add(centre, mul(r2, u)), mul(up2, 0.26)),
+            LATH,
             2,
           ),
         );
@@ -5829,6 +5990,7 @@
           "rgba(200,205,212,0.9)",
           3,
         );
+        laths(p.centre, r2, up2);
         paper(p.centre, r2, up2, false, flashOf(key));
         hitsOf(key).forEach(hole);
         const bw = 0.42;
@@ -5855,9 +6017,10 @@
           "rgba(150,155,165,0.8)",
           3,
         );
-        if (Math.abs(Math.cos(psi)) > 0.04)
+        if (Math.abs(Math.cos(psi)) > 0.04) {
+          laths([tg.pos[0], 1.24, tg.pos[2]], r2, UP);
           paper([tg.pos[0], 1.24, tg.pos[2]], r2, UP, false, flashOf(key));
-        else
+        } else
           seg3(
             cam,
             [tg.pos[0], 0.95, tg.pos[2]],
@@ -5907,6 +6070,7 @@
         const u = moverOffset(st);
         seg3(cam, at(u, 0.12), at(u, 0.95), "rgba(150,155,165,0.9)", 3);
         const c = moverCentre(st);
+        laths(c, right, UP);
         paper(c, right, UP, false, flashOf(key));
         hitsOf(key).forEach(hole);
         [-1, 1].forEach((sd) => {
@@ -7719,8 +7883,9 @@
       }
     }
 
-    // S8 — end card.
-    let logoLayer = null;
+    // S8 — end card: the IPSC crest and the KRPSA crest side by side (the
+    // Confederation and its Region, no separator), then the lettering.
+    const logoLayers = {};
     function sceneEnd(t) {
       if (t < 24.3) return;
       const iris = ease.inOut3(seg(t, 24.3, 24.75));
@@ -7737,25 +7902,27 @@
       ctx.scale(push, push);
       ctx.translate(-W / 2, -H / 2);
       const lt = t - 24.5;
-      const img = images["krpsa-logo.png"];
       const fade = 1 - seg(t, 27.2 + TAIL, 28 + TAIL);
       ctx.globalAlpha = fade;
-      if (img) {
-        const h = 420;
+      // a crest rises into place, then a light sweeps across it
+      const crest = (name, cx, cy, h, d) => {
+        const img = images[name];
+        if (!img) return;
         const w = (img.width / img.height) * h;
-        const p = ease.out5(seg(lt, 0, 0.7));
+        const p = ease.out5(seg(lt, d, d + 0.7));
         ctx.save();
-        ctx.translate(560, 540);
+        ctx.translate(cx, cy);
         ctx.scale(lerp(0.86, 1, p), lerp(0.86, 1, p));
         ctx.beginPath();
         ctx.rect(-w / 2 - 10, h / 2 - (h + 20) * p, w + 20, (h + 20) * p);
         ctx.clip();
         // The light sweep is composited on the crest's own layer, so it only
         // touches the crest's pixels and never the background around it.
-        const sw = seg(lt, 0.4, 1.6);
+        const sw = seg(lt, d + 0.4, d + 1.6);
         if (sw > 0 && sw < 1) {
-          logoLayer ||= document.createElement("canvas").getContext("2d");
-          const lc = logoLayer;
+          const lc = (logoLayers[name] ||= document
+            .createElement("canvas")
+            .getContext("2d"));
           const iw = Math.round(w);
           const ih = Math.round(h);
           if (lc.canvas.width !== iw || lc.canvas.height !== ih) {
@@ -7776,8 +7943,14 @@
           ctx.drawImage(lc.canvas, -w / 2, -h / 2, w, h);
         } else ctx.drawImage(img, -w / 2, -h / 2, w, h);
         ctx.restore();
-      }
-      kinetic("KRPSA", 820, 545, {
+      };
+      // The two crests have the same outer height, but the KRPSA crest's black
+      // rim vanishes into the dark background, so its perceived outline is the
+      // yellow border inside it, about 6 % smaller. It is drawn 6 % taller so
+      // the two shields read as the same size.
+      crest("ipsc-crest.png", 410, 540, 380, 0);
+      crest("krpsa-logo.png", 773, 540, 402, 0.12);
+      kinetic("KRPSA", 1023, 545, {
         size: 190,
         t: lt - 0.15,
         tracking: -6,
@@ -7785,7 +7958,7 @@
       });
       ctx.save();
       ctx.globalAlpha *= ease.out3(seg(lt, 0.5, 0.8));
-      text("KOREA PRACTICAL SHOOTING ASSOCIATION", 826, 600, {
+      text("KOREA PRACTICAL SHOOTING ASSOCIATION", 1029, 600, {
         size: 20,
         weight: 700,
         tracking: 5,
@@ -7793,16 +7966,16 @@
       ctx.restore();
       const lw = ease.outExpo(seg(lt, 0.55, 1.1)) * 600;
       ctx.fillStyle = C.red;
-      ctx.fillRect(826, 628, lw, 4);
+      ctx.fillRect(1029, 628, lw, 4);
       ctx.save();
       ctx.globalAlpha *= ease.out3(seg(lt, 0.8, 1.1));
-      text("IPSC  1976 — 2026  ·  50 YEARS", 826, 678, {
+      text("IPSC  1976 — 2026  ·  50 YEARS", 1029, 678, {
         size: 20,
         weight: 700,
         tracking: 4,
         color: C.red,
       });
-      text("DILIGENTIA · VIS · CELERITAS", 826, 714, {
+      text("DILIGENTIA · VIS · CELERITAS", 1029, 714, {
         size: 16,
         weight: 600,
         tracking: 4,
@@ -8288,6 +8461,14 @@
     CAPTIONS,
     SHOTS: SHOTS.map((shot) => ({ ...shot, t: ins(shot.t) })),
     TARGETS,
+    // target geometry in cm (centre origin, y down) for the tests
+    TARGET: {
+      outer: TGT.outer.pts,
+      d: TGT.d.pts,
+      c: TGT.c.pts,
+      a: TGT.a.pts,
+      popper: POPPER.pts,
+    },
     STAGE: {
       points: STAGE_POINTS,
       time: STAGE_TIME,

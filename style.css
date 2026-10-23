@@ -388,11 +388,48 @@ p {
 .sport .eyebrow {
   font-size: 12px;
 }
+/* The IPSC crest beside "What is IPSC?" */
+.sport-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+}
+.sport-crest {
+  flex: none;
+  align-self: center;
+  width: 152px;
+  height: auto;
+}
+/* The motto line above the three principle cards: the DVC monogram from the
+   crest, the label, and a rule out to the right edge. */
+.motto-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 60px;
+}
+.dvc-mark {
+  width: 46px;
+  height: auto;
+}
+.motto-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #2b3038;
+  white-space: nowrap;
+}
+.motto-heading::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #d6dbe0;
+}
 .principles {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 22px;
-  margin-top: 60px;
+  margin-top: 20px;
 }
 .principles article {
   background: white;
@@ -879,6 +916,12 @@ html[lang="en"] h2 {
   }
   .sport-heading p {
     font-size: 16px;
+  }
+  .sport-intro {
+    gap: 20px;
+  }
+  .sport-crest {
+    width: 104px;
   }
   .principles {
     grid-template-columns: 1fr;
@@ -1850,10 +1893,24 @@ a {
   margin: 0;
 }
 .training-signature {
+  display: inline-flex;
+  align-items: center;
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 2px;
   white-space: nowrap;
+}
+/* The two marks beside the KRPSA × MISIA lettering: the KRPSA crest and
+   MISIA's oval logo, both about 30 px tall. */
+.signature-logo-krpsa {
+  width: 24px;
+  height: auto;
+  margin-right: 12px;
+}
+.signature-logo-misia {
+  width: 56px;
+  height: auto;
+  margin-left: 12px;
 }
 .training-signature > span {
   color: #71859c;
@@ -1919,6 +1976,10 @@ a {
   font-weight: 500;
   letter-spacing: -0.6px;
   line-height: 1.4;
+}
+.misia-overview .misia-note {
+  font-weight: 650;
+  color: #0f2a17;
 }
 .misia-overview p {
   max-width: 760px;
