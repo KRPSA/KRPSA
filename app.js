@@ -28,6 +28,7 @@ const english = {
   sportBody:
     "IPSC stands for International Practical Shooting Confederation. Practical shooting is a dynamic sport that combines accuracy, power and speed across varied courses of fire.",
   sportLink: "Explore IPSC ↗",
+  mottoLabel: "THE IPSC MOTTO",
   accuracy: "Precision in every shot",
   accuracyBody:
     "Unwavering focus on the target.<br>Every shot makes a difference.",
@@ -168,6 +169,8 @@ Object.assign(english, {
   misiaTitle: "A shared commitment to safer sport.",
   misiaBody:
     "MISIA develops international standards for IPSC training and the accreditation of shooting instructors. Its mission is to promote, maintain and improve safety training for practical shooting athletes worldwide.",
+  misiaNote:
+    "Every instructor who delivers KRPSA's Action Air and live-fire courses is a certified instructor who has completed MISIA's live-fire instructor programme and earned its qualification.",
   misiaWebsite: "Visit MISIA ↗",
   directorAlt: "Wontaek Lim at a practical shooting competition",
 });
