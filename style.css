@@ -396,9 +396,9 @@ p {
 }
 .sport-crest {
   flex: none;
-  width: 84px;
+  align-self: center;
+  width: 152px;
   height: auto;
-  margin-top: -4px;
 }
 /* The motto line above the three principle cards: the DVC monogram from the
    crest, the label, and a rule out to the right edge. */
@@ -916,6 +916,12 @@ html[lang="en"] h2 {
   }
   .sport-heading p {
     font-size: 16px;
+  }
+  .sport-intro {
+    gap: 20px;
+  }
+  .sport-crest {
+    width: 104px;
   }
   .principles {
     grid-template-columns: 1fr;
@@ -1894,25 +1900,17 @@ a {
   letter-spacing: 2px;
   white-space: nowrap;
 }
-/* The two crests beside the KRPSA × MISIA lettering. The MISIA mark is black
-   on transparent, so it sits in a small pill of its own green. */
+/* The two marks beside the KRPSA × MISIA lettering: the KRPSA crest and
+   MISIA's oval logo, both about 30 px tall. */
 .signature-logo-krpsa {
   width: 24px;
   height: auto;
   margin-right: 12px;
 }
 .signature-logo-misia {
-  display: inline-grid;
-  place-items: center;
-  margin-left: 12px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #90ff4d;
-}
-.signature-logo-misia img {
-  display: block;
-  width: 54px;
+  width: 56px;
   height: auto;
+  margin-left: 12px;
 }
 .training-signature > span {
   color: #71859c;
