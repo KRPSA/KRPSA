@@ -7744,7 +7744,13 @@
     );
     CAPTIONS.sort((a, b) => a[0] - b[0]);
     CAPTIONS[CAPTIONS.length - 1][1] += TAIL; // the closing line stays with the end card
-    CUES.forEach((c) => (c.t = ins(c.t)));
+    CUES.forEach((c) => {
+      // a riser or a run of flutter stretches with the scene it plays under
+      // (but does not run on through an inserted chapter)
+      const across = INSERTS.some((x) => c.t < x.at && c.t + c.dur >= x.at);
+      if (c.dur != null && !across) c.dur = ins(c.t + c.dur) - ins(c.t);
+      c.t = ins(c.t);
+    });
     CUES.push(...DIV_INFO.cues.map((c) => ({ ...c, t: insStart(div) + c.lt })));
     CUES.sort((a, b) => a.t - b.t);
   }
