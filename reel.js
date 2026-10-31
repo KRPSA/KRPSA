@@ -343,25 +343,55 @@
   const timeWidth = (str) =>
     [...str].reduce((w, ch) => w + (ch === "." || ch === " " ? 0.3 : 0.62), 0);
 
+  // The opening's on-screen copy ([English, Korean]), here so that the font
+  // preloader can fetch every glyph. Times are in the original cut. Each text
+  // lands in under 0.3 s on the final timeline and then holds still: the
+  // three words of the motto build up and hold together, and so do the three
+  // range commands, each one entering 50 ms after a beat of the music (the
+  // stretch plays them at 2.30, 3.80 and 5.55 s; the beep is at 7.70).
+  const OPENING = {
+    // [Latin, English, Korean, slam]
+    dvc: [
+      ["DILIGENTIA", "ACCURACY", "정확", 0.03],
+      ["VIS", "POWER", "파워", 0.24],
+      ["CELERITAS", "SPEED", "속도", 0.45],
+    ],
+    // [command, its meaning, at]
+    commands: [
+      ["MAKE READY", ["Load and holster", "장전하고 준비"], 2.05],
+      ["ARE YOU READY?", ["Silence = ready", "준비됐습니까?"], 3.159],
+      ["STANDBY", ["Beep in 1–4 s", "대기 — 1~4초 뒤 신호음"], 4.433],
+    ],
+    seconds: ["s", "초"],
+    // STANDBY's heartbeat, on the music's eighth notes (6.24, 6.74, 7.24 s)
+    hearts: [4.939, 5.303, 5.667],
+    // the sights split: each half's name, and where its eye focuses
+    iron: {
+      name: ["IRON SIGHTS", "아이언 사이트"],
+      focus: ["FOCUS: FRONT SIGHT", "초점 → 가늠쇠"],
+    },
+    optic: { name: ["OPTIC", "옵틱"], focus: ["FOCUS: TARGET", "초점 → 표적"] },
+  };
+
   // Each line stays up long enough to read on the final timeline: at most
   // about 7 Korean or 15 English characters a second, and two seconds or more
   // (times here are in the original cut; the stretches slow some of it down).
   const CAPTIONS = [
     [
-      0.1,
-      2.08,
+      0.05,
+      2.02,
       "정확, 파워, 속도 — IPSC의 DVC.",
-      "Accuracy, power, speed: IPSC's DVC.",
+      "Accuracy, power, speed: the DVC.",
     ],
     [
-      2.1,
-      4.12,
-      "“Make Ready” → “Are You Ready?”",
-      "“Make Ready” → “Are You Ready?”",
+      2.162,
+      4.3,
+      "레인지 오피서의 구령: 장전, 그리고 준비 확인.",
+      "Range Officer: load, then the ready check.",
     ],
     [
-      4.2,
-      6.85,
+      4.442,
+      6.8,
       "“Standby” — 1~4초 뒤 신호음, 시작!",
       "“Standby” — the beep comes in 1–4 s.",
     ],
@@ -437,28 +467,36 @@
 
   // Sound cues, shared with scripts/reel-audio.mjs so picture and sound stay in sync.
   const CUES = [
-    { t: 0.08, type: "hit", v: 0.8 },
-    { t: 0.58, type: "hit", v: 0.85 },
-    { t: 1.08, type: "hit", v: 0.9 },
-    { t: 1.5, type: "swell" },
-    { t: 1.84, type: "whoosh", v: 0.7 },
-    { t: 2.05, type: "stab", v: 0.9 },
+    // the three words of the motto slam in, and the swell runs into the wipe
+    ...OPENING.dvc.map(([, , , t], k) => ({
+      t,
+      type: "hit",
+      v: 0.8 + k * 0.05,
+    })),
+    { t: 1.65, type: "swell" },
+    { t: 1.95, type: "whoosh", v: 0.7 },
+    // a stab on each range command; the magazine loads round by round
+    ...OPENING.commands.map(([, , t], k) => ({
+      t,
+      type: "stab",
+      v: k === 2 ? 1 : 0.9,
+    })),
     ...Array.from({ length: MAG }, (_, i) => ({
       t: 2.15 + i * 0.04,
       type: "click",
       v: 0.35,
     })),
-    { t: 3.05, type: "stab", v: 0.9 },
-    { t: 4.05, type: "stab", v: 1 },
-    { t: 4.1, type: "riser", dur: 1.72 },
-    { t: 4.5, type: "heart" },
-    { t: 5.0, type: "heart" },
-    { t: 5.5, type: "heart" },
+    // STANDBY: a riser that peaks 0.18 s before the beep (its dur is in
+    // seconds on the final timeline: ins() maps only a cue's start), and the
+    // heartbeat
+    { t: 4.47, type: "riser", dur: 1.92 },
+    ...OPENING.hearts.map((t) => ({ t, type: "heart" })),
     { t: BEEP, type: "beep" },
     { t: BEEP, type: "drop" },
     { t: 6.32, type: "whoosh", v: 0.6 },
     { t: FREEZE, type: "freeze" },
-    // line of sight, push in, split, settle, focus, a dry recoil, the divisions
+    // line of sight, push in, split, settle, focus, two dry recoils, the
+    // guns lowered, the divisions
     { t: 6.95, type: "blip", v: 0.45 },
     { t: 7.06, type: "tick", v: 0.45 },
     { t: 7.25, type: "tick", v: 0.45 },
@@ -469,9 +507,7 @@
     { t: 9.3, type: "blip", v: 0.6 },
     { t: 9.36, type: "blip", v: 0.5 },
     { t: 9.72, type: "whoosh", v: 0.35 },
-    { t: 10.85, type: "whoosh", v: 0.5 },
-    { t: 11.15, type: "tick", v: 0.7 },
-    { t: 11.4, type: "tick", v: 0.7 },
+    { t: 10.97, type: "whoosh", v: 0.35 },
     { t: 12.28, type: "whoosh", v: 0.45 },
     { t: 12.78, type: "whoosh", v: 0.6 },
     { t: 13.0, type: "hit", v: 0.6 },
@@ -968,6 +1004,7 @@
       CHAPTERS.map((c) => c.ko + c.sub.ko).join("") +
       "정확파워속도프로덕션디비전장비기준승인목록등재기계식조준기탄창발점수시간히트팩터철판노슛미스넘어져야득점존" +
       JSON.stringify(DIV) +
+      JSON.stringify(OPENING) +
       "≤≥×÷·";
     const fontLoads = document.fonts
       ? [
@@ -2108,171 +2145,133 @@
     }
 
     // ============================================================ SCENES
-    // S0 — DVC: Diligentia, Vis, Celeritas.
+    // S0 — DVC: Diligentia, Vis, Celeritas. The three words slam in a
+    // quarter second apart, side by side, each with its meaning under it, and
+    // hold together, still, until the wipe to the range commands runs over them.
     function sceneDVC(t) {
       if (t > 2.2) return;
       floorGrid(0.6 * ease.out3(seg(t, 0, 1.2)), t);
-      const words = [
-        ["DILIGENTIA", "ACCURACY", "01", 0.08],
-        ["VIS", "POWER", "02", 0.58],
-        ["CELERITAS", "SPEED", "03", 1.08],
-      ];
+      const lang = opt.lang;
+      const size = 112;
+      const tracking = -3;
+      const gap = 132;
+      const widths = OPENING.dvc.map(
+        ([la]) => layout(la, font(800, size), tracking).width,
+      );
+      const total = widths.reduce((a, b) => a + b, 0) + gap * 2;
+      const y = 528;
       // ruler under the words
-      const rw = ease.outExpo(seg(t, 0.0, 0.6)) * 1280;
-      ctx.save();
-      line(W / 2 - rw / 2, 680, W / 2 + rw / 2, 680, C.red, 2);
-      for (let k = -32; k <= 32; k++) {
+      const rw = ease.outExpo(seg(t, 0.0, 0.6)) * (total + 120);
+      const ry = y + 46;
+      line(W / 2 - rw / 2, ry, W / 2 + rw / 2, ry, C.red, 2);
+      for (let k = -45; k <= 45; k++) {
         const x = W / 2 + k * 20;
         if (Math.abs(x - W / 2) > rw / 2) continue;
-        line(
-          x,
-          680,
-          x,
-          680 + (k % 5 === 0 ? 16 : 7),
-          "rgba(255,255,255,0.3)",
-          1,
-        );
+        line(x, ry, x, ry + (k % 5 === 0 ? 16 : 7), "rgba(255,255,255,0.3)", 1);
       }
-      ctx.restore();
-      words.forEach(([la, en, n, at], k) => {
-        const next = k < 2 ? words[k + 1][3] - 0.07 : 1.4;
+      let x = W / 2 - total / 2;
+      OPENING.dvc.forEach(([la, en, ko, at], k) => {
+        const cx = x + widths[k] / 2;
+        x += widths[k] + gap;
         const lt = t - at;
-        if (lt < 0 || t > next + 0.4) return;
-        const out = t - next;
-        const impact = Math.max(0, 1 - lt / 0.12);
-        kinetic(la, W / 2, 620, {
-          size: 200,
+        if (lt < 0) return;
+        // the word lands in a quarter second, with a chromatic hit
+        kinetic(la, cx, y, {
+          size,
           t: lt,
-          out,
-          outDur: 0.18,
-          tracking: -4,
+          tracking,
           align: "center",
-          stagger: 0.022,
-          dur: 0.36,
-          split: impact * 9,
+          stagger: 0.008,
+          dur: 0.24,
+          split: Math.max(0, 1 - lt / 0.12) * 9,
         });
-        kinetic(`${n} — ${en}`, W / 2, 380, {
-          size: 24,
-          weight: 700,
-          t: lt - 0.05,
-          out,
-          outDur: 0.18,
-          tracking: 8,
-          align: "center",
-          color: C.red,
-          stagger: 0.012,
-        });
+        // its meaning: in en the English, in ko the Korean, in both the two
+        const g = { t: lt - 0.03, align: "center", dur: 0.2, weight: 700 };
+        if (lang !== "ko")
+          kinetic(en, cx, y + 110, {
+            ...g,
+            size: 30,
+            tracking: 8,
+            stagger: 0.008,
+            color: C.red,
+          });
+        if (lang !== "en")
+          kinetic(ko, cx, lang === "ko" ? y + 126 : y + 168, {
+            ...g,
+            size: lang === "ko" ? 56 : 40,
+            family: KR,
+            stagger: 0.02,
+            color: lang === "ko" ? C.red : "#c9ccd1",
+          });
       });
-      // the motto collapses into one line
-      const lt = t - 1.62;
-      if (lt >= 0) {
-        kinetic("DILIGENTIA  ·  VIS  ·  CELERITAS", W / 2, 600, {
-          size: 58,
-          weight: 700,
-          t: lt,
-          tracking: 6,
-          align: "center",
-          stagger: 0.01,
-          dur: 0.35,
-        });
-        ctx.save();
-        ctx.globalAlpha = ease.out3(seg(lt, 0.05, 0.3));
-        text("ACCURACY · POWER · SPEED", W / 2, 380, {
-          size: 24,
-          weight: 700,
-          tracking: 8,
-          align: "center",
-          color: C.red,
-        });
-        ctx.restore();
-      }
     }
 
-    // S1 — range commands.
+    // S1 — range commands. The Range Officer's three commands build up as a
+    // list, each with its meaning under it (the Korean in ko and both, what
+    // it asks for in en), and stay, still, until the start signal: the
+    // number of the latest one turns red. MAKE READY loads a magazine;
+    // STANDBY runs a clock through the 1–4 s window in which the beep comes.
+    const CMD_X = 232;
+    const CMD_Y = [318, 514, 710]; // baselines
     function sceneCommands(t) {
       if (t < 1.8 || t >= BEEP) return;
-      const anticip = ease.in3(seg(t, 5.7, 6.0));
-      const beat = [4.5, 5.0, 5.5].reduce(
-        (acc, b) => acc + Math.max(0, 1 - Math.abs(t - b) / 0.12) * 0.012,
-        0,
-      );
+      // a breath in, the last 0.18 s before the beep
+      const anticip = ease.in3(seg(t, 5.87, BEEP));
       ctx.save();
       ctx.translate(W / 2, H / 2);
-      ctx.scale(1 + beat - anticip * 0.05, 1 + beat - anticip * 0.05);
+      ctx.scale(1 - anticip * 0.05, 1 - anticip * 0.05);
       ctx.translate(-W / 2, -H / 2);
       ctx.globalAlpha = 1 - anticip * 0.55;
       floorGrid(0.5, t);
-
-      // section label + range-officer voice meter
-      const la = ease.out3(seg(t, 2.0, 2.4));
-      ctx.save();
-      ctx.globalAlpha *= la;
-      text("RANGE COMMANDS", 150, 300, {
-        size: 16,
-        weight: 700,
-        tracking: 4,
-        color: C.red,
-      });
-      const lang = opt.lang === "en" ? "en" : "ko";
-      text(
-        lang === "en"
-          ? "Issued by the Range Officer"
-          : "레인지 오피서(RO)의 공식 구령",
-        150,
-        330,
-        {
-          size: 18,
-          weight: 500,
-          color: C.dim,
-          family: lang === "en" ? SANS : KR,
-        },
-      );
-      for (let k = 0; k < 5; k++) {
-        const v = Math.abs(Math.sin(t * 13 + k * 1.7)) * (t < 5.9 ? 1 : 0);
-        const live = [2.05, 3.05, 4.05].some((c) => t > c && t < c + 0.55);
-        const h = 6 + (live ? v * 26 : 2);
-        ctx.fillStyle = live ? C.red : C.faint;
-        ctx.fillRect(1770 - (4 - k) * 9, 300 - h, 5, h);
-      }
-      ctx.restore();
-
-      const cmds = [
-        ["MAKE READY", 2.05, 2.9],
-        ["ARE YOU READY?", 3.05, 3.9],
-      ];
-      cmds.forEach(([str, a, b], k) => {
-        if (t < a || t > b + 0.4) return;
-        kinetic(str, 150, 600, {
-          size: 168,
-          t: t - a,
-          out: t - b,
-          tracking: -5,
-          stagger: 0.025,
-          // each command is gone before the next one lands
-          outDur: 0.14,
-          outStagger: 0,
-        });
+      const lang = opt.lang;
+      const cmds = OPENING.commands;
+      const latest = cmds.findLastIndex(([, , at]) => t >= at);
+      cmds.forEach(([cmd, meaning, at], k) => {
+        const lt = t - at;
+        if (lt < 0) return;
+        const y = CMD_Y[k];
         ctx.save();
-        ctx.globalAlpha = 1 - seg(t, b, b + 0.2);
-        text(`0${k + 1}`, 150, 420, {
-          size: 18,
+        ctx.globalAlpha *= ease.out3(seg(lt, 0, 0.1));
+        text(`0${k + 1}`, 150, y - 62, {
+          size: 24,
           weight: 700,
           tracking: 3,
-          color: C.dim,
+          color: k === latest ? C.red : C.dim,
         });
-        const w = ease.outExpo(seg(t, a + 0.1, a + 0.5)) * 160;
-        ctx.fillStyle = C.red;
-        ctx.fillRect(150, 650, w, 6);
         ctx.restore();
+        // lands in under 0.3 s on the final timeline, with a chromatic hit
+        kinetic(cmd, CMD_X, y, {
+          size: 112,
+          t: lt,
+          tracking: -3,
+          stagger: 0.005,
+          dur: 0.18,
+          split: Math.max(0, 1 - lt / 0.1) * 7,
+        });
+        const str = lang === "en" ? meaning[0] : meaning[1];
+        kinetic(str, CMD_X + 4, y + 64, {
+          size: lang === "en" ? 36 : 40,
+          weight: lang === "en" ? 600 : 700,
+          family: lang === "en" ? SANS : KR,
+          color: "#c9ccd1",
+          t: lt - 0.03,
+          dur: 0.16,
+          stagger: Math.min(0.008, 0.04 / [...str].length),
+        });
       });
 
-      // MAKE READY: fifteen rounds into a magazine (the Production limit).
-      if (t > 2.05 && t < 3.3) {
-        const a = ease.out3(seg(t, 2.05, 2.25)) * (1 - seg(t, 2.95, 3.2));
+      // MAKE READY: fifteen rounds into a magazine (the Production limit),
+      // which clears the stage for the STANDBY clock
+      const [, , ready] = cmds[0];
+      const [, , standby] = cmds[2];
+      const ma =
+        ease.out3(seg(t, ready, ready + 0.2)) *
+        (1 - seg(t, standby, standby + 0.15));
+      if (ma > 0) {
         ctx.save();
-        ctx.globalAlpha *= a;
-        const mx = 1500;
-        const my = 760;
+        ctx.globalAlpha *= ma;
+        const mx = 1660;
+        const my = 600;
         ctx.strokeStyle = "rgba(255,255,255,0.6)";
         ctx.lineWidth = 2;
         ctx.strokeRect(mx - 46, my - 430, 92, 440);
@@ -2294,102 +2293,52 @@
           ctx.fill();
           ctx.restore();
         }
-        digits(String(loaded).padStart(2, "0"), mx + 80, my - 380, 72, {
-          weight: 800,
-        });
-        text("/ 15", mx + 168, my - 380, {
-          size: 28,
-          weight: 700,
-          color: C.dim,
-        });
-        text("ROUNDS — PRODUCTION MAX", mx + 80, my - 340, {
-          size: 13,
-          weight: 700,
-          tracking: 2,
-          color: C.red,
-        });
         ctx.restore();
       }
 
-      // ARE YOU READY?: a flat line — silence means ready.
-      if (t > 3.05 && t < 4.3) {
-        const a = ease.out3(seg(t, 3.1, 3.3)) * (1 - seg(t, 3.95, 4.15));
+      // STANDBY: the start signal comes 1 to 4 s after it. The playhead runs
+      // in real seconds of the final timeline, and the window pulses with the
+      // heartbeat.
+      if (t >= standby) {
+        const x0 = 900;
+        const x1 = 1720;
+        const y = CMD_Y[2] - 42;
+        const sx = (s) => x0 + ((x1 - x0) * s) / 4;
+        const grow = ease.outExpo(seg(t, standby, standby + 0.18));
         ctx.save();
-        ctx.globalAlpha *= a;
-        ctx.strokeStyle = "rgba(255,255,255,0.7)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        const r = rand(Math.floor(t * 30));
-        for (let x = 1340; x <= 1780; x += 8) {
-          const y = 372 + (r() - 0.5) * 3;
-          if (x === 1340) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-        text("SILENCE = READY", 1780, 410, {
-          size: 15,
-          weight: 700,
-          tracking: 3,
-          color: C.red,
-          align: "right",
-        });
-        text("Not ready? Say “not ready”.", 1780, 436, {
-          size: 15,
-          weight: 500,
-          color: C.dim,
-          align: "right",
-        });
-        ctx.restore();
-      }
-
-      // STANDBY: centred, slowly tracking out, with the 1–4 s window.
-      if (t > 4.05) {
-        const lt = t - 4.05;
-        const track = lerp(-8, 26, ease.out3(seg(t, 4.05, 6.0)));
-        kinetic("STANDBY", W / 2, 590, {
-          size: 236,
-          t: lt,
-          tracking: track,
-          align: "center",
-          stagger: 0.03,
-          dur: 0.5,
-        });
-        const a = ease.out3(seg(t, 4.3, 4.7));
-        ctx.save();
-        ctx.globalAlpha *= a;
-        const x0 = 560;
-        const x1 = 1360;
-        const y = 760;
-        text("START SIGNAL WINDOW", x0, y - 44, {
-          size: 14,
-          weight: 700,
-          tracking: 3,
-          color: C.dim,
-        });
-        text("1 – 4 s", x1, y - 44, {
-          size: 14,
-          weight: 700,
-          tracking: 2,
-          color: C.red,
-          align: "right",
-        });
         ctx.fillStyle = "rgba(255,255,255,0.12)";
-        ctx.fillRect(x0, y - 2, x1 - x0, 4);
-        ctx.fillStyle = rgba(C.red, 0.35);
-        ctx.fillRect(x0 + (x1 - x0) / 4, y - 10, ((x1 - x0) * 3) / 4, 20);
+        ctx.fillRect(x0, y - 2, (x1 - x0) * grow, 4);
+        const pulse = OPENING.hearts.reduce(
+          (p, h) => Math.max(p, t >= h ? Math.exp(-(t - h) * 9) : 0),
+          0,
+        );
+        ctx.fillStyle = rgba(C.red, 0.35 + 0.35 * pulse);
+        ctx.fillRect(sx(1), y - 10, (sx(4) - sx(1)) * grow, 20);
+        ctx.globalAlpha *= ease.out3(seg(t, standby + 0.02, standby + 0.12));
         for (let k = 0; k <= 4; k++) {
-          const x = x0 + ((x1 - x0) * k) / 4;
-          line(x, y - 14, x, y + 14, "rgba(255,255,255,0.5)", 2);
-          text(`${k}`, x, y + 44, {
-            size: 16,
+          line(sx(k), y - 14, sx(k), y + 14, "rgba(255,255,255,0.5)", 2);
+          text(`${k}`, sx(k), y + 52, {
+            size: 26,
             weight: 600,
             align: "center",
-            color: C.dim,
+            color: "#b4b8bf",
           });
         }
-        const head = x0 + ((x1 - x0) * clamp((t - 4.0) / 2.0) * 2) / 4;
+        // the unit, just after the 4
+        text(
+          lang === "ko" ? OPENING.seconds[1] : OPENING.seconds[0],
+          x1 + 12,
+          y + 52,
+          {
+            size: 26,
+            weight: 600,
+            color: "#b4b8bf",
+            family: lang === "ko" ? KR : SANS,
+          },
+        );
+        const s = clamp(ins(t) - ins(standby), 0, 4);
         ctx.fillStyle = C.white;
-        ctx.fillRect(head - 2, y - 26, 4, 52);
+        ctx.fillRect(sx(s) - 2, y - 26, 4, 52);
         ctx.restore();
       }
       ctx.restore();
@@ -2447,7 +2396,7 @@
         const fy = y + (ry - GUN.cy) * s;
         const ns = lerp(s, 34, p);
         x = lerp(fx, W / 2, p) - (rx - GUN.cx) * ns;
-        y = lerp(fy, 430, p) - (ry - GUN.cy) * ns;
+        y = lerp(fy, SIGHT.aimY, p) - (ry - GUN.cy) * ns;
         s = ns;
       }
       return { x, y, s, rot };
@@ -2620,14 +2569,11 @@
         drawTarget(T[0], T[1] - TGT.aCentre * 1.7, 1.7, { letters: 0 });
         ctx.restore();
       }
-      // nodes and labels as the line reaches each point
+      // a node as the line reaches each point: the rear sight, the front
+      // sight and the target. Its 0.8 s are too short to read labels in, so
+      // the picture carries it, and the sights split names the parts.
       const lock = 1 - Math.abs(t - 7.3) / 0.05;
-      const lang = opt.lang === "en" ? "en" : "ko";
-      [
-        [R, "가늠자", "REAR SIGHT"],
-        [F, "가늠쇠", "FRONT SIGHT"],
-        [T, "표적", "TARGET"],
-      ].forEach(([P, ko, en], k) => {
+      [R, F, T].forEach((P) => {
         if (x < P[0] - 2) return;
         const at = 6.95 + 0.33 * ((P[0] - E[0]) / (T[0] - E[0]));
         const pop = ease.outBack(seg(t, at, at + 0.15));
@@ -2645,42 +2591,26 @@
         ctx.beginPath();
         ctx.arc(P[0], P[1], 4 * pop, 0, Math.PI * 2);
         ctx.fill();
-        const la = ease.out3(seg(t, at, at + 0.2)) * (1 - seg(t, 7.36, 7.46));
-        ctx.save();
-        ctx.globalAlpha *= la;
-        const align = "center";
-        const lx = P[0];
-        const ly = k === 2 ? P[1] + 128 : P[1] - 40;
-        text(lang === "en" ? en : ko, lx, ly, {
-          size: lang === "en" ? 18 : 26,
-          weight: 700,
-          tracking: lang === "en" ? 2 : 0,
-          align,
-          family: lang === "en" ? SANS : KR,
-        });
-        if (lang !== "en")
-          text(en, lx, ly + 18, {
-            size: 12,
-            weight: 700,
-            tracking: 2,
-            color: C.dim,
-            align,
-          });
-        ctx.restore();
       });
       ctx.restore();
     }
 
     // S3 — iron sights or an optic: the same shot pair through both.
     const SIGHT = {
+      // the A zone centre sits this high when the sights are on: low enough
+      // to leave the names and focus lines above it clear, even in recoil
+      aimY: 520,
       t0: 7.75,
       open: 8.05,
       settle: 9.3,
-      recoil: 9.75, // a dry recoil cycle: the clock is frozen, nothing is fired
-      zoom: 10.9,
+      // two dry recoil cycles: the clock is frozen, nothing is fired
+      recoils: [9.75, 11.0],
       lower: 12.3,
       out: 12.75,
     };
+    // seconds since the latest dry recoil (-Infinity before the first)
+    const sinceRecoil = (t) =>
+      t - (SIGHT.recoils.findLast((r) => t >= r) ?? Infinity);
     const canBlur = "filter" in CanvasRenderingContext2D.prototype;
 
     let softLayer = null;
@@ -2821,8 +2751,8 @@
       line(38, 1, 270, 1, "rgba(255,255,255,0.3)", 2);
     }
     // One first-person sight picture, centred on cx. kind: "iron" | "optic".
-    function sightView(t, kind, cx, zoom) {
-      const aimY = 430; // the A zone centre sits here when the sights are on
+    function sightView(t, kind, cx) {
+      const aimY = SIGHT.aimY;
       const s = 6.4; // target px per cm
       const G = 0.56; // the gun's scale in the sight picture
       const tgtY = aimY - TGT.aCentre * s; // target centre (the A zone centre is above it)
@@ -2834,14 +2764,14 @@
       let sy =
         Math.cos(t * 3.9 + (kind === "iron" ? 0.6 : 2.1)) * wob * 0.7 +
         (kind === "iron" ? (1 - settle) * 60 : 0);
-      const rk = kick(t - SIGHT.recoil);
+      const rk = kick(sinceRecoil(t));
       sy -= rk.lift;
       const tilt = rk.tilt;
       // at the end both guns lower out of frame, leaving two bare targets
       const lowered = ease.in3(seg(t, SIGHT.lower, SIGHT.lower + 0.35));
       sy += 1000 * lowered;
       // the range behind: horizon glow, floor lines, the target on its stand
-      const hz = 640;
+      const hz = aimY + 210;
       const sky = ctx.createLinearGradient(0, 160, 0, hz);
       sky.addColorStop(0, "#0f1216");
       sky.addColorStop(1, "#1a1e24");
@@ -2853,9 +2783,6 @@
         line(cx + k * 30, hz, cx + k * 190, H, "rgba(255,255,255,0.05)", 1);
       line(cx - 480, hz, cx + 480, hz, "rgba(255,255,255,0.12)", 1);
       ctx.save();
-      ctx.translate(cx, 330);
-      ctx.scale(zoom, zoom);
-      ctx.translate(-cx, -330);
       // iron sights: the eye focuses on the front sight, the target goes soft
       const blur = kind === "iron" ? (5 * settle + 1.5) * (1 - lowered) : 0;
       const drawRange = () => {
@@ -2893,9 +2820,9 @@
         const px = lerp(48, 0, align);
         // under recoil the post climbs out of the notch, then settles back
         const postLift = (dt) => kick(dt).lift * 1.15;
-        const py = lerp(-52, 0, align) - postLift(t - SIGHT.recoil);
+        const py = lerp(-52, 0, align) - postLift(sinceRecoil(t));
         [3, 2, 1].forEach((k) => {
-          const d = t - SIGHT.recoil - k * 0.03;
+          const d = sinceRecoil(t) - k * 0.03;
           if (d > 0 && d < 0.5)
             frontPost(px, lerp(-52, 0, align) - postLift(d), 0.1 * (4 - k));
         });
@@ -2949,7 +2876,7 @@
         // the dot rides with the gun; its track shows the recoil
         const dx = cx + sx;
         const dy = aimY + sy;
-        const dt = t - SIGHT.recoil;
+        const dt = sinceRecoil(t);
         if (dt > 0 && dt < 0.6) {
           const top = aimY - kick(Math.min(dt, 0.07)).lift;
           ctx.strokeStyle = rgba(C.red, 0.55 * (1 - dt / 0.6));
@@ -2974,7 +2901,8 @@
         ctx.fill();
       }
 
-      // focus brackets: where the eye goes
+      // focus brackets: where the eye goes (the label is in the title
+      // block, still, while the bracket rides the recoil)
       const fa =
         ease.outBack(seg(t, SIGHT.settle - 0.1, SIGHT.settle + 0.25)) *
         (1 - seg(t, SIGHT.lower - 0.1, SIGHT.lower + 0.08));
@@ -2988,8 +2916,8 @@
         const hh = (bh / 2) * grow;
         ctx.save();
         ctx.globalAlpha *= clamp(fa);
-        ctx.strokeStyle = C.white;
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = C.red;
+        ctx.lineWidth = 4;
         const L = 22;
         [
           [-1, -1],
@@ -3003,17 +2931,6 @@
           ctx.lineTo(bx + ix * hw - ix * L, by + iy * hh);
           ctx.stroke();
         });
-        const lang = opt.lang === "en" ? "en" : "ko";
-        const label =
-          kind === "iron"
-            ? ["초점 · 가늠쇠", "FOCUS · FRONT SIGHT"]
-            : ["초점 · 표적", "FOCUS · TARGET"];
-        text(lang === "en" ? label[1] : label[0], bx + hw + 14, by + hh - 4, {
-          size: 18,
-          weight: 700,
-          tracking: lang === "en" ? 2 : 0,
-          family: lang === "en" ? SANS : KR,
-        });
         ctx.restore();
       }
       ctx.restore();
@@ -3023,7 +2940,6 @@
       if (t < SIGHT.t0 || t > 13.2) return;
       const open = ease.inOut3(seg(t, SIGHT.t0, SIGHT.open));
       const out = ease.in3(seg(t, SIGHT.out, 13.0));
-      const zoom = ease.inOut3(seg(t, SIGHT.zoom, SIGHT.zoom + 0.45));
       ctx.save();
       ctx.globalAlpha = 1 - out;
       // both halves open out from the centre line
@@ -3037,7 +2953,7 @@
         if (k === 0) ctx.rect(W / 2 - half, 0, half, H);
         else ctx.rect(W / 2, 0, half, H);
         ctx.clip();
-        sightView(t, kind, cx, lerp(1, 0.8, zoom));
+        sightView(t, kind, cx);
         ctx.restore();
       });
       if (open > 0 && open < 1)
@@ -3046,108 +2962,68 @@
         line(W / 2 + half, 0, W / 2 + half, H, C.red, 3);
       line(W / 2, 0, W / 2, H, "rgba(255,255,255,0.35)", 2);
 
-      // titles
-      const lt = t - SIGHT.open;
-      const lang = opt.lang === "en" ? "en" : "ko";
+      // Each half's name (the Korean first in ko, under the English in
+      // both) and, in red as its focus brackets come in, where its eye
+      // focuses. Every line lands in about 0.2 s and stays still, out of the
+      // recoil, until the blinds close.
+      const lang = opt.lang;
+      const ko = lang === "ko";
       [
-        [
-          96,
-          "IRON SIGHTS",
-          "아이언 사이트 — 가늠자와 가늠쇠",
-          "Rear notch and front post",
-        ],
-        [
-          W / 2 + 96,
-          "OPTIC",
-          "옵틱 — 슬라이드에 장착한 도트 사이트",
-          "A slide-mounted red dot",
-        ],
-      ].forEach(([x, title, ko, en]) => {
-        kinetic(title, x, 236, {
-          size: 64,
-          t: lt,
-          out: t - SIGHT.out,
-          tracking: -1.5,
-          stagger: 0.02,
-        });
-        ctx.save();
-        ctx.globalAlpha *= ease.out3(seg(lt, 0.25, 0.55)) * (1 - out);
-        text(lang === "en" ? en : ko, x + 2, 274, {
-          size: 18,
-          weight: 600,
-          color: C.dim,
-          family: lang === "en" ? SANS : KR,
-        });
-        ctx.restore();
+        [96, OPENING.iron],
+        [W / 2 + 96, OPENING.optic],
+      ].forEach(([x, { name, focus }]) => {
+        const rise = (str, y, at, o) =>
+          kinetic(str, x, y, {
+            t: t - at,
+            out: t - SIGHT.out,
+            stagger: Math.min(0.01, 0.06 / [...str].length),
+            dur: 0.22,
+            ...o,
+          });
+        const at = SIGHT.open;
+        if (ko) {
+          rise(name[1], 236, at, { size: 64, weight: 700, family: KR });
+          rise(name[0], 282, at + 0.04, {
+            size: 26,
+            weight: 700,
+            tracking: 3,
+            color: "#b4b8bf",
+          });
+        } else {
+          rise(name[0], 236, at, { size: 64, tracking: -1.5 });
+          if (lang === "both")
+            rise(name[1], 290, at + 0.04, {
+              size: 40,
+              weight: 700,
+              family: KR,
+              color: "#c9ccd1",
+            });
+        }
+        const fa = SIGHT.settle - 0.1;
+        // (in both the pair sits lower, so the English one is set smaller
+        // to stay clear of the front post at the top of its recoil)
+        const both = lang === "both";
+        const fy = ko ? 352 : both ? 360 : 306;
+        if (ko)
+          rise(focus[1], fy, fa, {
+            size: 36,
+            weight: 700,
+            family: KR,
+            color: C.red,
+          });
+        else
+          rise(focus[0], fy, fa, {
+            size: both ? 28 : 32,
+            tracking: both ? 0.5 : 1,
+            color: C.red,
+          });
+        if (both)
+          rise(focus[1], fy + 42, fa + 0.04, {
+            size: 30,
+            weight: 700,
+            family: KR,
+          });
       });
-
-      // the two divisions this difference creates
-      const chips = [
-        [W / 4, "PRODUCTION", "아이언 사이트만 허용", "Iron sights only"],
-        [
-          (W * 3) / 4,
-          "PRODUCTION OPTICS",
-          "승인 목록 권총 + 슬라이드 장착 옵틱",
-          "Approved-list handgun + slide-mounted optic",
-        ],
-      ];
-      chips.forEach(([cx, name, ko, en], k) => {
-        const at = SIGHT.zoom + 0.25 + k * 0.25;
-        const p = ease.outBack(seg(t, at, at + 0.35));
-        if (p <= 0) return;
-        ctx.save();
-        ctx.globalAlpha *= clamp(p) * (1 - out);
-        ctx.translate(cx, 806);
-        ctx.scale(lerp(0.85, 1, clamp(p)), lerp(0.85, 1, clamp(p)));
-        const w = 520;
-        ctx.fillStyle = "rgba(10,12,15,0.86)";
-        ctx.strokeStyle = "rgba(255,255,255,0.5)";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(-w / 2, -58, w, 116, 10);
-        ctx.fill();
-        ctx.stroke();
-        text("IPSC HANDGUN DIVISION", 0, -24, {
-          size: 13,
-          weight: 700,
-          tracking: 3,
-          color: C.red,
-          align: "center",
-        });
-        text(name, 0, 18, {
-          size: 38,
-          weight: 800,
-          tracking: -0.5,
-          align: "center",
-        });
-        text(lang === "en" ? en : ko, 0, 46, {
-          size: 17,
-          weight: 500,
-          color: C.dim,
-          align: "center",
-          family: lang === "en" ? SANS : KR,
-        });
-        ctx.restore();
-      });
-      // neither side is "the" optics division
-      ctx.save();
-      ctx.globalAlpha *=
-        ease.out3(seg(t, SIGHT.zoom + 0.8, SIGHT.zoom + 1.1)) * (1 - out);
-      text(
-        lang === "en"
-          ? "Optics and Open also allow optics"
-          : "옵틱스 · 오픈 디비전도 옵틱 허용",
-        (W * 3) / 4,
-        896,
-        {
-          size: 15,
-          weight: 600,
-          color: C.dim,
-          align: "center",
-          family: lang === "en" ? SANS : KR,
-        },
-      );
-      ctx.restore();
       ctx.restore();
     }
 
@@ -7288,9 +7164,9 @@
         [BEEP, 0.45, 20],
         [RESUME, 0.3, 9],
         [21.0 + SHIFT, 0.3, 7],
-        [0.08, 0.2, 5],
-        [0.58, 0.2, 5],
-        [1.08, 0.2, 5],
+        // the first word of the motto only: the later ones land on words
+        // that are already being read
+        [OPENING.dvc[0][3], 0.2, 5],
         ...SHOTS.map((s) => [s.t, 0.12, 3]),
       ];
       let x = 0;
@@ -7363,8 +7239,9 @@
         else if (tl.lt > tl.insert.dur - 0.25)
           blinds(at - (tl.insert.dur - tl.lt), at - 0.2, at + 0.2);
       } else {
-        if (t < 1.84) sceneDVC(t);
-        else if (t < 2.14) wipe(t, 1.84, 2.14, sceneDVC, sceneCommands);
+        // the wipe runs over the held motto just as MAKE READY (2.05) rises
+        if (t < 1.95) sceneDVC(t);
+        else if (t < 2.2) wipe(t, 1.95, 2.2, sceneDVC, sceneCommands);
         else sceneCommands(t);
         sceneBeep(t);
         sceneLineOfSight(t);
