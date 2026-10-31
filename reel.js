@@ -403,8 +403,9 @@
     [
       vt(7460) - 0.09, // the slide locks back on the 15th shot
       vt(10300) - 0.17,
-      "탄창이 비면 — 달리며 재장전.",
-      "Empty: reload on the run.",
+      // short: the reload panel's title (재장전 / RELOAD) shares the beat
+      "빈 탄창은 달리며 교체.",
+      "Swap mags on the run.",
     ],
     [
       vt(10300) - 0.01, // the popper that starts both
@@ -5014,8 +5015,9 @@
       // the slide cycling and the reload, picture-in-picture; for the reload
       // it opens into a split screen
       const [rl0e, , , rl3e] = EVENTS.reload;
-      // held open long enough to see step 04 lit at full size
-      const split = ease.inOut3(env(st, rl0e - 0.05, rl3e + 0.4, 0.3, 0.3));
+      // held open after the last step so its title (재장전 / RELOAD) stays
+      // settled for its reading time; closed before the cut to the drone
+      const split = ease.inOut3(env(st, rl0e - 0.05, rl3e + 1.38, 0.3, 0.2));
       const px = lerp(96, 60, split);
       const py = lerp(168, 150, split);
       const pw = lerp(420, 740, split); // clear of the shooter on the right
@@ -5032,18 +5034,45 @@
       ctx.roundRect(px, py, pw, ph, 6);
       ctx.fill();
       ctx.stroke();
-      text(reloadUi ? "RELOAD" : "SLIDE CYCLE", px + 20, py + 32, {
-        size: lerp(12, 16, split),
+      // the small chrome title while the panel rides with the shots; it
+      // gives way as the panel opens, and once the panel is open its title
+      // is the reload, in the viewer's language, at a size to read, still
+      // from the moment the panel stops growing until it starts to close
+      ctx.save();
+      ctx.globalAlpha *= 1 - seg(split, 0, 0.3);
+      text("SLIDE CYCLE", px + 20, py + 32, {
+        size: 12,
         weight: 800,
         tracking: 2.4,
-        color: reloadUi ? C.red : C.dim,
+        color: C.dim,
       });
+      ctx.restore();
+      if (split > 0.6) {
+        ctx.save();
+        ctx.globalAlpha *= seg(split, 0.6, 0.95);
+        const ko = opt.lang === "ko";
+        const tw = text(ko ? "재장전" : "RELOAD", px + 24, py + 50, {
+          size: 26,
+          weight: ko ? 700 : 800,
+          family: ko ? KR : SANS,
+          tracking: ko ? 0 : 2.4,
+          color: C.red,
+        });
+        if (opt.lang === "both")
+          text("재장전", px + 24 + tw + 16, py + 50, {
+            size: 26,
+            weight: 700,
+            family: KR,
+            color: "#c9ccd1",
+          });
+        ctx.restore();
+      }
       if (split > 0.02) {
         // the four steps of the reload (slide lock, magazine out, magazine
         // in, slide forward) as a bar of four segments, each filling as the
         // gun above does it. They go unnamed: the whole reload takes under a
-        // second on screen, with steps 0.13-0.54 s apart, and the caption
-        // already takes the beat's reading time ("reload on the move").
+        // second on screen, with steps 0.13-0.54 s apart, and the title and
+        // the caption ("Swap mags on the run.") take the beat's reading time.
         const bw = (pw - 48 - 3 * 10) / 4;
         ctx.save();
         // only on the open panel, clear of the grip on the way in and out
