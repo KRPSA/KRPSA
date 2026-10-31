@@ -196,12 +196,13 @@
   };
   // [from ms, to ms, playback rate]: slow motion below 1, fast forward above.
   const RAMPS = [
-    [2850, 3085, 0.45],
+    [2850, 3085, 0.65],
     [3085, 3150, 0.04], // bullet time: the first swinger shot in flight
-    [3150, 3450, 0.45],
-    [3480, 5500, 1.4],
-    [7550, 10180, 1.3],
-    [11250, 12050, 0.45],
+    [3150, 3450, 0.65],
+    [3480, 5500, 2.0],
+    [7550, 10180, 1.3], // the reload on the run: kept readable
+    [11250, 12050, 0.7],
+    [12100, 12900, 1.8], // the run to the low port
     [14545, 14612, 0.05], // bullet time: the last shot
   ];
   function videoOfStage(ms) {
@@ -7660,11 +7661,11 @@
   // and where an insert (the divisions chapter) plays while it holds still.
   // Stretches are [from, to, seconds on screen] in original-cut time.
   const STRETCH = [
-    [0, 2.14, 2.75], // DVC
-    [2.14, BEEP, 4.85], // the range commands, up to the start signal
-    [13.0, 15.7, 4.8], // targets and scoring, before the push to the stage
+    [0, 2.14, 2.4], // DVC
+    [2.14, BEEP, 5.3], // the range commands, up to the start signal
+    [13.0, 15.7, 5.7], // targets and scoring, before the push to the stage
     [19.9 + SHIFT, 22.4 + SHIFT, 3.4], // the hit factor
-    [22.4 + SHIFT, 25.1 + SHIFT, 3.25], // range is clear, up to the end card
+    [22.4 + SHIFT, 25.1 + SHIFT, 4.2], // range is clear, up to the end card
   ];
   const INSERTS = [{ at: 12.95, dur: DIV_INFO.dur, kind: "divisions" }];
   // [o0, o1, f0, f1]: original time o0..o1 plays over final time f0..f1;
