@@ -542,17 +542,20 @@ const AM = [57, 60, 64];
 const F = [53, 57, 60];
 const C = [55, 60, 64];
 const G = [55, 59, 62];
-// Music is written against the original cut; I() maps those times onto the
-// final timeline, which adds the Divisions chapter and the course walk.
+// Music is laid out against the original cut; I() maps those times onto the
+// final timeline, which adds the Divisions chapter and slows some scenes down
+// so their words can be read. Sections start and end at mapped times, and the
+// beats inside them run on the final timeline, so the tempo never drags.
 const I = MARKS.ins;
-const [DIVI, FLYI] = MARKS.inserts;
-voice.pad(0, AM, 6.0, 0.8, 700);
-voice.pad(6.0, AM, 2.0, 1, 1400);
-[[8, AM], [10, F], [12, C]].forEach(([t, n]) => voice.pad(t, n, Math.min(2.0, DIVI.at - t), 0.9, 600));
+const [DIVI] = MARKS.inserts;
+const span = (a, b) => I(b) - I(a); // final length of original a..b
+voice.pad(I(0), AM, span(0, 6), 0.8, 700);
+voice.pad(I(6), AM, span(6, 8), 1, 1400);
+[[8, AM], [10, F], [12, C]].forEach(([t, n]) => voice.pad(I(t), n, Math.min(span(t, t + 2), DIVI.at - I(t)), 0.9, 600));
 // The C bar that the Divisions chapter cuts into resumes after it, on the
 // Targets & scoring downbeat, so the music runs on into the G.
 voice.pad(I(13), C, I(14) - I(13), 0.9, 600);
-[[14, G]].forEach(([t, n]) => voice.pad(I(t), n, 2.0, 0.9, 600));
+voice.pad(I(14), G, span(14, 16), 0.9, 600);
 // The Divisions chapter: a lighter groove under the equipment morphs.
 {
   const prog = [F, C, G, AM];
@@ -566,25 +569,34 @@ voice.pad(I(13), C, I(14) - I(13), 0.9, 600);
     voice.bass(t, [29, 24, 31, 33][Math.floor(beat / 6) % 4], BEAT, 0.55, 700);
   }
 }
-// The course walk: a held chord rising into the stage.
-voice.pad(FLYI.at, G, FLYI.dur, 0.9, 1200);
 // The stage: its length comes from the shot list, and everything after it is
 // moved by MARKS.shift so it stays on the beat grid.
 const S = MARKS.shift;
 const STAGE_OUT = 19.75 + S;
 [[16, AM, 4], [20, F, 2], [22, C, 2], [24, G, 2], [26, AM, STAGE_OUT - 26]].forEach(([t, n, d]) => voice.pad(I(t), n, d, 1, 1500));
-voice.pad(I(20 + S), F, 1.25, 1, 1300);
-voice.pad(I(21.25 + S), G, 1.25, 1, 1300);
-voice.pad(I(22.5 + S), AM, 2.0, 0.7, 800);
+voice.pad(I(20 + S), F, span(20 + S, 21.25 + S), 1, 1300);
+voice.pad(I(21.25 + S), G, span(21.25 + S, 22.5 + S), 1, 1300);
+voice.pad(I(22.5 + S), AM, span(22.5 + S, 24.5 + S), 0.7, 800);
 
-for (let t = 2; t < 4; t += BEAT) voice.kick(t, 0.45);
-for (let t = 2; t < 5.75; t += BEAT / 2) voice.bass(t, 33, BEAT / 2, 0.7, 260 + (t - 2) * 120);
-for (let t = 2; t < 5.75; t += BEAT / 4) voice.hat(t, (t * 4) % 2 < 1 ? 0.6 : 0.35);
-voice.kick(6.5, 0.9);
-for (let t = 8; t < 16; t += 1) if (t < DIVI.at - 0.2 || t >= DIVI.at + 0.2) voice.kick(I(t), 0.55);
-// The bass stops at the Divisions chapter like the pads, and its bar resumes after it.
-for (let t = 8; t < 16; t += 2) voice.bass(I(t), t < 10 ? 33 : t < 12 ? 29 : t < 14 ? 31 : 31, t < DIVI.at ? Math.min(1.8, DIVI.at - t) : 1.8, 0.5, 300);
-voice.bass(I(13), 31, I(14) - I(13), 0.5, 300);
+// The range commands: a build from the first command to the start signal.
+{
+  const a = I(2);
+  const b = I(5.75);
+  for (let t = a; t < I(4); t += BEAT) voice.kick(t, 0.45);
+  for (let t = a; t < b; t += BEAT / 2) voice.bass(t, 33, BEAT / 2, 0.7, 260 + ((t - a) / (b - a)) * 450);
+  for (let t = a; t < b; t += BEAT / 4) voice.hat(t, Math.round((t - a) / (BEAT / 4)) % 2 ? 0.35 : 0.6);
+}
+voice.kick(I(6.5), 0.9);
+// Sights and scoring: a kick a second and a bass every two, stopping for the
+// Divisions chapter (it has its own groove) and resuming after it.
+const inDiv = (t) => t >= DIVI.at - 0.2 && t < DIVI.at + DIVI.dur + 0.05;
+for (let t = I(8); t < I(16) - 0.05; t += 1) if (!inDiv(t)) voice.kick(t, 0.55);
+for (let t = I(8); t < DIVI.at - 0.2; t += 2) {
+  const note = t < I(10) ? 33 : t < I(12) ? 29 : 31;
+  voice.bass(t, note, Math.min(1.8, DIVI.at - t), 0.5, 300);
+}
+// after the chapter, the bass picks the bar up again on the scoring downbeat
+for (let t = DIVI.at + DIVI.dur; t < I(16) - 0.05; t += 2) voice.bass(t, 31, Math.min(1.8, I(16) - t), 0.5, 300);
 // Stage drums follow the speed ramps: half time in slow motion, sixteenth
 // hats while fast-forwarding.
 for (let t = I(16); t < I(STAGE_OUT); t += BEAT) {

@@ -342,54 +342,52 @@
   const timeWidth = (str) =>
     [...str].reduce((w, ch) => w + (ch === "." || ch === " " ? 0.3 : 0.62), 0);
 
-  // Each line stays up long enough to read: at most about 20 characters a
-  // second in English and 15 in Korean (the on-screen graphics carry the rest).
+  // Each line stays up long enough to read on the final timeline: at most
+  // about 7 Korean or 15 English characters a second, and two seconds or more
+  // (times here are in the original cut; the stretches slow some of it down).
   const CAPTIONS = [
     [
       0.1,
-      1.9,
+      2.08,
       "정확, 파워, 속도 — IPSC의 DVC.",
       "Accuracy, power, speed: IPSC's DVC.",
     ],
     [
-      2.0,
-      4.1,
+      2.1,
+      4.12,
       "“Make Ready” → “Are You Ready?”",
       "“Make Ready” → “Are You Ready?”",
     ],
     [
       4.2,
-      5.9,
-      "“Standby” — 1~4초 안에 신호음.",
-      "“Standby” — a beep within 1–4 s.",
+      6.85,
+      "“Standby” — 1~4초 뒤 신호음, 시작!",
+      "“Standby” — the beep comes in 1–4 s.",
     ],
-    [6.0, 6.8, "신호음 — 시작!", "Beep — go!"],
-    [6.9, 8.1, "시간을 멈추고, 사수의 눈으로.", "Freeze. Shooter's view."],
     [
-      8.2,
-      10.2,
+      6.95,
+      9.95,
       "아이언 사이트 — 초점은 가늠쇠에.",
       "Iron sights: focus on the front sight.",
     ],
+    [10.1, 12.85, "옵틱 — 초점은 표적에.", "Optic: focus on the target."],
     [
-      10.3,
-      12.9,
-      "옵틱 — 초점은 표적에. 디비전도 조준기에 따라 나뉩니다.",
-      "Optic: eyes on the target. Sights set the division.",
+      13.05,
+      14.3,
+      "종이 표적은 A·C·D 존으로 채점.",
+      "Paper scores by zone: A, C, D.",
     ],
-    [13.0, 14.07, "종이 표적: A·C·D 존.", "Paper: A, C, D zones."],
     [
-      14.17,
+      14.4,
       15.95,
-      "철판은 넘어져야 득점. 노슛·미스는 −10점.",
-      "Steel must fall. No-shoot/miss −10.",
+      "철판은 넘어져야 득점, 노슛·미스는 −10점.",
+      "Steel must fall; no-shoot/miss −10.",
     ],
-    [16.1, vt(2300) - 0.14, "프리스타일 스테이지.", "A freestyle stage."],
     [
-      vt(2300) + 0.16,
+      16.1,
       vt(3450) - 0.08,
-      "포퍼가 스윙 타겟을 풀어 줍니다.",
-      "The popper releases the swinger.",
+      "롱 코스 — 포퍼가 스윙 타겟을 풀어 줍니다.",
+      "A long course. The popper releases the swinger.",
     ],
     [
       vt(3480) + 0.19,
@@ -406,31 +404,31 @@
     [
       vt(10300) + 0.22,
       vt(12050),
-      "포퍼 하나가 드롭 터너와 무버를 함께 작동.",
-      "One popper starts the turner and the mover.",
+      "포퍼 하나로 드롭 터너·무버 작동.",
+      "One popper starts turner and mover.",
     ],
     [
       vt(12050) + 0.3,
       STAGE_END + 0.55,
       "낮은 포트에서 무릎쏴 — 마지막 발에 타이머가 멈춥니다.",
-      "Down on one knee at the low port. The last shot stops the clock.",
+      "Kneel at the low port. The last shot stops the clock.",
     ],
     [
-      20.1 + SHIFT,
-      22.4 + SHIFT,
-      "점수 ÷ 시간 = 히트 팩터. 높을수록 이깁니다.",
-      "Points ÷ time = hit factor. The highest wins.",
+      20.0 + SHIFT,
+      22.35 + SHIFT,
+      "점수 ÷ 시간 = 히트 팩터, 높을수록 승리.",
+      "Points ÷ time = hit factor. Highest wins.",
     ],
     [
       // through the RANGE IS CLEAR hold, until the iris to the end card
-      22.55 + SHIFT,
-      24.25 + SHIFT + END_HOLD,
-      "끝까지 안전하게 — 언로드, 쇼 클리어, 해머 다운.",
-      "Safe to the end: unload, show clear, hammer down.",
+      22.5 + SHIFT,
+      25.0 + SHIFT,
+      "언로드, 쇼 클리어, 해머 다운 — 끝까지 안전.",
+      "Unload, show clear, hammer down.",
     ],
     [
-      24.7 + SHIFT + END_HOLD,
-      27.2 + SHIFT + END_HOLD,
+      24.6 + SHIFT + END_HOLD,
+      27.9 + SHIFT + END_HOLD,
       "1976년 시작된 IPSC, 2026년 50주년.",
       "IPSC, founded in 1976 — fifty years in 2026.",
     ],
@@ -779,7 +777,10 @@
         ],
         magwellOpen: [
           "MAGWELL",
-          ["Any size: no box in Optics and Open", "옵틱스·오픈은 박스가 없어 크기 제한 없음"],
+          [
+            "Any size: no box in Optics and Open",
+            "옵틱스·오픈은 박스가 없어 크기 제한 없음",
+          ],
         ],
       },
       power: {
@@ -925,9 +926,7 @@
       [101.2, 40.8, 2.2],
       [114.2, 30.2, 1.0],
     ],
-    screws: [
-      [23.7, 92.1],
-    ],
+    screws: [[23.7, 92.1]],
     magBody: shape("M 55.9,139.0 L 16.6,139.0 L 34.7,78.5 L 74.0,78.5 Z"),
     magPad: shape(
       "M 11.1,139.2 L 58.2,139.2 L 57.9,156.1 L 56.6,157.6 L 55.4,158.1 L 33.5,158.1 L 33.2,158.8 L 14.3,158.8 L 14.3,158.3 L 11.8,156.1 L 11.6,152.6 L 15.4,140.2 Z",
@@ -1005,16 +1004,43 @@
       "M -7.742,-29 L 7.742,-29 L 23,-9.674 L 23,9.674 L 7.742,29 L -7.742,29 L -23,9.674 L -23,-9.674 Z",
     ),
     d: tgtPts(
-      [[-7.5, 0], [7.5, 0], [22.5, 19], [22.5, 38], [7.5, 57], [-7.5, 57], [-22.5, 38], [-22.5, 19]],
+      [
+        [-7.5, 0],
+        [7.5, 0],
+        [22.5, 19],
+        [22.5, 38],
+        [7.5, 57],
+        [-7.5, 57],
+        [-22.5, 38],
+        [-22.5, 19],
+      ],
       true,
     ),
     // an open line from one end of the top edge to the other
     c: tgtPts(
-      [[-7.5, 0], [-15, 19], [-15, 33.5], [-5, 45], [5, 45], [15, 33.5], [15, 19], [7.5, 0]],
+      [
+        [-7.5, 0],
+        [-15, 19],
+        [-15, 33.5],
+        [-5, 45],
+        [5, 45],
+        [15, 33.5],
+        [15, 19],
+        [7.5, 0],
+      ],
       false,
     ),
     a: tgtPts(
-      [[-2.5, 2.5], [2.5, 2.5], [7.5, 19], [7.5, 27.5], [2.5, 35], [-2.5, 35], [-7.5, 27.5], [-7.5, 19]],
+      [
+        [-2.5, 2.5],
+        [2.5, 2.5],
+        [7.5, 19],
+        [7.5, 27.5],
+        [2.5, 35],
+        [-2.5, 35],
+        [-7.5, 27.5],
+        [-7.5, 19],
+      ],
       true,
     ),
     aCentre: TARGET_TOP + 18.75, // the A zone runs from 2.5 to 35 cm below the top
@@ -1031,7 +1057,9 @@
     const pts = ["M -7.5,0", "L 7.5,0", `L ${neck},${-joint}`];
     for (let k = 1; k < 40; k++) {
       const a = a0 - (k / 40) * (Math.PI + 2 * Math.abs(a0));
-      pts.push(`L ${(r * Math.cos(a)).toFixed(3)},${(-cy + r * Math.sin(a)).toFixed(3)}`);
+      pts.push(
+        `L ${(r * Math.cos(a)).toFixed(3)},${(-cy + r * Math.sin(a)).toFixed(3)}`,
+      );
     }
     pts.push(`L ${-neck},${-joint}`, "Z");
     return shape(pts.join(" "));
@@ -4942,29 +4970,6 @@
         return [pos, look, o.fov, 0.06 * Math.sin(a)];
       };
     }
-    // The course walk before the clock resumes: down from the overview, along
-    // the shooting areas, and back up to the overview (lt: 0..FLY.dur).
-    function flyCamera(lt) {
-      const over = RIGS.overview();
-      const keys = [
-        [0, over],
-        [0.75, [[-11.5, 3.0, -0.4], [-7.2, 1.0, 8.2], 40, -0.03]],
-        [2.35, [[12.6, 3.7, 0.0], [10.6, 1.0, 8.6], 40, 0.03]],
-        [FLY.dur, over],
-      ];
-      let k = 0;
-      while (k < keys.length - 2 && lt > keys[k + 1][0]) k++;
-      const [ta, A] = keys[k];
-      const [tb, B] = keys[k + 1];
-      const p = ease.inOut3(seg(lt, ta, tb));
-      return camera(
-        lerp3(A[0], B[0], p),
-        lerp3(A[1], B[1], p),
-        lerp(A[2], B[2], p),
-        lerp(A[3], B[3], p),
-      );
-    }
-
     // A static close-up that pushes in slowly across [from, to] (stage time).
     function closeUp(key, o) {
       const tg = TARGETS[key];
@@ -5153,9 +5158,6 @@
       [W - 96 - 334, 34, W - 96 + 34, 640],
       [86, 158, 526, 408],
     ];
-    // the course card's panel over the walk, and how far it is up (0..1)
-    const CARD_RECT = [86, 136, 686, 454];
-    let cardUp = 0;
     // How much of a stage label to show, from its box (w × h, centred on x,
     // standing on y): none under a HUD panel or above one, where it would sit
     // on the panel's border, and fading out within about 60 px of the frame.
@@ -5163,12 +5165,7 @@
       const under = ([x0, , x1, y1]) =>
         x > x0 - 40 && x < x1 + 40 && y < y1 + 10;
       if (hudLive && HUD_RECTS.some(under)) return 0;
-      const edge = seg(
-        Math.min(x - w / 2, W - x - w / 2, y - h, H - y),
-        20,
-        60,
-      );
-      return under(CARD_RECT) ? edge * (1 - cardUp) : edge;
+      return seg(Math.min(x - w / 2, W - x - w / 2, y - h, H - y), 20, 60);
     }
     function label3(cam, p, str, color = "rgba(255,255,255,0.75)", size = 13) {
       const q = project(cam, p);
@@ -5188,14 +5185,10 @@
       ctx.restore();
     }
 
-    // fly: local time inside the course-walk insert (the clock stays frozen)
-    function sceneStage(t, fly = null) {
-      if (fly == null && (t < 15.7 || t > STAGE_END + 1.2)) return;
-      const st =
-        fly != null
-          ? FREEZE_MS / 1000
-          : stageOfVideo(Math.max(t, RESUME)) / 1000;
-      const enter = fly != null ? 1 : stagePush(t);
+    function sceneStage(t) {
+      if (t < 15.7 || t > STAGE_END + 1.2) return;
+      const st = stageOfVideo(Math.max(t, RESUME)) / 1000;
+      const enter = stagePush(t);
       const leave = ease.in3(seg(t, STAGE_END + 0.45, STAGE_END + 0.9));
       ctx.save();
       ctx.translate((1 - enter) * W * 1.1, 0);
@@ -5206,9 +5199,8 @@
         ctx.clip();
       }
       ctx.globalAlpha = 1 - leave;
-      const cam = fly != null ? flyCamera(fly) : stageCamera(t, st);
+      const cam = stageCamera(t, st);
       hudLive = t > 16.05 && t < STAGE_END + 0.6;
-      cardUp = fly != null ? cardPanel(fly) : 0;
       for (let x = -12; x <= 12; x++)
         seg3(
           cam,
@@ -5504,7 +5496,6 @@
         }
       });
       ctx.restore();
-      if (fly != null) courseCard(fly);
 
       const la =
         ease.out3(seg(t, 16.0, 16.3)) *
@@ -5735,86 +5726,6 @@
       ctx.restore();
       SHOTS.forEach((s) => brass(go, st - s.st, s.i * 7 + 3));
       ctx.restore();
-    }
-
-    // how far the course card's panel is up at lt (inside the walk): it
-    // stays until the card has risen out, and hands over to the slide-cycle
-    // panel that fades in at the same corner
-    const cardPanel = (lt) =>
-      ease.out3(seg(lt, 0.05, 0.35)) * (1 - seg(lt, FLY.dur - 0.15, FLY.dur));
-
-    // The course card over the walk: what this stage asks of the shooter.
-    function courseCard(lt) {
-      const out = lt - (FLY.dur - 0.35);
-      const lang = opt.lang;
-      // a panel, as behind the shot timer, keeps the course off the card
-      const up = cardPanel(lt);
-      if (up > 0) {
-        const [x0, y0, x1, y1] = CARD_RECT;
-        ctx.save();
-        ctx.globalAlpha *= up;
-        ctx.fillStyle = "rgba(10,12,15,0.9)";
-        ctx.strokeStyle = "rgba(255,255,255,0.1)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(x0, y0, x1 - x0, y1 - y0, 6);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      }
-      kinetic("STAGE 01", 120, 250, {
-        size: 112,
-        t: lt - 0.2,
-        out: out > 0 ? out : -1,
-        tracking: -3,
-        stagger: 0.03,
-      });
-      kinetic(
-        lang === "en" ? "LONG COURSE" : "LONG COURSE · 롱 코스",
-        126,
-        300,
-        {
-          size: 22,
-          weight: 800,
-          t: lt - 0.35,
-          out: out > 0 ? out : -1,
-          tracking: 6,
-          color: C.red,
-          family: lang === "en" ? SANS : KR,
-          stagger: 0.012,
-        },
-      );
-      const stats = [
-        [String(SHOTS.length), "ROUNDS"],
-        [String(MAX_POINTS), "POINTS"],
-        [String(Object.keys(AREAS).length), "POSITIONS"],
-        [
-          String(
-            Object.values(TARGETS).filter((tg) =>
-              ["swinger", "turner", "mover"].includes(tg.kind),
-            ).length,
-          ),
-          lang === "ko" ? "무빙 타겟" : "MOVING TARGETS",
-        ],
-      ];
-      stats.forEach(([n, lbl], k) => {
-        const at = 0.55 + k * 0.12;
-        const a =
-          ease.out3(seg(lt, at, at + 0.3)) *
-          (1 - seg(lt, FLY.dur - 0.45, FLY.dur - 0.2));
-        if (a <= 0) return;
-        ctx.save();
-        ctx.globalAlpha *= a;
-        const x = 126 + k * 150;
-        digits(n.padStart(2, "0"), x, 392 + (1 - a) * 18, 54, { weight: 800 });
-        text(lbl, x + 2, 420, {
-          size: 12,
-          weight: 700,
-          tracking: 2.4,
-          color: C.dim,
-        });
-        ctx.restore();
-      });
     }
 
     function drawStageTarget(cam, key, st) {
@@ -8084,8 +7995,6 @@
         if (tl.lt < 0.25) blinds(at + tl.lt, at - 0.2, at + 0.2);
         else if (tl.lt > tl.insert.dur - 0.25)
           blinds(at - (tl.insert.dur - tl.lt), at - 0.2, at + 0.2);
-      } else if (tl.insert?.kind === "flyover") {
-        sceneStage(t, tl.lt);
       } else {
         if (t < 1.84) sceneDVC(t);
         else if (t < 2.14) wipe(t, 1.84, 2.14, sceneDVC, sceneCommands);
@@ -8102,9 +8011,9 @@
       }
       ctx.restore();
       overlays(t);
-      // the frozen timer keeps blinking through the inserts (each lasts a
-      // whole number of blinks, so the beat is seamless on the way out)
-      timerHud(t, tl.insert ? tl.insert.at + tl.lt : t);
+      // the frozen timer blinks on the final timeline's own beat, steady
+      // through the inserts and the stretches
+      timerHud(t, tf);
       if (opt.captions) caption(tf);
       hud(tf);
     }
@@ -8380,31 +8289,64 @@
   // walk just before the clock resumes.
   const DIV_INFO =
     typeof DIV !== "undefined" ? DIV : { dur: 12, captions: [], cues: [] };
-  const FLY = { dur: 3.0 };
-  const INSERTS = [
-    { at: 12.95, dur: DIV_INFO.dur, kind: "divisions" },
-    { at: RESUME, dur: FLY.dur, kind: "flyover" },
+  // The final timeline. The original cut plays at its own pace, except where
+  // a stretch slows a scene down so its words stay up long enough to read,
+  // and where an insert (the divisions chapter) plays while it holds still.
+  // Stretches are [from, to, seconds on screen] in original-cut time.
+  const STRETCH = [
+    [0, 2.14, 2.75], // DVC
+    [2.14, BEEP, 4.85], // the range commands, up to the start signal
+    [13.0, 15.7, 4.8], // targets and scoring, before the push to the stage
+    [19.9 + SHIFT, 22.4 + SHIFT, 3.4], // the hit factor
+    [22.4 + SHIFT, 25.1 + SHIFT, 3.25], // range is clear, up to the end card
   ];
-  // an event exactly at an insert's start plays after the insert
-  const ins = (t) => INSERTS.reduce((v, x) => (t >= x.at ? v + x.dur : v), t);
-  const insStart = (x) => ins(x.at) - x.dur; // where an insert begins
-  function timeline(t) {
-    let off = 0;
-    for (const x of INSERTS) {
-      const start = x.at + off;
-      if (t < start) return { t: t - off, insert: null, lt: 0 };
-      if (t < start + x.dur)
-        return { t: x.at - 0.001, insert: x, lt: t - start };
-      off += x.dur;
+  const INSERTS = [{ at: 12.95, dur: DIV_INFO.dur, kind: "divisions" }];
+  // [o0, o1, f0, f1]: original time o0..o1 plays over final time f0..f1;
+  // an insert holds the original cut still (o0 === o1) and carries `insert`
+  const SEGS = (() => {
+    const marks = [
+      ...STRETCH.map(([a, b, d]) => ({ o: a, b, d })),
+      ...INSERTS.map((x) => ({ o: x.at, b: x.at, d: x.dur, insert: x })),
+    ].sort((p, q) => p.o - q.o || (p.insert ? -1 : 1));
+    const segs = [];
+    let o = 0;
+    let f = 0;
+    for (const m of marks) {
+      if (m.o > o) segs.push([o, m.o, f, (f += m.o - o)]);
+      segs.push(Object.assign([m.o, m.b, f, (f += m.d)], { insert: m.insert }));
+      o = m.b;
     }
-    return { t: t - off, insert: null, lt: 0 };
+    segs.push([o, Infinity, f, Infinity]);
+    return segs;
+  })();
+  // map a time in the original cut to the final timeline (an event exactly at
+  // an insert's start plays after the insert)
+  function ins(t) {
+    const [o0, o1, f0, f1] =
+      SEGS.find(
+        (s) => !s.insert && t >= s[0] && (t < s[1] || s[1] === Infinity),
+      ) ?? SEGS[SEGS.length - 1];
+    return o1 === Infinity
+      ? f0 + (t - o0)
+      : f0 + ((t - o0) * (f1 - f0)) / (o1 - o0);
+  }
+  const insStart = (x) => SEGS.find((s) => s.insert === x)[2];
+  // the final time f in the original cut; inside an insert the cut holds
+  // still and lt is the insert's own time
+  function timeline(f) {
+    const s = SEGS.find((s) => f < s[3]) ?? SEGS[SEGS.length - 1];
+    const [o0, o1, f0, f1] = s;
+    if (s.insert) return { t: o0 - 0.001, insert: s.insert, lt: f - f0 };
+    const t =
+      o1 === Infinity ? o0 + (f - f0) : o0 + ((f - f0) * (o1 - o0)) / (f1 - f0);
+    return { t, insert: null, lt: 0 };
   }
   // the cut runs one minute: the end card holds for whatever time is left
-  const CUT = BASE_DURATION + INSERTS.reduce((sum, x) => sum + x.dur, 0);
+  const CUT = ins(BASE_DURATION);
   const TAIL = Math.max(0, 60 - CUT);
-  const DURATION = Math.ceil(CUT + TAIL);
+  const DURATION = Math.ceil(CUT + TAIL - 1e-6);
   {
-    const [div, fly] = INSERTS;
+    const [div] = INSERTS;
     // chapters: one that starts exactly where an insert begins opens with it
     CHAPTERS.forEach((c) => {
       const at = INSERTS.find((x) => x.at === c.t);
@@ -8431,23 +8373,11 @@
         ko,
         en,
       ]),
-      [
-        insStart(fly) + 0.25,
-        insStart(fly) + fly.dur - 0.35,
-        "스테이지 01 — 사격 위치 네 곳, 26발 롱 코스.",
-        "Stage 01: four positions, 26-round long course.",
-      ],
     );
     CAPTIONS.sort((a, b) => a[0] - b[0]);
     CAPTIONS[CAPTIONS.length - 1][1] += TAIL; // the closing line stays with the end card
     CUES.forEach((c) => (c.t = ins(c.t)));
-    CUES.push(
-      ...DIV_INFO.cues.map((c) => ({ ...c, t: insStart(div) + c.lt })),
-      { t: insStart(fly), type: "whoosh", v: 0.7 },
-      { t: insStart(fly) + 0.05, type: "riser", dur: fly.dur - 0.1 },
-      { t: insStart(fly) + 0.75, type: "whoosh", v: 0.5 },
-      { t: insStart(fly) + 2.35, type: "whoosh", v: 0.5 },
-    );
+    CUES.push(...DIV_INFO.cues.map((c) => ({ ...c, t: insStart(div) + c.lt })));
     CUES.sort((a, b) => a.t - b.t);
   }
 
@@ -8490,6 +8420,8 @@
         dur: x.dur,
         kind: x.kind,
       })),
+      // the stretched scenes on the final timeline: [from, to, rate]
+      stretch: STRETCH.map(([a, b, d]) => [ins(a), ins(a) + d, (b - a) / d]),
       // For scripts/reel-audio.mjs, which samples the moving targets in stage
       // time: the stage clock at `resume` (s) and EVENTS (stage s).
       stageStart: FREEZE_MS / 1000,
