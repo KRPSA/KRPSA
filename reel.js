@@ -346,19 +346,25 @@
   // The opening's on-screen copy ([English, Korean]), here so that the font
   // preloader can fetch every glyph. Times are in the original cut. Each text
   // lands in under 0.3 s on the final timeline and then holds still: the
-  // three words of the motto build up and hold together, and so do the three
-  // range commands, each one entering 50 ms after a beat of the music (the
-  // stretch plays them at 2.30, 3.80 and 5.55 s; the beep is at 7.70).
+  // three words of the motto land within the first 0.4 s and hold together
+  // until the wipe, which runs across them in reading order (it reaches
+  // DILIGENTIA at 2.47 s); the three range commands build up, each on its
+  // own stab (the stretch plays them at 2.49, 3.80 and 5.55 s, on the music's
+  // eighth notes; the beep is at 7.70).
   const OPENING = {
     // [Latin, English, Korean, slam]
     dvc: [
-      ["DILIGENTIA", "ACCURACY", "정확", 0.03],
-      ["VIS", "POWER", "파워", 0.24],
-      ["CELERITAS", "SPEED", "속도", 0.45],
+      ["DILIGENTIA", "ACCURACY", "정확", 0],
+      ["VIS", "POWER", "파워", 0.11],
+      ["CELERITAS", "SPEED", "속도", 0.22],
     ],
+    // the wipe from the motto to the commands, [from, to] (2.37–2.66 s on
+    // the final timeline): MAKE READY has risen behind it, and is uncovered
+    // (2.46–2.52 s) on its stab
+    wipe: [2.103, 2.329],
     // [command, its meaning, at]
     commands: [
-      ["MAKE READY", ["Load and holster", "장전하고 준비"], 2.05],
+      ["MAKE READY", ["Load and holster", "장전하고 준비"], 2.2075],
       ["ARE YOU READY?", ["Silence = ready", "준비됐습니까?"], 3.159],
       ["STANDBY", ["Beep in 1–4 s", "대기 — 1~4초 뒤 신호음"], 4.433],
     ],
@@ -376,25 +382,10 @@
   // Each line stays up long enough to read on the final timeline: at most
   // about 7 Korean or 15 English characters a second, and two seconds or more
   // (times here are in the original cut; the stretches slow some of it down).
+  // The motto goes without one: its meaning is on screen, under each word.
   const CAPTIONS = [
-    [
-      0.05,
-      2.02,
-      "정확, 파워, 속도 — IPSC의 DVC.",
-      "Accuracy, power, speed: the DVC.",
-    ],
-    [
-      2.162,
-      4.3,
-      "레인지 오피서의 구령: 장전, 그리고 준비 확인.",
-      "Range Officer: load, then the ready check.",
-    ],
-    [
-      4.442,
-      6.8,
-      "“Standby” — 1~4초 뒤 신호음, 시작!",
-      "“Standby” — the beep comes in 1–4 s.",
-    ],
+    [2.22, 4.3, "레인지 오피서(RO)의 구령.", "The Range Officer's commands."],
+    [4.442, 6.8, "신호음이 울리면 시작!", "On the beep, the run starts."],
     [
       6.95,
       9.95,
@@ -473,8 +464,8 @@
       type: "hit",
       v: 0.8 + k * 0.05,
     })),
-    { t: 1.65, type: "swell" },
-    { t: 1.95, type: "whoosh", v: 0.7 },
+    { t: 1.81, type: "swell" },
+    { t: OPENING.wipe[0], type: "whoosh", v: 0.7 },
     // a stab on each range command; the magazine loads round by round
     ...OPENING.commands.map(([, , t], k) => ({
       t,
@@ -482,7 +473,7 @@
       v: k === 2 ? 1 : 0.9,
     })),
     ...Array.from({ length: MAG }, (_, i) => ({
-      t: 2.15 + i * 0.04,
+      t: OPENING.commands[0][2] + i * 0.04,
       type: "click",
       v: 0.35,
     })),
@@ -2145,11 +2136,12 @@
     }
 
     // ============================================================ SCENES
-    // S0 — DVC: Diligentia, Vis, Celeritas. The three words slam in a
-    // quarter second apart, side by side, each with its meaning under it, and
-    // hold together, still, until the wipe to the range commands runs over them.
+    // S0 — DVC: Diligentia, Vis, Celeritas. The three words slam in an
+    // eighth of a second apart, side by side, each with its meaning under it,
+    // and hold together, still, until the wipe to the range commands runs
+    // over them, left to right, in the order they are read.
     function sceneDVC(t) {
-      if (t > 2.2) return;
+      if (t > OPENING.wipe[1]) return;
       floorGrid(0.6 * ease.out3(seg(t, 0, 1.2)), t);
       const lang = opt.lang;
       const size = 112;
@@ -2175,24 +2167,24 @@
         x += widths[k] + gap;
         const lt = t - at;
         if (lt < 0) return;
-        // the word lands in a quarter second, with a chromatic hit
+        // the word lands in 0.12 s, with a chromatic hit
         kinetic(la, cx, y, {
           size,
           t: lt,
           tracking,
           align: "center",
-          stagger: 0.008,
-          dur: 0.24,
-          split: Math.max(0, 1 - lt / 0.12) * 9,
+          stagger: 0.003,
+          dur: 0.11,
+          split: Math.max(0, 1 - lt / 0.1) * 9,
         });
         // its meaning: in en the English, in ko the Korean, in both the two
-        const g = { t: lt - 0.03, align: "center", dur: 0.2, weight: 700 };
+        const g = { t: lt - 0.02, align: "center", dur: 0.11, weight: 700 };
         if (lang !== "ko")
           kinetic(en, cx, y + 110, {
             ...g,
-            size: 30,
-            tracking: 8,
-            stagger: 0.008,
+            size: lang === "en" ? 36 : 30,
+            tracking: lang === "en" ? 6 : 8,
+            stagger: 0.005,
             color: C.red,
           });
         if (lang !== "en")
@@ -2200,7 +2192,7 @@
             ...g,
             size: lang === "ko" ? 56 : 40,
             family: KR,
-            stagger: 0.02,
+            stagger: 0.012,
             color: lang === "ko" ? C.red : "#c9ccd1",
           });
       });
@@ -2213,6 +2205,10 @@
     // STANDBY runs a clock through the 1–4 s window in which the beep comes.
     const CMD_X = 232;
     const CMD_Y = [318, 514, 710]; // baselines
+    // MAKE READY rises behind the wipe, so that the wipe uncovers it already
+    // still, on its stab
+    const cmdRise = ([, , at], k) =>
+      k === 0 ? Math.min(at - 0.18, OPENING.wipe[0]) : at;
     function sceneCommands(t) {
       if (t < 1.8 || t >= BEEP) return;
       // a breath in, the last 0.18 s before the beep
@@ -2225,9 +2221,9 @@
       floorGrid(0.5, t);
       const lang = opt.lang;
       const cmds = OPENING.commands;
-      const latest = cmds.findLastIndex(([, , at]) => t >= at);
+      const latest = cmds.findLastIndex((c, k) => t >= cmdRise(c, k));
       cmds.forEach(([cmd, meaning, at], k) => {
-        const lt = t - at;
+        const lt = t - cmdRise(cmds[k], k);
         if (lt < 0) return;
         const y = CMD_Y[k];
         ctx.save();
@@ -2275,11 +2271,11 @@
         ctx.strokeStyle = "rgba(255,255,255,0.6)";
         ctx.lineWidth = 2;
         ctx.strokeRect(mx - 46, my - 430, 92, 440);
-        const loaded = Math.floor(clamp((t - 2.15) / 0.04 + 1, 0, MAG));
+        const loaded = Math.floor(clamp((t - ready) / 0.04 + 1, 0, MAG));
         for (let k = 0; k < loaded; k++) {
           const yy = my - 14 - k * 27;
           const xx = mx + (k % 2 ? 9 : -9);
-          const pop = ease.outBack(clamp((t - (2.15 + k * 0.04)) / 0.12));
+          const pop = ease.outBack(clamp((t - (ready + k * 0.04)) / 0.12));
           ctx.save();
           ctx.translate(xx, yy);
           ctx.scale(pop, pop);
@@ -2344,9 +2340,10 @@
       ctx.restore();
     }
 
-    // S1 → S0 wipe.
+    // S0 → S1 wipe. It runs at an even pace on the final timeline, across
+    // the stretch's change of rate.
     function wipe(t, a, b, drawA, drawB) {
-      const p = ease.inOut3(seg(t, a, b));
+      const p = ease.inOut3(seg(ins(t), ins(a), ins(b)));
       const edge = lerp(-260, W + 260, p);
       const skew = 160;
       ctx.save();
@@ -7166,7 +7163,7 @@
         [21.0 + SHIFT, 0.3, 7],
         // the first word of the motto only: the later ones land on words
         // that are already being read
-        [OPENING.dvc[0][3], 0.2, 5],
+        [OPENING.dvc[0][3], 0.1, 5],
         ...SHOTS.map((s) => [s.t, 0.12, 3]),
       ];
       let x = 0;
@@ -7239,9 +7236,10 @@
         else if (tl.lt > tl.insert.dur - 0.25)
           blinds(at - (tl.insert.dur - tl.lt), at - 0.2, at + 0.2);
       } else {
-        // the wipe runs over the held motto just as MAKE READY (2.05) rises
-        if (t < 1.95) sceneDVC(t);
-        else if (t < 2.2) wipe(t, 1.95, 2.2, sceneDVC, sceneCommands);
+        // the wipe runs over the held motto and uncovers MAKE READY
+        const [wa, wb] = OPENING.wipe;
+        if (t < wa) sceneDVC(t);
+        else if (t < wb) wipe(t, wa, wb, sceneDVC, sceneCommands);
         else sceneCommands(t);
         sceneBeep(t);
         sceneLineOfSight(t);
