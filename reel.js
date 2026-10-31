@@ -416,12 +416,14 @@
       vt(3150) - 0.37,
       "롱 코스 — 포퍼를 쓰러뜨리면 스윙어가 움직입니다.",
       "Long course. The popper starts the swinger.",
+      ["POPPER", "SWINGER"], // the stage targets it names, drawn up large
     ],
     [
       vt(3150) - 0.21, // the run to B starts at vt(3480)
       vt(7460) - 0.25,
       "이동 중에도 총구는 180° 안 — 이어서 포트 사격.",
       "Muzzle inside 180°, then through the port.",
+      ["PORT"],
     ],
     [
       vt(7460) - 0.09, // the slide locks back on the 15th shot
@@ -435,12 +437,14 @@
       vt(12050) + 0.23,
       "포퍼 하나로 드롭 터너·무버 작동.",
       "One popper, two targets.",
+      ["POPPER", "DROP TURNER", "MOVER"],
     ],
     [
       vt(12050) + 0.39,
       STAGE_END + 0.55,
       "낮은 포트는 무릎쏴 — 마지막 발에 타이머가 멈춥니다.",
       "Low port: kneel. Last shot stops the clock.",
+      ["LOW PORT"],
     ],
     [
       // while the equation builds and holds, gone as it leaves
@@ -2082,7 +2086,7 @@
           outStagger: 0,
         });
         if (lang === "both" && en.toLowerCase() !== ko.toLowerCase()) {
-          ctx.globalAlpha = fade * ease.out3(seg(lt, 0.15, 0.5));
+          ctx.globalAlpha = fade * ease.out3(seg(lt, 0.05, 0.25));
           ctx.shadowColor = "rgba(0,0,0,0.8)";
           ctx.shadowBlur = 6;
           text(en, 120, y + 40, { size: 22, weight: 500, color: "#a4a8af" });
@@ -2165,7 +2169,8 @@
     function timerHud(t, beat = t) {
       if (t < 6.52 || t > 20.4 + SHIFT) return;
       const ms = stageMs(t);
-      const a = (t < 6.8 ? 1 : 1) * (1 - seg(t, 19.95 + SHIFT, 20.0 + SHIFT));
+      // gone the moment its time flies off into the hit factor
+      const a = t < 19.95 + SHIFT ? 1 : 0;
       if (a <= 0) return;
       ctx.save();
       ctx.globalAlpha = a;
@@ -4558,35 +4563,79 @@
     // How much of a stage label to show, from its box (w × h, centred on x,
     // standing on y): none under a HUD panel or above one, where it would sit
     // on the panel's border, and fading out within about 60 px of the frame.
+    // the caption on screen during the stage (set by sceneStage): labels keep
+    // out of its band, and the targets it names are drawn up large
+    let stageCap = null;
     function labelAlpha(x, y, w, h) {
       const under = ([x0, , x1, y1]) =>
         x > x0 - 40 && x < x1 + 40 && y < y1 + 10;
       if (hudLive && HUD_RECTS.some(under)) return 0;
-      return seg(Math.min(x - w / 2, W - x - w / 2, y - h, H - y), 20, 60);
+      const edge = seg(
+        Math.min(x - w / 2, W - x - w / 2, y - h, H - y),
+        20,
+        60,
+      );
+      const inBand = stageCap && x - w / 2 < 1460;
+      return inBand ? edge * seg(H - 215 - y, 0, 25) : edge;
     }
+    // the stage's target names, in Korean for the Korean captions
+    const TAG_KO = {
+      SWINGER: "스윙어",
+      POPPER: "포퍼",
+      "NO-SHOOT": "노슛",
+      PLATES: "철판",
+      "DROP TURNER": "드롭 터너",
+      MOVER: "무버",
+      PORT: "포트",
+      "LOW PORT": "낮은 포트",
+    };
     function label3(cam, p, str, color = "rgba(255,255,255,0.75)", size = 13) {
       const q = project(cam, p);
       if (q[2] < 0.5) return;
-      const w = layout(str, font(800, size), 1.5).width;
-      const a = labelAlpha(q[0], q[1], w, size);
+      const named = stageCap?.[4]?.includes(str);
+      const ko = opt.lang === "en" ? null : TAG_KO[str];
+      const sz = named ? 22 : size;
+      const main = opt.lang === "ko" && ko ? ko : str;
+      const isKo = main !== str;
+      const sub = opt.lang === "both" ? ko : null;
+      const w = layout(
+        main,
+        font(800, sz, isKo ? KR : SANS),
+        isKo ? 0 : 1.5,
+      ).width;
+      const a = labelAlpha(q[0], q[1] + (sub ? sz : 0), w, sz * (sub ? 2 : 1));
       if (a <= 0) return;
       ctx.save();
       ctx.globalAlpha *= a;
-      text(str, q[0], q[1], {
-        size,
+      const col = named ? C.white : color;
+      text(main, q[0], q[1], {
+        size: sz,
         weight: 800,
-        tracking: 1.5,
+        tracking: isKo ? 0 : 1.5,
         align: "center",
-        color,
+        color: col,
+        family: isKo ? KR : SANS,
       });
+      if (sub)
+        text(sub, q[0], q[1] + sz + 2, {
+          size: Math.max(12, sz - 2),
+          weight: 700,
+          align: "center",
+          color: col,
+          family: KR,
+        });
       ctx.restore();
     }
 
     function sceneStage(t) {
       if (t < 15.7 || t > STAGE_END + 1.2) return;
+      const tfin = ins(t);
+      stageCap =
+        CAPTIONS.find((c) => tfin >= c[0] - 0.05 && tfin <= c[1] + 0.3) ?? null;
       const st = stageOfVideo(Math.max(t, RESUME)) / 1000;
       const enter = stagePush(t);
-      const leave = ease.in3(seg(t, STAGE_END + 0.45, STAGE_END + 0.9));
+      // out before the hit factor lands (19.9 + SHIFT)
+      const leave = ease.in3(seg(t, STAGE_END + 0.3, STAGE_END + 0.55));
       ctx.save();
       ctx.translate((1 - enter) * W * 1.1, 0);
       if (enter < 1) {
@@ -4597,7 +4646,7 @@
       }
       ctx.globalAlpha = 1 - leave;
       const cam = stageCamera(t, st);
-      hudLive = t > 16.05 && t < STAGE_END + 0.6;
+      hudLive = t > 16.05 && t < STAGE_END + 0.55; // while the panel is up
       for (let x = -12; x <= 12; x++)
         seg3(
           cam,
@@ -4888,7 +4937,7 @@
 
       const la =
         ease.out3(seg(t, 16.0, 16.3)) *
-        (1 - seg(t, STAGE_END + 0.45, STAGE_END + 0.7));
+        (1 - seg(t, STAGE_END + 0.3, STAGE_END + 0.55));
       if (la <= 0) return;
       // in bullet time the panel steps back to let the round and its target
       // through; the clock and the ramp badge stay readable
@@ -5008,12 +5057,13 @@
         color: C.dim,
       });
       if (reloading)
-        text("RELOAD", x1, ry + 58, {
+        text(opt.lang === "ko" ? "재장전" : "RELOAD", x1, ry + 58, {
           size: 22,
           weight: 800,
-          tracking: 2,
+          tracking: opt.lang === "ko" ? 0 : 2,
           align: "right",
           color: C.red,
+          family: opt.lang === "ko" ? KR : SANS,
         });
       else
         digits(`${String(inMag).padStart(2, "0")}/15`, x1, ry + 58, 26, {
@@ -5051,12 +5101,18 @@
       // from the moment the panel stops growing until it starts to close
       ctx.save();
       ctx.globalAlpha *= 1 - seg(split, 0, 0.3);
-      text("SLIDE CYCLE", px + 20, py + 32, {
-        size: 12,
-        weight: 800,
-        tracking: 2.4,
-        color: C.dim,
-      });
+      text(
+        opt.lang === "ko" ? "슬라이드 작동" : "SLIDE CYCLE",
+        px + 20,
+        py + 32,
+        {
+          size: 12,
+          weight: 800,
+          tracking: opt.lang === "ko" ? 0 : 2.4,
+          color: C.dim,
+          family: opt.lang === "ko" ? KR : SANS,
+        },
+      );
       ctx.restore();
       if (split > 0.6) {
         ctx.save();
@@ -5346,7 +5402,7 @@
             3,
           );
         hitsOf(key).forEach((s) => Math.abs(Math.cos(psi)) > 0.2 && hole(s));
-        label3(cam, [tg.pos[0], 1.8, tg.pos[2]], "DROP TURNER");
+        label3(cam, [tg.pos[0], 2.3, tg.pos[2]], "DROP TURNER"); // above its hit pops
       } else if (tg.kind === "plates") {
         // a common base: post, crossbar, two round plates on hinges
         const base = [tg.pos[0], 0, tg.pos[2]];
@@ -7573,7 +7629,10 @@
         if (i === index) button.setAttribute("aria-current", "step");
         else button.removeAttribute("aria-current");
       });
-      const ci = CAPTIONS.findIndex(([a, b]) => t >= a - 0.05 && t <= b + 0.25);
+      // the line whose own span holds t, else a neighbour's lead-in or tail
+      let ci = CAPTIONS.findIndex(([a, b]) => t >= a && t <= b);
+      if (ci < 0)
+        ci = CAPTIONS.findIndex(([a, b]) => t >= a - 0.05 && t <= b + 0.25);
       if (ci !== captionIndex && captionEl) {
         captionIndex = ci;
         const line = CAPTIONS[ci];

@@ -3348,14 +3348,26 @@ html[lang="en"] .latest-announcements-heading h2 {
   text-overflow: ellipsis;
 }
 /* Below 1440 px the names no longer fit: the rail shows numbers, as on
-   tablets (each button keeps its name in title and aria-label, and the reel
-   itself names the current chapter). */
+   tablets, except for the chapter playing (each button keeps its name in
+   title and aria-label). */
 @media (min-width: 1001px) and (max-width: 1439px) {
   .hero-reel-chapters button {
     justify-content: center;
   }
   .hero-reel-chapters .reel-chapter-name {
     display: none;
+  }
+  /* the chapter playing keeps its name, across two columns */
+  .hero-reel-chapters li:has(> button[aria-current]) {
+    grid-column: span 2;
+  }
+  .hero-reel-chapters button[aria-current] .reel-chapter-name {
+    display: inline;
+  }
+}
+@media (min-width: 1001px) and (max-width: 1100px) {
+  .hero-reel-chapters li:has(> button[aria-current]) {
+    grid-column: span 3;
   }
 }
 .hero-reel-skip {
