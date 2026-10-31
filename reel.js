@@ -384,35 +384,39 @@
       "철판은 넘어져야 득점, 노슛·미스는 −10점.",
       "Steel must fall; no-shoot/miss −10.",
     ],
+    // The stage runs at its own pace, so its lines sit back to back, each a
+    // little ahead of its beat (a line lands about 0.4 s after it starts),
+    // and name the targets as their 3D labels do (SWINGER, PORT, DROP
+    // TURNER, MOVER, LOW PORT).
     [
       16.1,
-      vt(3450) - 0.08,
-      "롱 코스 — 포퍼가 스윙 타겟을 풀어 줍니다.",
-      "A long course. The popper releases the swinger.",
+      vt(3150) - 0.37,
+      "롱 코스 — 포퍼를 쓰러뜨리면 스윙어가 움직입니다.",
+      "Long course. The popper starts the swinger.",
     ],
     [
-      vt(3480) + 0.19,
-      vt(7460) - 0.03,
-      "이동 중에도 총구는 180° 안 — 다음은 포트.",
-      "Muzzle inside the 180°, then through the port.",
+      vt(3150) - 0.21, // the run to B starts at vt(3480)
+      vt(7460) - 0.25,
+      "이동 중에도 총구는 180° 안 — 이어서 포트 사격.",
+      "Muzzle inside 180°, then through the port.",
     ],
     [
-      vt(7460) + 0.12,
-      vt(10300) - 0.08,
-      "탄창이 비면 — 이동하며 재장전.",
-      "Empty: reload on the move.",
+      vt(7460) - 0.09, // the slide locks back on the 15th shot
+      vt(10300) - 0.17,
+      "탄창이 비면 — 달리며 재장전.",
+      "Empty: reload on the run.",
     ],
     [
-      vt(10300) + 0.22,
-      vt(12050),
+      vt(10300) - 0.01, // the popper that starts both
+      vt(12050) + 0.23,
       "포퍼 하나로 드롭 터너·무버 작동.",
-      "One popper starts turner and mover.",
+      "One popper, two targets.",
     ],
     [
-      vt(12050) + 0.3,
+      vt(12050) + 0.39,
       STAGE_END + 0.55,
-      "낮은 포트에서 무릎쏴 — 마지막 발에 타이머가 멈춥니다.",
-      "Kneel at the low port. The last shot stops the clock.",
+      "낮은 포트는 무릎쏴 — 마지막 발에 타이머가 멈춥니다.",
+      "Low port: kneel. Last shot stops the clock.",
     ],
     [
       20.0 + SHIFT,
@@ -2088,13 +2092,27 @@
       ctx.globalAlpha = a;
       const frozen = t >= FREEZE && t < RESUME;
       const done = t >= SHOTS[SHOTS.length - 1].t;
-      text(frozen ? "TIME FREEZE" : done ? "LAST SHOT" : "TIME", W - 96, 84, {
-        size: 12,
-        weight: 700,
-        tracking: 2.4,
-        align: "right",
-        color: frozen ? C.red : C.dim,
-      });
+      const lw = text(
+        frozen ? "TIME FREEZE" : done ? "LAST SHOT" : "TIME",
+        W - 96,
+        84,
+        {
+          size: 12,
+          weight: 700,
+          tracking: 2.4,
+          align: "right",
+          color: frozen ? C.red : C.dim,
+        },
+      );
+      // the clock holds through the explainers: say so in Korean too
+      if (frozen && opt.lang !== "en")
+        text("시간 정지", W - 96 - lw - 14, 85, {
+          size: 18,
+          weight: 700,
+          align: "right",
+          color: C.red,
+          family: KR,
+        });
       // on for the first half of every beat (120 BPM), dim for the second
       const blink = frozen ? ((beat - BEEP) % 0.5 < 0.25 ? 1 : 0.55) : 1;
       ctx.globalAlpha = a * blink;
@@ -4724,7 +4742,9 @@
         .sort((a, b) => b.z - a.z)
         .forEach((o) => o.draw());
 
-      // activators: a popper releasing a moving target
+      // activators: a popper releasing a moving target. The line goes
+      // unlabelled: it rides cameras that cut or swing within a second, and
+      // the captions name what the popper starts.
       [
         ["P1", "SW", EVENTS.swingerRelease],
         ["P2", "DT", EVENTS.turnerRelease],
@@ -4741,16 +4761,6 @@
         ctx.setLineDash([8, 6]);
         line(A[0], A[1], lerp(A[0], B[0], p), lerp(A[1], B[1], p), C.red, 2.5);
         ctx.setLineDash([]);
-        const mx = (A[0] + B[0]) / 2;
-        const my = (A[1] + B[1]) / 2 - 14;
-        text(opt.lang === "en" ? "ACTIVATES" : "작동", mx, my, {
-          size: 14,
-          weight: 800,
-          tracking: opt.lang === "en" ? 2 : 0,
-          align: "center",
-          color: C.red,
-          family: opt.lang === "en" ? SANS : KR,
-        });
         ctx.restore();
       });
 
@@ -5029,35 +5039,24 @@
         color: reloadUi ? C.red : C.dim,
       });
       if (split > 0.02) {
-        // the four steps of the reload, lit as they happen
-        const steps = [
-          ["SLIDE LOCK", "슬라이드 고정", EVENTS.reload[0]],
-          ["MAG OUT", "탄창 분리", EVENTS.reload[1]],
-          ["MAG IN", "탄창 삽입", EVENTS.reload[2]],
-          ["SLIDE FORWARD", "슬라이드 전진", EVENTS.reload[3]],
-        ];
-        steps.forEach(([en, ko, at], k) => {
-          const on = st >= at;
-          const y = py + ph - 120 + k * 26;
-          ctx.save();
-          // only on the open panel, clear of the grip on the way in and out
-          ctx.globalAlpha *= seg(split, 0.75, 1);
-          ctx.fillStyle = on ? C.red : "rgba(255,255,255,0.18)";
-          ctx.fillRect(px + 24, y - 11, 10, 10);
-          text(
-            `${String(k + 1).padStart(2, "0")}  ${opt.lang === "ko" ? ko : en}`,
-            px + 46,
-            y,
-            {
-              size: 14,
-              weight: 700,
-              tracking: opt.lang === "ko" ? 0 : 2,
-              color: on ? C.white : C.dim,
-              family: opt.lang === "ko" ? KR : SANS,
-            },
-          );
-          ctx.restore();
+        // the four steps of the reload (slide lock, magazine out, magazine
+        // in, slide forward) as a bar of four segments, each filling as the
+        // gun above does it. They go unnamed: the whole reload takes under a
+        // second on screen, with steps 0.13-0.54 s apart, and the caption
+        // already takes the beat's reading time ("reload on the move").
+        const bw = (pw - 48 - 3 * 10) / 4;
+        ctx.save();
+        // only on the open panel, clear of the grip on the way in and out
+        ctx.globalAlpha *= seg(split, 0.75, 1);
+        EVENTS.reload.forEach((at, k) => {
+          const x = px + 24 + k * (bw + 10);
+          const y = py + ph - 44;
+          ctx.fillStyle = "rgba(255,255,255,0.14)";
+          ctx.fillRect(x, y, bw, 6);
+          ctx.fillStyle = C.red;
+          ctx.fillRect(x, y, bw * ease.out3(seg(st, at, at + 0.12)), 6);
         });
+        ctx.restore();
       }
       const last = [...SHOTS].reverse().find((s) => st >= s.st);
       const rc =
