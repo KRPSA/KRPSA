@@ -577,70 +577,56 @@
   // The handgun divisions chapter (sceneDivisions) runs in its own local time
   // lt, 0..dur, while the game clock stays frozen. One idea at a time: a
   // title, then the five main handgun divisions one after another, each with
-  // one big label for what sets it apart, then the five in a line-up. beats
-  // are the entrances, in local seconds (the title, the five divisions, the
-  // line-up); each holds until the next. Its captions ([from, to, ko, en])
-  // and sound cues ({ lt, type, v }) are in local seconds too, for the
-  // timeline to shift into place. All of its on-screen copy lives here
-  // ([English, Korean]), so that the font preloader can fetch every glyph.
+  // its name and one big label for what sets it apart, then the five in a
+  // line-up. Each beat carries about as much new text as a first-time viewer
+  // reads in its hold (some 7 Korean or 15 English characters a second), and
+  // the one caption only repeats the title. beats are the entrances,
+  // in local seconds (the title, the five divisions, the line-up); each holds
+  // until the next. Its captions ([from, to, ko, en]) and sound cues
+  // ({ lt, type, v }) are in local seconds too, for the timeline to shift
+  // into place. All of its on-screen copy lives here ([English, Korean]), so
+  // that the font preloader can fetch every glyph.
+  const DIV_BEATS = [0.0, 0.83, 2.51, 4.17, 6.39, 8.07, 10.0];
   const DIV = {
     dur: 12.0,
-    beats: [0.05, 1.35, 3.05, 4.75, 6.6, 8.3, 10.0],
+    beats: DIV_BEATS,
     captions: [
       [
         0.15,
-        2.55,
+        2.4,
         "디비전은 장비로 나뉩니다.",
         "Divisions are set by equipment.",
       ],
-      [
-        2.75,
-        6.4,
-        "프로덕션 옵틱스는 레드 닷 추가, 스탠더드는 규격 박스.",
-        "Production Optics adds a red dot. Standard fits a box.",
-      ],
-      [
-        6.6,
-        9.5,
-        "옵틱스는 컴펜세이터 금지, 오픈은 허용.",
-        "Optics: no compensator. Open allows one.",
-      ],
-      [9.7, 11.9, "클래식과 리볼버도 있습니다.", "Plus Classic and Revolver."],
     ],
     // one cue on each visual beat, never two within 0.25 s
-    cues: [
-      { lt: 0.35, type: "whoosh", v: 0.45 }, // the pistol inks in
-      { lt: 1.35, type: "blip", v: 0.6 }, // Production
-      { lt: 3.05, type: "blip", v: 0.6 }, // Production Optics
-      { lt: 3.31, type: "click", v: 0.8 }, // the red dot seats
-      { lt: 4.75, type: "slide", v: 0.5 }, // Standard: the red dot lifts off
-      { lt: 5.01, type: "clank", v: 0.9 }, // the box slams shut
-      { lt: 5.27, type: "tick", v: 0.5 }, // its dimensions
-      { lt: 6.6, type: "whoosh", v: 0.5 }, // Optics: the box opens
-      { lt: 6.86, type: "click", v: 0.8 }, // the red dot seats
-      { lt: 8.3, type: "stab", v: 0.8 }, // Open
-      { lt: 8.56, type: "clank", v: 0.7 }, // the compensator seats
-      { lt: 10.0, type: "whoosh", v: 0.6 }, // the line-up
-      { lt: 10.3, type: "hit", v: 0.45 },
+    cues: (([, p, po, s, o, op, l]) => [
+      { lt: 0.3, type: "whoosh", v: 0.45 }, // the pistol inks in
+      { lt: p, type: "blip", v: 0.6 }, // Production
+      { lt: po, type: "blip", v: 0.6 }, // Production Optics
+      { lt: po + 0.3, type: "click", v: 0.8 }, // the red dot seats
+      { lt: s, type: "slide", v: 0.5 }, // Standard: the red dot lifts off
+      { lt: s + 0.25, type: "clank", v: 0.9 }, // the box slams shut
+      { lt: o, type: "whoosh", v: 0.5 }, // Optics: the box opens
+      { lt: o + 0.3, type: "click", v: 0.8 }, // the red dot seats
+      { lt: op, type: "stab", v: 0.8 }, // Open
+      { lt: op + 0.3, type: "clank", v: 0.7 }, // the compensator seats
+      { lt: l, type: "whoosh", v: 0.6 }, // the line-up
+      { lt: l + 0.3, type: "hit", v: 0.45 }, // its names
       { lt: 11.75, type: "whoosh", v: 0.45 }, // the blinds close
-    ],
+    ])(DIV_BEATS),
     title: {
       kicker: "IPSC HANDGUN",
       name: ["DIVISIONS", "디비전"],
       sub: ["Set by equipment", "장비로 나뉩니다"],
     },
-    // the five main divisions, in order. label: what sets each apart; note:
-    // the one fact under it; kit: the pistol's parts (see drawGun); marks:
-    // the parts the label points at. Production Optics' name grows out of
-    // Production's, and the approved-list note runs under both.
+    // the five main divisions, in order. label: what sets each apart; kit:
+    // the pistol's parts (see drawGun); marks: the parts the label points
+    // at. Production Optics' name grows out of Production's. Standard's
+    // "no optic, no compensator" is drawn on the pistol (crossed outlines).
     specs: [
       {
         name: ["PRODUCTION", "프로덕션"],
         label: ["IRON SIGHTS", "아이언 사이트"],
-        note: [
-          "Approved-list handguns · Minor only",
-          "승인 목록 권총 · 마이너만",
-        ],
         kit: {},
         marks: ["rear", "front"],
       },
@@ -653,21 +639,18 @@
       {
         name: ["STANDARD", "스탠더드"],
         label: ["FITS THE BOX", "규격 박스 안에"],
-        note: ["No optic or compensator", "옵틱 · 컴펜세이터 금지"],
         kit: { flush: 1, magwell: 0.3 },
         marks: [],
       },
       {
         name: ["OPTICS", "옵틱스"],
         label: ["NO COMPENSATOR", "컴펜세이터 금지"],
-        note: ["Red dot required", "레드 닷 필수"],
         kit: { optic: 1, magwell: 0.65 },
         marks: ["comp"],
       },
       {
         name: ["OPEN", "오픈"],
         label: ["RED DOT + COMPENSATOR", "레드 닷 + 컴펜세이터"],
-        note: ["The most freedom", "가장 자유로운 디비전"],
         kit: { optic: 1, comp: 1, extMag: 1, magwell: 1 },
         marks: ["optic", "comp"],
       },
@@ -3193,12 +3176,13 @@
     // title stays top left; one pistol morphs through the five divisions on
     // the right while, on the left, each one's name and its one big label
     // hold still long enough to read; then the five line up. Text rises in
-    // as kinetic type, still 0.24 s after its beat, and holds until the
-    // next beat, when it fades out as the next line rises into its place.
+    // as kinetic type, still 0.18 s after its beat, and holds until just
+    // before the next beat, when it is pushed up out of its mask, gone
+    // before the next line rises into its place.
     const DIV_B = DIV.beats;
     const DIV_POSE = { x: 1295, y: 572, s: 2.55 };
-    const DIV_IN = 0.2; // a line's rise in
-    const DIV_OUT = 0.12; // and its fade out, from the next beat
+    const DIV_IN = 0.15; // a line's rise in
+    const DIV_OUT = 0.06; // its exit, ending on the next beat
     // the parts a label points at, as rects on the pistol (mm)
     const DIV_MARKS = {
       rear: [34, -3.5, 49, 9],
@@ -3207,40 +3191,41 @@
       comp: [213, 2, 258, 31],
     };
     const divKo = () => opt.lang === "ko";
-    // A line of copy rising in at tIn (local s), as kinetic type, and fading
-    // out with a small lift at tOut, so it never crosses the line above; the
-    // stagger is capped so that long lines settle as fast as short ones.
+    // how far gone things leaving on beat at are (0..1)
+    const divGone = (lt, at) => seg(lt, at - DIV_OUT, at);
+    // A line of copy rising in at tIn (local s), as kinetic type, and pushed
+    // up out of its own mask, fading as it goes, in the DIV_OUT before tOut:
+    // it is gone before the next line rises into its place, and never
+    // crosses the line above. The stagger is capped so that long lines
+    // settle as fast as short ones.
     function divLine(str, x, y, o, tIn, tOut, lt) {
-      if (lt < tIn || lt >= tOut + DIV_OUT) return;
-      const out = ease.out3(seg(lt, tOut, tOut + DIV_OUT));
+      const t0 = tOut - DIV_OUT;
+      if (lt < tIn || lt >= tOut) return;
       ctx.save();
-      ctx.globalAlpha *= 1 - out;
-      kinetic(str, x, y - out * 10, {
+      ctx.globalAlpha *= 1 - divGone(lt, tOut);
+      kinetic(str, x, y, {
         weight: 800,
         ...o,
         t: lt - tIn,
         dur: DIV_IN,
-        stagger: Math.min(0.012, 0.04 / [...str].length),
+        stagger: Math.min(0.008, 0.024 / [...str].length),
+        out: lt - t0,
+        outDur: DIV_OUT,
+        outStagger: 0,
       });
       ctx.restore();
     }
-    // the in and out of division k's copy: its own beat, and the next one
-    // unless the next carries it on (Production's name and note run on
-    // through Production Optics)
-    function divSpan(k, part) {
+    // the in and out of division k's name: its own beat, and the next one
+    // unless the next name grows out of it (Production's runs on through
+    // Production Optics)
+    function divSpan(k) {
       const d = DIV.specs;
       let end = k + 1;
-      while (
-        d[end] &&
-        (part === "note"
-          ? !d[end].note
-          : d[end].name[0].startsWith(d[k].name[0]))
-      )
-        end++;
+      while (d[end] && d[end].name[0].startsWith(d[k].name[0])) end++;
       return [DIV_B[k + 1], DIV_B[end + 1]];
     }
 
-    // The title, top left, from the first beat to the end.
+    // The title, top left, from the first beat to the end: still by 0.35 s.
     function divHeader(lt) {
       const t = lt - DIV_B[0];
       if (t < 0) return;
@@ -3252,17 +3237,17 @@
         tracking: 4,
         color: C.red,
         t,
-        stagger: 0.01,
-        dur: 0.3,
+        stagger: 0.008,
+        dur: 0.24,
       });
       const w = kinetic(ko ? T.name[1] : T.name[0], 96, 248, {
         size: 72,
         weight: ko ? 700 : 800,
         family: ko ? KR : SANS,
         tracking: ko ? 0 : -2,
-        t: t - 0.04,
-        stagger: 0.018,
-        dur: 0.3,
+        t: t - 0.02,
+        stagger: 0.01,
+        dur: 0.24,
       });
       if (opt.lang === "both")
         kinetic(T.name[1], 96 + w + 22, 248, {
@@ -3270,12 +3255,12 @@
           weight: 700,
           family: KR,
           color: "#c9ccd1",
-          t: t - 0.1,
-          stagger: 0.02,
-          dur: 0.3,
+          t: t - 0.06,
+          stagger: 0.012,
+          dur: 0.24,
         });
       ctx.save();
-      ctx.globalAlpha *= ease.out3(seg(t, 0.15, 0.35));
+      ctx.globalAlpha *= ease.out3(seg(t, 0.16, 0.34));
       const sub =
         opt.lang === "en"
           ? T.sub[0]
@@ -3292,26 +3277,24 @@
     }
 
     // Baselines of the copy column, by language: counter, name, the name in
-    // the other language, label, its Korean, note, its Korean.
+    // the other language, label, its Korean. The column is centred on the
+    // pistol.
     function divRows() {
-      if (opt.lang === "en")
-        return { count: 384, name: 476, label: 600, note: 684 };
+      if (opt.lang === "en") return { count: 438, name: 532, label: 660 };
       if (opt.lang === "ko")
-        return { count: 384, name: 476, name2: 526, label: 630, note: 716 };
+        return { count: 418, name: 512, name2: 562, label: 670 };
       return {
-        count: 384,
-        name: 476,
-        name2: 532,
-        label: 636,
-        label2: 692,
-        note: 772,
-        note2: 812,
+        count: 404,
+        name: 498,
+        name2: 554,
+        label: 660,
+        label2: 718,
       };
     }
 
     // The copy column, left: for each division its counter, its name (in
-    // ko the Korean name, with the English one under it), its label and its
-    // note, each in on its beat and out on the next.
+    // ko the Korean name, with the English one under it) and its label,
+    // each in on its beat and out just before the next.
     function divCopy(lt) {
       const lang = opt.lang;
       const ko = lang === "ko";
@@ -3336,7 +3319,7 @@
           `0${k + 1} / 05`,
           98,
           R.count,
-          { size: 24, weight: 700, tracking: 3, color: C.red },
+          { size: 28, weight: 700, tracking: 3, color: C.red },
           tIn,
           tOut,
           lt,
@@ -3344,7 +3327,7 @@
         // the name; a name that grows out of the last one adds its tail
         const prev = DIV.specs[k - 1];
         const grows = prev && d.name[0].startsWith(prev.name[0]);
-        const nOut = divSpan(k, "name")[1];
+        const nOut = divSpan(k)[1];
         // (i: 0 the English name, 1 the Korean)
         const nameLine = (i, y, o) => {
           const name = d.name[i];
@@ -3405,71 +3388,48 @@
             tOut,
             lt,
           );
-        // the note
-        if (d.note) {
-          const [oIn, oOut] = divSpan(k, "note");
-          const o = { size: 28, weight: 500, color: "#b4b8bf" };
-          divLine(
-            ko ? d.note[1] : d.note[0],
-            97,
-            R.note,
-            { ...o, family: ko ? KR : SANS },
-            oIn,
-            oOut,
-            lt,
-          );
-          if (lang === "both")
-            divLine(
-              d.note[1],
-              97,
-              R.note2,
-              { ...o, family: KR },
-              oIn,
-              oOut,
-              lt,
-            );
-        }
       });
     }
 
     // The pistol's kit and the box at lt: each division's change starts on
     // its beat (the red dot drops on, lifts off; the box slams shut on the
-    // Standard beat + 0.26, on its cue; the compensator drops on).
+    // Standard beat + 0.25, on its cue, and its dimensions draw out; the
+    // compensator drops on), all of it still well inside the beat's hold.
+    const DIV_STRIKE = 0.25;
     function divKit(lt) {
       const [, , po, s, o, op] = DIV_B;
+      const hit = s + DIV_STRIKE;
       return {
         optic:
           lt < s
-            ? seg(lt, po, po + 0.36)
+            ? seg(lt, po, po + 0.3)
             : lt < o
               ? 1 - seg(lt, s, s + 0.2)
-              : seg(lt, o, o + 0.36),
+              : seg(lt, o, o + 0.3),
         flush:
           lt < o
             ? ease.inOut3(seg(lt, s, s + 0.25))
             : 1 - ease.inOut3(seg(lt, o, o + 0.25)),
-        box: lt < o ? seg(lt, s, s + 0.26) : 1 - seg(lt, o, o + 0.24),
-        dims:
-          lt < o
-            ? ease.out3(seg(lt, s + 0.26, s + 0.42))
-            : 1 - seg(lt, o, o + 0.12),
+        box: lt < o ? seg(lt, s, hit) : 1 - seg(lt, o, o + 0.24),
+        // the dimensions leave with the copy
+        dims: ease.out3(seg(lt, hit, hit + 0.08)) * (1 - divGone(lt, o)),
         // a small magwell drops on in Standard (it must fit the box), grows
         // in Optics and again in Open, where there is no box at all
         magwell:
           lt < o
             ? 0.3
             : lt < op
-              ? lerp(0.3, 0.65, ease.inOut3(seg(lt, o + 0.05, o + 0.33)))
-              : lerp(0.65, 1, ease.outBack(seg(lt, op + 0.08, op + 0.35))),
-        magwellIn: ease.outBack(seg(lt, s + 0.05, s + 0.35)),
-        comp: seg(lt, op, op + 0.35),
-        extMag: ease.outBack(seg(lt, op + 0.08, op + 0.35)),
+              ? lerp(0.3, 0.65, ease.inOut3(seg(lt, o + 0.05, o + 0.3)))
+              : lerp(0.65, 1, ease.outBack(seg(lt, op + 0.05, op + 0.3))),
+        magwellIn: ease.outBack(seg(lt, s + 0.05, s + 0.3)),
+        comp: seg(lt, op, op + 0.3),
+        extMag: ease.outBack(seg(lt, op + 0.05, op + 0.3)),
         // what Standard may not carry: a dashed outline and a red cross;
         // the compensator's stays crossed through Optics
         ghost: {
-          optic: lt < o ? seg(lt, s + 0.05, s + 0.35) : 1 - seg(lt, o, o + 0.1),
+          optic: lt < o ? seg(lt, s + 0.05, s + 0.3) : 1 - seg(lt, o, o + 0.1),
           comp:
-            lt < op ? seg(lt, s + 0.05, s + 0.35) : 1 - seg(lt, op, op + 0.1),
+            lt < op ? seg(lt, s + 0.05, s + 0.3) : 1 - seg(lt, op, op + 0.1),
         },
       };
     }
@@ -3478,13 +3438,14 @@
     // (drawn oblique, at half scale). layer "back" draws the depth faces
     // behind the gun, "front" the four walls, which close in as close goes
     // 0 → 1 and strike together at 1 (from no further than the frame's
-    // content band), and the three dimensions (dims 0..1).
-    function divBox(g, close, dims, layer) {
+    // content band), and the three dimensions (dims 0..1), around pose gd
+    // (the box without its strike shake, so that they hold still to read).
+    function divBox(g, close, dims, layer, gd = g) {
       if (close <= 0) return;
-      const [x0, y0] = gunPoint(g, -3.5, -1.25);
-      const [x1, y1] = gunPoint(g, 221.5, 148.75);
-      const ox = 19.5 * g.s;
-      const oy = -11.25 * g.s;
+      let [x0, y0] = gunPoint(g, -3.5, -1.25);
+      let [x1, y1] = gunPoint(g, 221.5, 148.75);
+      let ox = 19.5 * g.s;
+      let oy = -11.25 * g.s;
       ctx.save();
       if (layer === "back") {
         ctx.globalAlpha *= seg(close, 0.7, 1);
@@ -3528,6 +3489,10 @@
       });
       if (dims > 0) {
         const [w, h, d] = DIV.box;
+        [x0, y0] = gunPoint(gd, -3.5, -1.25);
+        [x1, y1] = gunPoint(gd, 221.5, 148.75);
+        ox = 19.5 * gd.s;
+        oy = -11.25 * gd.s;
         divDim(x0 + ox, y0 + oy - 34, x1 + ox, y0 + oy - 34, w, dims, 0);
         divDim(x1 + ox + 62, y0 + oy, x1 + ox + 62, y1 + oy, h, dims, 0);
         divDim(
@@ -3667,14 +3632,15 @@
       const k = DIV_B.findLastIndex((x) => lt >= x) - 1; // the division
       // every change lands with a small punch-in, and the box strike with a
       // hard one and a short shake, all over before the copy has settled
-      const hitAt = s + 0.26;
+      const hitAt = s + DIV_STRIKE;
       const bump = DIV_B.slice(1, 6).reduce(
         (b, at) =>
           b + (lt < at ? 0 : Math.sin(Math.PI * seg(lt, at, at + 0.24))),
         0,
       );
-      const jolt = lt >= hitAt ? 1 - seg(lt, hitAt, hitAt + 0.12) : 0;
+      const jolt = lt >= hitAt ? 1 - seg(lt, hitAt, hitAt + 0.1) : 0;
       const kit = divKit(lt);
+      const calm = { ...DIV_POSE, s: DIV_POSE.s * (1 + 0.014 * bump) };
       let pose = {
         ...DIV_POSE,
         x: DIV_POSE.x + Math.sin(lt * 157) * 3 * jolt,
@@ -3705,7 +3671,7 @@
         extMag: kit.extMag,
         ghost: kit.ghost,
       });
-      divBox(pose, kit.box, kit.dims, "front");
+      divBox(pose, kit.box, kit.dims, "front", calm);
       // the box locks with a flash on the strike
       const lock = seg(lt, hitAt, hitAt + 0.3);
       if (lock > 0 && lock < 1) {
@@ -3739,7 +3705,7 @@
       // the label's marks on the pistol: Production's sight line and the
       // brackets, which lock on once the part has landed
       const tIn = DIV_B[k + 1];
-      const out = 1 - seg(lt, DIV_B[k + 2], DIV_B[k + 2] + 0.12);
+      const out = 1 - divGone(lt, DIV_B[k + 2]);
       const on = seg(lt, tIn + 0.12, tIn + 0.35) * out;
       DIV.specs[k].marks.forEach((m) => divBrackets(pose, DIV_MARKS[m], on));
       if (tIn === p) {
@@ -3764,10 +3730,13 @@
     }
 
     // The line-up: the other four ink in as blueprints, then solid, beside
-    // Open; every name comes in at once and holds; then Classic and Revolver.
+    // Open; once Open has landed in its slot every name comes in at once and
+    // holds; then Classic and Revolver.
     function divLineup(lt) {
       const t0 = DIV_B[6];
       if (lt < t0) return;
+      const tNames = t0 + 0.2; // Open's pistol has cleared the names' row
+      const tOthers = tNames;
       const lang = opt.lang;
       const ko = lang === "ko";
       DIV.specs.forEach((d, n) => {
@@ -3800,7 +3769,7 @@
           lx,
           716,
           { size, weight, family, tracking: 0.5, align: "center" },
-          t0 + 0.02,
+          tNames,
           DIV.dur + 1,
           lt,
         );
@@ -3816,13 +3785,13 @@
               color: "#c9ccd1",
               align: "center",
             },
-            t0 + 0.02,
+            tNames,
             DIV.dur + 1,
             lt,
           );
       });
       // and the others
-      const rule = ease.outExpo(seg(lt, t0 + 0.05, t0 + 0.55));
+      const rule = ease.outExpo(seg(lt, tNames, tNames + 0.5));
       line(96, 796, 96 + (1824 - 96) * rule, 796, "rgba(255,255,255,0.14)", 1);
       const [en, kr] = DIV.others;
       const o = { size: 34, weight: 800, tracking: 1 };
@@ -3832,13 +3801,13 @@
         const we = layout(en, f, 1).width;
         const wk = layout(kr.slice(2), fk, 0).width;
         const x = W / 2 - (we + 28 + wk) / 2;
-        divLine(en, x, 852, o, t0 + 0.04, DIV.dur + 1, lt);
+        divLine(en, x, 852, o, tOthers, DIV.dur + 1, lt);
         divLine(
           kr.slice(2),
           x + we + 28,
           852,
           { size: 30, weight: 700, family: KR, color: "#c9ccd1" },
-          t0 + 0.04,
+          tOthers,
           DIV.dur + 1,
           lt,
         );
@@ -3853,7 +3822,7 @@
             family: ko ? KR : SANS,
             weight: ko ? 700 : 800,
           },
-          t0 + 0.04,
+          tOthers,
           DIV.dur + 1,
           lt,
         );
