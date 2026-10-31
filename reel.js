@@ -488,10 +488,9 @@
       type: "click",
       v: 0.35,
     })),
-    // STANDBY: a riser that peaks 0.18 s before the beep (its dur is in
-    // seconds on the final timeline: ins() maps only a cue's start), and the
-    // heartbeat
-    { t: 4.47, type: "riser", dur: 1.92 },
+    // STANDBY: a riser that peaks 0.18 s before the beep on screen (its dur
+    // is in original seconds and stretches with the scene), and the heartbeat
+    { t: 4.47, type: "riser", dur: 1.4 },
     ...OPENING.hearts.map((t) => ({ t, type: "heart" })),
     { t: BEEP, type: "beep" },
     { t: BEEP, type: "drop" },
@@ -2292,7 +2291,7 @@
       const lang = opt.lang;
       const cmds = OPENING.commands;
       const latest = cmds.findLastIndex((c, k) => t >= cmdRise(c, k));
-      cmds.forEach(([cmd, meaning, at], k) => {
+      cmds.forEach(([cmd, meaning], k) => {
         const lt = t - cmdRise(cmds[k], k);
         if (lt < 0) return;
         const y = CMD_Y[k];
@@ -2548,42 +2547,6 @@
         ctx.lineWidth = 6;
         ctx.strokeRect(24, 24, W - 48, H - 48);
       }
-    }
-
-    function dimension(x0, x1, y, label, a, tickUp = true) {
-      if (a <= 0) return;
-      ctx.save();
-      ctx.globalAlpha *= a;
-      const p = ease.outExpo(a);
-      const mid = (x0 + x1) / 2;
-      const hx0 = lerp(mid, x0, p);
-      const hx1 = lerp(mid, x1, p);
-      line(hx0, y, hx1, y, C.red, 1.5);
-      const tk = tickUp ? -12 : 12;
-      line(x0, y - tk, x0, y + tk * 0.4, C.red, 1.5);
-      line(x1, y - tk, x1, y + tk * 0.4, C.red, 1.5);
-      ctx.fillStyle = C.red;
-      [
-        [hx0, 1],
-        [hx1, -1],
-      ].forEach(([x, d]) => {
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + d * 10, y - 4);
-        ctx.lineTo(x + d * 10, y + 4);
-        ctx.fill();
-      });
-      const w = layout(label, font(700, 15), 1.5).width + 18;
-      ctx.fillStyle = C.bg;
-      ctx.fillRect(mid - w / 2, y - 12, w, 24);
-      text(label, mid, y + 5, {
-        size: 15,
-        weight: 700,
-        tracking: 1.5,
-        align: "center",
-        color: C.red,
-      });
-      ctx.restore();
     }
 
     // Line of sight: eye, rear sight, front sight and target on one red line.
