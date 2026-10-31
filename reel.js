@@ -330,7 +330,7 @@
       sub: { ko: "점수 ÷ 시간", en: "Points ÷ time" },
     },
     {
-      t: 22.5 + SHIFT,
+      t: 22.02 + SHIFT, // the first command
       ko: "레인지 클리어",
       en: "Range is clear",
       short: { ko: "클리어", en: "Clear" },
@@ -372,15 +372,17 @@
       "Iron sights: focus on the front sight.",
     ],
     [10.1, 12.85, "옵틱 — 초점은 표적에.", "Optic: focus on the target."],
+    // targets and scoring: one line for each of its two beats (the table,
+    // then the cards), saying what the beat shows
     [
-      13.05,
-      14.3,
+      13.047,
+      14.55,
       "종이 표적은 A·C·D 존으로 채점.",
       "Paper scores by zone: A, C, D.",
     ],
     [
-      14.4,
-      15.95,
+      14.634,
+      15.945,
       "철판은 넘어져야 득점, 노슛·미스는 −10점.",
       "Steel must fall; no-shoot/miss −10.",
     ],
@@ -415,23 +417,27 @@
       "Kneel at the low port. The last shot stops the clock.",
     ],
     [
-      20.0 + SHIFT,
-      22.35 + SHIFT,
+      // while the equation builds and holds, gone as it leaves
+      20.005 + SHIFT,
+      21.948 + SHIFT,
       "점수 ÷ 시간 = 히트 팩터, 높을수록 승리.",
-      "Points ÷ time = hit factor. Highest wins.",
+      "Points ÷ time. Highest hit factor wins.",
     ],
     [
-      // through the RANGE IS CLEAR hold, until the iris to the end card
-      22.5 + SHIFT,
+      // from the first command through the RANGE IS CLEAR hold, until the
+      // iris to the end card
+      22.06 + SHIFT,
       25.0 + SHIFT,
       "언로드, 쇼 클리어, 해머 다운 — 끝까지 안전.",
       "Unload, show clear, hammer down.",
     ],
     [
+      // the end card's anniversary line, said again; its exit (the last
+      // 0.3 s) ends with the reel, as the card and the chrome fade out
       24.6 + SHIFT + END_HOLD,
-      27.9 + SHIFT + END_HOLD,
-      "1976년 시작된 IPSC, 2026년 50주년.",
-      "IPSC, founded in 1976 — fifty years in 2026.",
+      27.7 + SHIFT + END_HOLD,
+      "IPSC 50주년, 1976–2026.",
+      "IPSC at fifty.",
     ],
   ];
 
@@ -475,10 +481,11 @@
     { t: 12.28, type: "whoosh", v: 0.45 },
     { t: 12.78, type: "whoosh", v: 0.6 },
     { t: 13.0, type: "hit", v: 0.6 },
-    ...[13.5, 13.75, 14.0].map((t) => ({ t, type: "blip", v: 0.55 })),
-    ...[14.5, 14.75, 15.0].map((t) => ({ t, type: "tick", v: 0.6 })),
-    { t: 15.25, type: "steel" },
-    { t: 15.55, type: "clank", v: 0.5 }, // as the steel icon lands
+    // the zones lit in turn on the beat, then the three cards (sceneTargets)
+    ...[13.237, 13.474, 13.711].map((t) => ({ t, type: "blip", v: 0.55 })),
+    { t: 14.634, type: "tick", v: 0.8 },
+    { t: 14.774, type: "steel" },
+    { t: 15.0, type: "clank", v: 0.5 }, // as the steel icon lands
     { t: 15.62, type: "riser", dur: 0.38 },
     { t: RESUME, type: "drop" },
     ...SHOTS.flatMap((s) => [
@@ -547,31 +554,72 @@
             dur: vt(b) - vt(a),
           };
     }),
+    // the hit factor (see sceneHitFactor): the time flies in, the points
+    // roll, the operators slam on the off-beat and the hit factor lands on
+    // the beat, at 20.3675
     { t: 19.95 + SHIFT, type: "whoosh", v: 0.8 },
-    ...Array.from({ length: 9 }, (_, i) => ({
-      t: 20.05 + SHIFT + i * 0.045,
+    ...Array.from({ length: 6 }, (_, i) => ({
+      t: 20.0 + SHIFT + i * 0.025,
       type: "tick",
       v: 0.3,
     })),
-    { t: 20.5 + SHIFT, type: "hit", v: 0.7 },
-    ...Array.from({ length: 10 }, (_, i) => ({
-      t: 20.55 + SHIFT + i * 0.045,
+    { t: 20.184 + SHIFT, type: "hit", v: 0.7 },
+    ...Array.from({ length: 6 }, (_, i) => ({
+      t: 20.2625 + SHIFT + i * 0.021,
       type: "tick",
       v: 0.3,
     })),
-    { t: 21.0 + SHIFT, type: "hit", v: 1 },
-    ...[21.5, 21.75, 22.0].map((t) => ({ t: t + SHIFT, type: "blip", v: 0.5 })),
-    { t: 22.5 + SHIFT, type: "stab", v: 0.8 },
-    { t: 22.62 + SHIFT, type: "clank", v: 0.6 },
-    { t: 22.82 + SHIFT, type: "slide", v: 0.6 }, // on the lock
-    { t: 23.25 + SHIFT, type: "stab", v: 0.8 },
-    { t: 23.27 + SHIFT, type: "slide", v: 0.8 }, // the slide going home
-    { t: 23.47 + SHIFT, type: "click", v: 0.9 },
-    { t: 24.0 + SHIFT, type: "stab", v: 1 },
+    { t: 20.3675 + SHIFT, type: "hit", v: 1 },
+    // range is clear (see sceneClear): a stab on each command, and the pistol
+    { t: 22.022 + SHIFT, type: "stab", v: 0.8 },
+    { t: 22.21 + SHIFT, type: "clank", v: 0.6 }, // the magazine drops free
+    { t: 22.37 + SHIFT, type: "slide", v: 0.6 }, // on the lock
+    { t: 23.101 + SHIFT, type: "stab", v: 0.8 },
+    { t: 23.135 + SHIFT, type: "slide", v: 0.8 }, // the slide going home
+    { t: 23.36 + SHIFT, type: "click", v: 0.9 }, // hammer down
+    { t: 24.136 + SHIFT, type: "stab", v: 1 },
     // the iris opening onto the end card, rising into the logo hit
     { t: 24.3 + SHIFT + END_HOLD, type: "whoosh", v: 0.5 },
     { t: 24.5 + SHIFT + END_HOLD, type: "logo" },
   ];
+
+  // On-screen copy of the explained scenes after the divisions chapter
+  // (sceneTargets, sceneHitFactor, sceneClear, sceneEnd), [English, Korean],
+  // here so that the font preloader can fetch every glyph. Each beat carries
+  // no more new text than a first-time viewer reads in its hold (about 7
+  // Korean letters or 15 English characters a second), and its caption says
+  // the same thing.
+  const FINALE_COPY = {
+    scoring: {
+      title: ["SCORING", "채점"],
+      major: ["MAJOR", "메이저"],
+      minor: ["MINOR", "마이너"],
+      zones: {
+        A: ["CENTRE", "중앙"],
+        C: ["MIDDLE", "중간"],
+        D: ["OUTER", "외곽"],
+      },
+      steel: ["STEEL", "철판"],
+      steelSub: ["MUST FALL", "넘어져야 득점"],
+      noShoot: ["NO-SHOOT", "노슛"],
+      miss: ["MISS", "미스"],
+    },
+    hitFactor: {
+      points: ["POINTS", "점수"],
+      time: ["TIME", "시간"],
+      hf: ["HIT FACTOR", "히트 팩터"],
+    },
+    clear: [
+      ["UNLOAD AND SHOW CLEAR", "언로드 · 쇼 클리어"],
+      ["HAMMER DOWN, HOLSTER", "해머 다운 · 홀스터"],
+      ["RANGE IS CLEAR", "레인지 클리어"],
+    ],
+    // the association's names as the site gives them (index.html)
+    end: {
+      name: ["KOREA PRACTICAL SHOOTING ASSOCIATION", "대한민국 실용사격 협회"],
+      years: ["IPSC  ·  50 YEARS", "IPSC 1976–2026  ·  50주년", "50주년"],
+    },
+  };
 
   // The handgun divisions chapter (sceneDivisions) runs in its own local time
   // lt, 0..dur, while the game clock stays frozen. One idea at a time: a
@@ -968,6 +1016,7 @@
       CHAPTERS.map((c) => c.ko + c.sub.ko).join("") +
       "정확파워속도프로덕션디비전장비기준승인목록등재기계식조준기탄창발점수시간히트팩터철판노슛미스넘어져야득점존" +
       JSON.stringify(DIV) +
+      JSON.stringify(FINALE_COPY) +
       "≤≥×÷·";
     const fontLoads = document.fonts
       ? [
@@ -2011,7 +2060,8 @@
     }
 
     function hud(t) {
-      const a = 1 - seg(t, DURATION - 1.4, DURATION - 0.8);
+      // out with the end card and its closing caption, over the last 0.3 s
+      const a = 1 - seg(t, DURATION - 0.3, DURATION);
       if (a <= 0) return;
       ctx.save();
       ctx.globalAlpha = a * ease.out3(seg(t, 0.1, 0.6));
@@ -3881,7 +3931,50 @@
     // so the stage's left edge follows the scoring panel's right edge.
     const stagePush = (t) => ease.inOut3(seg(t, 15.7, 16.0));
 
-    // S4 — targets and scoring.
+    // A line of copy that lands fast and then holds still, so that it can be
+    // read: kinetic type whose last glyph is at rest `land` seconds (of the
+    // original cut) after `at`, however long the line, pushed up out of its
+    // mask and faded over `exit` from `out` on. Returns its width.
+    function landLine(str, x, y, o, t, at, land, out = Infinity, exit = 0.05) {
+      const n = [...str].length;
+      if (t < at || t >= out + exit)
+        return layout(
+          str,
+          font(o.weight ?? 800, o.size, o.family),
+          o.tracking ?? 0,
+        ).width;
+      ctx.save();
+      ctx.globalAlpha *= 1 - seg(t, out, out + exit);
+      const w = kinetic(str, x, y, {
+        weight: 800,
+        ...o,
+        t: t - at,
+        dur: land * 0.7,
+        stagger: n > 1 ? (land * 0.3) / (n - 1) : 0,
+        out: t >= out ? t - out : -1,
+        outDur: exit,
+        outStagger: 0,
+      });
+      ctx.restore();
+      return w;
+    }
+
+    // S4 — targets and scoring, in two beats (at this stretch a second on
+    // screen is 0.47 s of the cut). Beat one, as the blinds open: the target
+    // and its points table (title, the Major and Minor heads, the zone rows
+    // A, C and D), every line still within 0.25 s of its start and held;
+    // then, on the beat, each zone lights up in turn on the target, with its
+    // hits and its row. Beat two, at 14.63: steel, no-shoot and miss, three
+    // cards together, held with the table until the push to the stage at
+    // 15.7. Copy: FINALE_COPY.scoring.
+    // [zone, Major, Minor, the row's entrance, its zone lit on the target]
+    const SCORING_ROWS = [
+      ["A", 5, 5, 13.118, 13.237],
+      ["C", 4, 3, 13.142, 13.474],
+      ["D", 2, 1, 13.166, 13.711],
+    ];
+    const SCORING_CARDS = [14.634, 14.644, 14.653]; // steel, no-shoot, miss
+    const STEEL_HIT = 14.774;
     function sceneTargets(t) {
       if (t < 12.9 || t > 16.1) return;
       const whip = stagePush(t);
@@ -3889,45 +3982,49 @@
       ctx.translate(-whip * W * 1.1, 0);
       const lt = t - 13.0;
       const lang = opt.lang;
+      const ko = lang === "ko";
+      const both = lang === "both";
+      const S = FINALE_COPY.scoring;
+      // the line in the viewer's language: Korean in ko, else English
+      const pick = (pair) => (ko ? pair[1] : pair[0]);
+      const face = (o) =>
+        ko ? { ...o, weight: 700, family: KR, tracking: 0 } : o;
+      const LAND = 0.12; // 0.25 s on screen
       floorGrid(0.35, t);
-      // target
-      const tx = 600;
-      const ty = 560;
-      const s = 11;
-      const zone = (at) =>
-        seg(t, at, at + 0.08) *
-        (1 - ease.out3(seg(t, at + 0.15, at + 0.9))) *
-        0.8;
+      // the target
+      const tx = 540;
+      const ty = 540;
+      const s = 10.5;
+      // a zone glows for about half a second on screen, into the next one
+      const glow = (i) => {
+        const at = SCORING_ROWS[i][4];
+        return (
+          seg(t, at, at + 0.04) * (1 - ease.out3(seg(t, at + 0.17, at + 0.26)))
+        );
+      };
       drawTarget(tx, ty, s, {
-        build: ease.out3(seg(lt, 0, 0.45)),
-        fill: ease.out3(seg(lt, 0.15, 0.5)),
-        zones: ease.out3(seg(lt, 0.3, 0.8)),
-        letters: ease.out3(seg(lt, 0.5, 0.8)),
-        hiA: zone(13.5),
-        hiC: zone(13.75),
-        hiD: zone(14.0),
+        build: ease.out3(seg(lt, 0, 0.2)),
+        fill: ease.out3(seg(lt, 0.04, 0.2)),
+        zones: ease.out3(seg(lt, 0.08, 0.24)),
+        letters: ease.out3(seg(lt, 0.12, 0.24)),
+        hiA: glow(0) * 0.8,
+        hiC: glow(1) * 0.8,
+        hiD: glow(2) * 0.8,
       });
-      // dimensions: the width goes on top, clear of the caption band
-      const da = seg(lt, 0.3, 0.7);
-      dimension(tx - 23 * s, tx + 23 * s, ty - 29 * s - 40, "46 cm", da);
-      ctx.save();
-      ctx.translate(tx - 23 * s - 40, ty);
-      ctx.rotate(-Math.PI / 2);
-      dimension(-29 * s, 29 * s, 0, "58 cm", da);
-      ctx.restore();
-      // bullet holes: two in A, one in C, one in D (cm from the centre)
+      // bullet holes: two in A, one in C, one in D (cm from the centre),
+      // each as its zone lights up
       [
-        [-2, -12, 13.5],
-        [4, -6, 13.52],
-        [-12, 4, 13.75],
-        [17, 12, 14.0],
+        [-2, -12, SCORING_ROWS[0][4]],
+        [4, -6, SCORING_ROWS[0][4] + 0.01],
+        [-12, 4, SCORING_ROWS[1][4]],
+        [17, 12, SCORING_ROWS[2][4]],
       ].forEach(([hx, hy, at]) => {
         if (t < at) return;
         ctx.fillStyle = "#14100b";
         ctx.beginPath();
         ctx.arc(tx + hx * s, ty + hy * s, 6, 0, Math.PI * 2);
         ctx.fill();
-        const r = seg(t, at, at + 0.35);
+        const r = seg(t, at, at + 0.2);
         if (r < 1) {
           ctx.strokeStyle = `rgba(255,255,255,${1 - r})`;
           ctx.lineWidth = 2;
@@ -3937,141 +4034,179 @@
         }
       });
 
-      // scoring table
-      const x0 = 1100;
-      kinetic("SCORING", x0, 250, {
-        size: 64,
-        t: lt,
-        tracking: -1.5,
-        stagger: 0.02,
-      });
-      ctx.save();
-      ctx.globalAlpha = ease.out3(seg(lt, 0.25, 0.55));
-      text("ZONE", x0, 330, {
-        size: 14,
-        weight: 700,
-        tracking: 3,
-        color: C.dim,
-      });
-      text("MAJOR", x0 + 420, 330, {
-        size: 14,
-        weight: 700,
-        tracking: 3,
-        color: C.dim,
-        align: "center",
-      });
-      text("MINOR", x0 + 600, 330, {
-        size: 14,
-        weight: 700,
-        tracking: 3,
-        color: C.white,
-        align: "center",
-      });
-      line(x0, 346, x0 + 680, 346, "rgba(255,255,255,0.2)", 1);
-      ctx.restore();
+      // the points table: what each zone scores at Major and at Minor
+      const x0 = 1000;
+      const xMaj = x0 + 590;
+      const xMin = W - 96 - 48;
+      const tw = landLine(
+        pick(S.title),
+        x0,
+        232,
+        face({ size: 72, tracking: -2 }),
+        t,
+        13.047,
+        LAND,
+      );
+      if (both)
+        landLine(
+          S.title[1],
+          x0 + tw + 22,
+          232,
+          { size: 52, weight: 700, family: KR, color: "#c9ccd1" },
+          t,
+          13.06,
+          LAND,
+        );
       [
-        ["A", 5, 5, 13.5],
-        ["C", 4, 3, 13.75],
-        ["D", 2, 1, 14.0],
-      ].forEach(([z, maj, min, at], i) => {
-        const rl = t - at;
-        if (rl < 0) return;
-        const y = 420 + i * 76;
-        const pill = ease.outBack(seg(rl, 0, 0.3));
+        [xMaj, S.major, C.dim],
+        [xMin, S.minor, C.white],
+      ].forEach(([x, pair, color]) => {
+        const head = { align: "center", color };
+        if (both) {
+          landLine(
+            pair[0],
+            x,
+            288,
+            { ...head, size: 22, tracking: 2 },
+            t,
+            13.085,
+            LAND,
+          );
+          landLine(
+            pair[1],
+            x,
+            320,
+            { ...head, size: 22, weight: 700, family: KR },
+            t,
+            13.09,
+            LAND,
+          );
+        } else
+          landLine(
+            pick(pair),
+            x,
+            306,
+            face({ ...head, size: 24, tracking: 2 }),
+            t,
+            13.085,
+            LAND,
+          );
+      });
+      const rule = ease.outExpo(seg(lt, 0.06, 0.2));
+      line(x0, 346, x0 + (W - 96 - x0) * rule, 346, "rgba(255,255,255,0.2)", 1);
+      SCORING_ROWS.forEach(([z, maj, min, at], i) => {
+        if (t < at) return;
+        const y = 428 + i * 82;
+        // the row of the zone that is lit
+        const band = glow(i);
+        if (band > 0) {
+          ctx.fillStyle = rgba(C.red, 0.13 * band);
+          ctx.fillRect(x0 - 20, y - 56, W - 96 - x0 + 40, 76);
+        }
+        const pill = ease.outBack(seg(t, at, at + 0.1));
         ctx.save();
         ctx.fillStyle = C.red;
         ctx.globalAlpha = 0.95;
         ctx.beginPath();
-        ctx.roundRect(x0 + 600 - 48 * pill, y - 46, 96 * pill, 62, 8);
+        ctx.roundRect(xMin - 48 * pill, y - 46, 96 * pill, 62, 8);
         ctx.fill();
         ctx.restore();
-        kinetic(z, x0, y, { size: 56, t: rl, stagger: 0 });
-        kinetic(String(maj), x0 + 420, y, {
-          size: 52,
-          weight: 600,
-          t: rl - 0.04,
-          align: "center",
-          color: C.dim,
-          stagger: 0,
-        });
-        kinetic(String(min), x0 + 600, y, {
-          size: 52,
-          t: rl - 0.08,
-          align: "center",
-          stagger: 0,
-        });
-        ctx.save();
-        ctx.globalAlpha = ease.out3(seg(rl, 0.1, 0.4));
-        const zl = {
-          A: ["중앙 · 최고점", "Centre — top score"],
-          C: ["중간", "Middle"],
-          D: ["가장자리", "Outer edge"],
-        }[z];
-        text(lang === "en" ? zl[1] : zl[0], x0 + 80, y - 10, {
-          size: 16,
-          weight: 500,
-          color: C.dim,
-          family: lang === "en" ? SANS : KR,
-        });
-        ctx.restore();
+        landLine(z, x0, y, { size: 60 }, t, at, 0.1);
+        landLine(
+          String(maj),
+          xMaj,
+          y,
+          { size: 52, weight: 600, align: "center", color: C.dim },
+          t,
+          at + 0.01,
+          0.1,
+        );
+        landLine(
+          String(min),
+          xMin,
+          y,
+          { size: 52, align: "center" },
+          t,
+          at + 0.02,
+          0.1,
+        );
+        const name = S.zones[z];
+        if (both) {
+          landLine(
+            name[0],
+            x0 + 86,
+            y - 18,
+            { size: 24, tracking: 1.5 },
+            t,
+            at,
+            LAND,
+          );
+          landLine(
+            name[1],
+            x0 + 86,
+            y + 14,
+            { size: 24, weight: 700, family: KR, color: "#c9ccd1" },
+            t,
+            at + 0.01,
+            LAND,
+          );
+        } else
+          landLine(
+            pick(name),
+            x0 + 86,
+            y - 6,
+            face({ size: ko ? 32 : 28, tracking: 1.5, color: "#dfe1e5" }),
+            t,
+            at,
+            LAND,
+          );
       });
-      ctx.save();
-      ctx.globalAlpha = ease.out3(seg(t, 14.2, 14.45));
-      text("PRODUCTION = MINOR", x0 + 680, 650, {
-        size: 13,
-        weight: 700,
-        tracking: 2.5,
-        color: C.red,
-        align: "right",
-      });
-      ctx.restore();
 
-      // steel, no-shoot, miss
-      const cards = [
-        ["STEEL", "MUST FALL", "5", 14.5],
-        ["NO-SHOOT", "PENALTY", "−10", 14.75],
-        ["MISS", "PENALTY", "−10", 15.0],
-      ];
-      cards.forEach(([name, sub, val, at], i) => {
+      // steel, no-shoot, miss: three cards, in together
+      const cw = 258;
+      const chh = 250;
+      const cy = 640;
+      SCORING_CARDS.forEach((at, i) => {
         const cl = t - at;
         if (cl < 0) return;
-        const cx = x0 + i * 236;
-        const cy = 720;
-        const pop = ease.out3(seg(cl, 0, 0.3));
+        const cx = x0 + i * (cw + 25);
+        const pop = ease.out3(seg(cl, 0, 0.11));
         ctx.save();
         ctx.globalAlpha = pop;
-        ctx.translate(0, (1 - pop) * 30);
-        ctx.fillStyle = "rgba(255,255,255,0.04)";
-        ctx.strokeStyle = "rgba(255,255,255,0.14)";
+        ctx.translate(0, (1 - pop) * 24);
+        ctx.fillStyle = "rgba(255,255,255,0.045)";
+        ctx.strokeStyle = "rgba(255,255,255,0.16)";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.roundRect(cx, cy, 212, 200, 6);
+        ctx.roundRect(cx, cy, cw, chh, 6);
         ctx.fill();
         ctx.stroke();
-        // icons
+        // the icon: the popper (shot down when it is hit), the white
+        // no-shoot, the outline of a target that was missed
         if (i === 0) {
-          const fall = ease.in3(seg(t, 15.25, 15.55));
+          const fall = ease.in3(seg(t, STEEL_HIT, 15.0));
+          const bx = cx + cw / 2;
+          const by = cy + 134;
           ctx.save();
-          ctx.translate(cx + 56, cy + 150);
-          ctx.scale(1.2, 1.2 * Math.cos(fall * 1.45));
+          ctx.translate(bx, by);
+          ctx.scale(1.1, 1.1 * Math.cos(fall * 1.45));
           ctx.transform(1, 0, -0.25 * fall, 1, 0, 0);
-          ctx.scale(1 / 1.2, 1);
           tracePath(ctx, POPPER);
           ctx.restore();
           ctx.fillStyle = C.steel;
           ctx.fill();
-          if (t > 15.25 && t < 15.5)
+          if (t > STEEL_HIT && t < STEEL_HIT + 0.12)
             muzzleFlash(
-              cx + 56,
-              cy + 150 - 70 * 1.2 * 0.95,
+              bx,
+              by - 70 * 1.1,
               26,
-              1 - seg(t, 15.25, 15.4),
+              1 - seg(t, STEEL_HIT, STEEL_HIT + 0.08),
               99,
             );
         } else {
           ctx.save();
-          ctx.translate(cx + 56, cy + 104);
-          ctx.scale(2.1, 2.1);
+          ctx.translate(cx + 66, cy + 80);
+          ctx.scale(1.8, 1.8);
           tracePath(ctx, TGT.outer);
           ctx.fillStyle = i === 1 ? "#eef0f2" : rgba(C.card, 0.25);
           ctx.fill();
@@ -4083,19 +4218,58 @@
             ctx.setLineDash([]);
           }
           ctx.restore();
+          text("−10", cx + cw - 24, cy + 110, {
+            size: 64,
+            weight: 800,
+            color: C.red,
+            align: "right",
+          });
         }
-        text(name, cx + 112, cy + 48, { size: 15, weight: 800, tracking: 1.5 });
-        text(sub, cx + 112, cy + 72, {
-          size: 12,
-          weight: 700,
-          tracking: 1.5,
-          color: C.dim,
-        });
-        text(val, cx + 112, cy + 160, {
-          size: 54,
-          weight: 800,
-          color: i ? C.red : C.white,
-        });
+        // the name, and for steel what it takes to score
+        const name = [S.steel, S.noShoot, S.miss][i];
+        const tx0 = cx + 24;
+        if (both) {
+          const w = text(name[0], tx0, cy + 178, {
+            size: 28,
+            weight: 800,
+            tracking: 1,
+          });
+          text(name[1], tx0 + w + 12, cy + 178, {
+            size: 24,
+            weight: 700,
+            family: KR,
+            color: "#c9ccd1",
+          });
+          if (i === 0) {
+            text(S.steelSub[0], tx0, cy + 210, {
+              size: 22,
+              weight: 700,
+              tracking: 2,
+              color: "#dfe1e5",
+            });
+            text(S.steelSub[1], tx0, cy + 238, {
+              size: 22,
+              weight: 700,
+              family: KR,
+              color: "#c9ccd1",
+            });
+          }
+        } else {
+          text(pick(name), tx0, cy + 190, {
+            size: ko ? 34 : 30,
+            weight: ko ? 700 : 800,
+            family: ko ? KR : SANS,
+            tracking: ko ? 0 : 1,
+          });
+          if (i === 0)
+            text(pick(S.steelSub), tx0, cy + 228, {
+              size: ko ? 26 : 22,
+              weight: 700,
+              family: ko ? KR : SANS,
+              tracking: ko ? 0 : 2,
+              color: "#dfe1e5",
+            });
+        }
         ctx.restore();
       });
       ctx.restore();
@@ -6941,15 +7115,22 @@
       else drawFigure(cam, st, rig);
     }
 
-    // S6 — hit factor.
+    // S6 — hit factor: points ÷ time = hit factor, each number under its
+    // name. The equation builds in about 0.6 s on screen (the time flies in
+    // from the shot timer, the points roll up, the operators slam on the
+    // off-beat, the hit factor rolls in and lands on the beat at 20.3675),
+    // then holds still, names and all, until it leaves at 21.92: 2.1 s on
+    // screen at this stretch, for the first range command to rise at 22.02.
+    // Copy: FINALE_COPY.hitFactor.
     function sceneHitFactor(t) {
-      if (t < 19.9 || t > 22.8) return;
-      const out = ease.in3(seg(t, 22.28, 22.52));
+      if (t < 19.9 || t > 22.05) return;
+      const out = ease.in3(seg(t, 21.92, 21.995));
       ctx.save();
       ctx.translate(0, -out * 140);
       ctx.globalAlpha = 1 - out;
       const y = 600;
       const size = 150;
+      const land = 20.3675; // the last digit of the hit factor
       // positions
       const xP = 230;
       const xDiv = 560;
@@ -6957,16 +7138,16 @@
       const xEq = 1140;
       const xHF = 1270;
       // time flies in from the HUD
-      const fly = ease.inOut3(seg(t, 19.95, 20.35));
+      const fly = ease.inOut3(seg(t, 19.95, 20.15));
       const tsz = lerp(64, size, fly);
       const tx = lerp(W - 96 - timeWidth(fmt2(STAGE_MS)) * 64, xT, fly);
       const ty = lerp(150, y, fly);
       digits(fmt2(STAGE_MS), tx, ty, tsz, { weight: 800 });
       // points roll
-      const pp = ease.out3(seg(t, 20.05, 20.45));
+      const pp = ease.out3(seg(t, 20.0, 20.15));
       const pts = Math.round(STAGE_POINTS * pp);
       ctx.save();
-      ctx.globalAlpha *= ease.out3(seg(t, 20.0, 20.12));
+      ctx.globalAlpha *= ease.out3(seg(t, 20.0, 20.04));
       digits(
         String(pts).padStart(String(STAGE_POINTS).length, "0"),
         xP,
@@ -6975,38 +7156,60 @@
         { weight: 800 },
       );
       ctx.restore();
+      // the names: English and Korean in both, else the viewer's language
       const lang = opt.lang;
-      const labels = [
-        [xP, "POINTS", "점수", 20.05],
-        [xT, "TIME", "시간", 20.25],
-        [xHF, "HIT FACTOR", "히트 팩터", 20.6],
-      ];
-      labels.forEach(([x, en, ko, at]) => {
-        kinetic(en, x + 4, y - size - 20, {
-          size: 18,
-          weight: 700,
-          tracking: 3,
-          t: t - at,
-          color: C.red,
-          stagger: 0.01,
-        });
-        ctx.save();
-        ctx.globalAlpha *= ease.out3(seg(t, at + 0.1, at + 0.35));
-        if (lang !== "en")
-          text(ko, x + 4, y - size + 8, {
-            size: 18,
-            weight: 500,
-            color: C.dim,
-            family: KR,
-          });
-        ctx.restore();
+      const L = FINALE_COPY.hitFactor;
+      [
+        [xP, L.points, 20.0],
+        [xT, L.time, 20.1],
+        [xHF, L.hf, 20.2],
+      ].forEach(([x, [en, kr], at]) => {
+        if (lang === "both") {
+          landLine(
+            en,
+            x + 4,
+            y - size - 46,
+            { size: 24, tracking: 3, color: C.red },
+            t,
+            at,
+            0.14,
+          );
+          landLine(
+            kr,
+            x + 4,
+            y - size - 10,
+            { size: 28, weight: 700, family: KR, color: "#c9ccd1" },
+            t,
+            at + 0.01,
+            0.14,
+          );
+        } else if (lang === "en")
+          landLine(
+            en,
+            x + 4,
+            y - size - 26,
+            { size: 26, tracking: 3, color: C.red },
+            t,
+            at,
+            0.14,
+          );
+        else
+          landLine(
+            kr,
+            x + 4,
+            y - size - 24,
+            { size: 34, weight: 700, family: KR, color: C.red },
+            t,
+            at,
+            0.14,
+          );
       });
       // operators slam
       [
         [xDiv, "÷"],
         [xEq, "="],
       ].forEach(([x, op]) => {
-        const p = seg(t, 20.5, 20.62);
+        const p = seg(t, 20.184, 20.23);
         if (p <= 0) return;
         const sc = lerp(2.2, 1, ease.out3(p));
         ctx.save();
@@ -7021,110 +7224,106 @@
         });
         ctx.restore();
       });
-      // hit factor rolls in, digit by digit
+      // hit factor rolls in, digit by digit, the last one on the beat
       const hf = HIT_FACTOR.toFixed(4);
-      if (t > 20.55) {
+      if (t > 20.2) {
         const r = rand(Math.floor(t * 40));
+        const step = 0.021;
         const chars = [...hf].map((ch, k) => {
-          const land = 20.62 + k * 0.07;
-          if (ch === ".") return t > land ? "." : " ";
-          return t >= land ? ch : String(Math.floor(r() * 10));
+          const at = land - (hf.length - 1 - k) * step;
+          if (ch === ".") return t > at ? "." : " ";
+          return t >= at ? ch : String(Math.floor(r() * 10));
         });
-        const settled = t >= 20.62 + hf.length * 0.07;
+        const settled = t >= land;
         const w = digits(chars.join(""), xHF, y, size, {
           weight: 800,
           color: settled ? C.white : "rgba(255,255,255,0.75)",
         });
-        const ul = ease.outExpo(seg(t, 21.0, 21.4));
+        const ul = ease.outExpo(seg(t, land, land + 0.13));
         ctx.fillStyle = C.red;
         ctx.fillRect(xHF, y + 26, w * ul, 8);
-        if (t > 21.0 && t < 21.5) {
-          const rp = seg(t, 21.0, 21.5);
+        // a ripple round the digits, kept clear of their names
+        if (t > land && t < land + 0.38) {
+          const rp = seg(t, land, land + 0.38);
           ctx.strokeStyle = rgba(C.red, 1 - rp);
           ctx.lineWidth = 3;
           ctx.strokeRect(
-            xHF - 20 - rp * 30,
-            y - size - rp * 30,
-            w + 40 + rp * 60,
-            size + 60 + rp * 60,
+            xHF - 20 - rp * 24,
+            y - 0.78 * size - 18 - rp * 24,
+            w + 40 + rp * 48,
+            0.78 * size + 62 + rp * 48,
           );
         }
       }
-      // what each part means
-      const tags = [
-        ["ACCURACY", "→ POINTS", 21.5],
-        ["POWER", "→ MINOR / MAJOR", 21.75],
-        ["SPEED", "→ TIME", 22.0],
-      ];
-      tags.forEach(([a, b, at], k) => {
-        const lt = t - at;
-        if (lt < 0) return;
-        const x = 250 + k * 470;
-        kinetic(a, x, 830, {
-          size: 30,
-          weight: 800,
-          t: lt,
-          tracking: 2,
-          stagger: 0.012,
-        });
-        ctx.save();
-        ctx.globalAlpha *= ease.out3(seg(lt, 0.1, 0.3));
-        text(b, x, 866, { size: 18, weight: 600, tracking: 2, color: C.dim });
-        ctx.restore();
-      });
       ctx.restore();
     }
 
-    // S7 — unload, show clear, hammer down, holster, range is clear.
+    // S7 — range is clear: the three commands one at a time, each in its
+    // English words (with the Korean under it in ko and both), still within
+    // 0.14 s on screen of its start and held about 1.45 s, while the pistol
+    // does what it says: magazine out, slide locked back, chamber shown
+    // empty; slide forward, hammer down, holstered. RANGE IS CLEAR holds
+    // until the end card's iris (25.1) reaches it. Copy: FINALE_COPY.clear.
+    const CLEAR_BEATS = [22.022, 23.101, 24.136]; // on screen 51.49, 53.09, 54.70
     function sceneClear(t) {
-      if (t < 22.4 || t > 24.8 + END_HOLD) return;
-      const lines = [
-        ["IF YOU ARE FINISHED,", "UNLOAD AND SHOW CLEAR", 22.5, 23.02],
-        ["IF CLEAR,", "HAMMER DOWN, HOLSTER", 23.25, 23.77],
-      ];
-      lines.forEach(([a, b, at, end]) => {
-        if (t < at || t > end + 0.4) return;
-        kinetic(a, 150, 400, {
-          size: 44,
-          weight: 600,
-          t: t - at,
-          out: t - end,
-          outDur: 0.18,
-          outStagger: 0.003,
-          color: C.dim,
-          tracking: 1,
-          stagger: 0.01,
-        });
-        kinetic(b, 150, 515, {
-          size: 92,
-          t: t - at - 0.05,
-          out: t - end,
-          outDur: 0.18,
-          outStagger: 0.004,
-          tracking: -3,
-          stagger: 0.016,
-        });
+      if (t < CLEAR_BEATS[0] || t > 24.8 + END_HOLD) return;
+      const lang = opt.lang;
+      const gloss = lang !== "en";
+      FINALE_COPY.clear.forEach(([en, kr], k) => {
+        const at = CLEAR_BEATS[k];
+        // gone just before the next one rises into its place
+        const out = (CLEAR_BEATS[k + 1] ?? Infinity) - 0.035;
+        // 0.14 s on screen (the first is still in the hit factor's stretch)
+        const land = k ? 0.09 : 0.103;
+        if (t < at || t > out + 0.035) return;
+        const last = k === 2;
+        // clear of the screen centre, where the end card's iris opens
+        const y = 450;
+        landLine(
+          en,
+          150,
+          y,
+          last ? { size: 150, tracking: -5 } : { size: 96, tracking: -3 },
+          t,
+          at,
+          land,
+          out,
+          0.035,
+        );
+        if (last) {
+          const w = ease.outExpo(seg(t, at, at + 0.12)) * 520;
+          ctx.fillStyle = C.red;
+          ctx.fillRect(150, 486, w, 8);
+        }
+        if (gloss)
+          landLine(
+            kr,
+            152,
+            last ? 570 : 532,
+            {
+              size: last ? 48 : 44,
+              weight: 700,
+              family: KR,
+              color: "#c9ccd1",
+            },
+            t,
+            at + 0.01,
+            land,
+            out,
+            0.035,
+          );
       });
-      if (t > 24.0) {
-        kinetic("RANGE IS CLEAR", 150, 540, {
-          size: 150,
-          t: t - 24.0,
-          tracking: -5,
-          stagger: 0.02,
-        });
-        const w = ease.outExpo(seg(t, 24.1, 24.45)) * 520;
-        ctx.fillStyle = C.red;
-        ctx.fillRect(150, 590, w, 8);
-      }
       // the gun: magazine out, slide locked back, show clear, slide forward,
-      // hammer down, holster. The magazine clears the grip by 22.72, before the
-      // slide comes back (22.8–22.9) and the chamber is shown empty.
-      if (t < 24.0) {
-        const drop = seg(t, 22.58, 23.08);
+      // hammer down, holster. The magazine clears the grip (22.31) before
+      // the slide comes back (22.36–22.42) and the chamber is shown empty;
+      // the slide goes home on HAMMER DOWN, HOLSTER, and the hammer follows.
+      if (t < CLEAR_BEATS[2]) {
+        const drop = seg(t, 22.2, 22.48);
         const lock =
-          ease.out3(seg(t, 22.8, 22.9)) * (1 - ease.in3(seg(t, 23.3, 23.34)));
-        const holster = ease.in3(seg(t, 23.6, 23.95));
-        const enter = ease.out3(seg(t, 22.52, 22.82));
+          ease.out3(seg(t, 22.36, 22.42)) *
+          (1 - ease.in3(seg(t, 23.13, 23.16)));
+        const holster = ease.in3(seg(t, 23.6, 23.9));
+        const enter = ease.out3(seg(t, CLEAR_BEATS[0], 22.2));
         const go = {
           x: lerp(2280, 1500, enter),
           y: 790 + holster * 520,
@@ -7135,14 +7334,14 @@
           ...go,
           slide: lock * 27,
           // cocked by the stage's last shot until HAMMER DOWN
-          hammer: 1 - ease.in3(seg(t, 23.44, 23.5)),
+          hammer: 1 - ease.in3(seg(t, 23.36, 23.4)),
           mag: { dx: -drop * 18, dy: drop * drop * 900, rot: drop * 0.8 },
         });
-        if (t > 22.88 && t < 23.25) {
+        // the empty chamber, ringed while the slide is back
+        if (t > 22.42 && t < 23.08) {
           const [cx, cy] = gunPoint(go, GUN.port[0], GUN.port[1]);
-          const a = env(t, 22.88, 23.25, 0.08, 0.12);
           ctx.save();
-          ctx.globalAlpha = a;
+          ctx.globalAlpha = env(t, 22.42, 23.08, 0.05, 0.05);
           ctx.strokeStyle = C.white;
           ctx.lineWidth = 2;
           ctx.setLineDash([5, 5]);
@@ -7150,19 +7349,18 @@
           ctx.arc(cx, cy, 70, 0, Math.PI * 2);
           ctx.stroke();
           ctx.setLineDash([]);
-          text("CHAMBER EMPTY", cx, cy + 100, {
-            size: 13,
-            weight: 800,
-            tracking: 2,
-            align: "center",
-          });
           ctx.restore();
         }
       }
     }
 
     // S8 — end card: the IPSC crest and the KRPSA crest side by side (the
-    // Confederation and its Region, no separator), then the lettering.
+    // Confederation and its Region, no separator), then the lettering: the
+    // name as the site gives it (in Korean in ko, under the English in
+    // both) and IPSC's fifty years. The lettering is in and still as the
+    // iris uncovers it (24.55) and holds; only the crests catch a light
+    // sweep. The card, the closing caption and the frame chrome all fade
+    // out over the reel's last 0.3 s. Copy: FINALE_COPY.end.
     const logoLayers = {};
     function sceneEnd(t) {
       if (t < 24.3) return;
@@ -7174,13 +7372,8 @@
       ctx.clip();
       background(t);
       blueprintGrid(0.5);
-      // a slow push-in so the hold keeps breathing
-      const push = lerp(1, 1.04, ease.inOut3(seg(t, 24.5, 28 + TAIL)));
-      ctx.translate(W / 2, H / 2);
-      ctx.scale(push, push);
-      ctx.translate(-W / 2, -H / 2);
       const lt = t - 24.5;
-      const fade = 1 - seg(t, 27.2 + TAIL, 28 + TAIL);
+      const fade = 1 - seg(t, 27.7 + TAIL, 28 + TAIL);
       ctx.globalAlpha = fade;
       // a crest rises into place, then a light sweeps across it
       const crest = (name, cx, cy, h, d) => {
@@ -7228,37 +7421,54 @@
       // the two shields read as the same size.
       crest("ipsc-crest.png", 410, 540, 380, 0);
       crest("krpsa-logo.png", 773, 540, 402, 0.12);
-      kinetic("KRPSA", 1023, 545, {
+      // the lettering: at rest by 24.52, as the iris uncovers it
+      const wm = kinetic("KRPSA", 1023, 545, {
         size: 190,
-        t: lt - 0.15,
+        t: lt + 0.3,
         tracking: -6,
-        stagger: 0.035,
+        stagger: 0.02,
+        dur: 0.24,
       });
+      const lang = opt.lang;
+      const E = FINALE_COPY.end;
+      const both = lang === "both";
       ctx.save();
-      ctx.globalAlpha *= ease.out3(seg(lt, 0.5, 0.8));
-      text("KOREA PRACTICAL SHOOTING ASSOCIATION", 1029, 600, {
-        size: 20,
-        weight: 700,
-        tracking: 5,
-      });
+      ctx.globalAlpha *= ease.out3(seg(lt, -0.2, -0.08));
+      if (lang === "ko")
+        text(E.name[1], 1029, 610, { size: 34, weight: 700, family: KR });
+      else text(E.name[0], 1029, 604, { size: 24, weight: 700, tracking: 2.5 });
+      if (both)
+        text(E.name[1], 1029, 644, {
+          size: 28,
+          weight: 700,
+          family: KR,
+          color: "#c9ccd1",
+        });
       ctx.restore();
-      const lw = ease.outExpo(seg(lt, 0.55, 1.1)) * 600;
+      const ry = both ? 672 : 638;
+      const lw = ease.outExpo(seg(lt, -0.15, 0.25)) * (wm - 6);
       ctx.fillStyle = C.red;
-      ctx.fillRect(1029, 628, lw, 4);
+      ctx.fillRect(1029, ry, lw, 4);
       ctx.save();
-      ctx.globalAlpha *= ease.out3(seg(lt, 0.8, 1.1));
-      text("IPSC  1976 — 2026  ·  50 YEARS", 1029, 678, {
-        size: 20,
-        weight: 700,
-        tracking: 4,
-        color: C.red,
-      });
-      text("DILIGENTIA · VIS · CELERITAS", 1029, 714, {
-        size: 16,
-        weight: 600,
-        tracking: 4,
-        color: C.dim,
-      });
+      ctx.globalAlpha *= ease.out3(seg(lt, -0.15, -0.03));
+      const yy = ry + 54;
+      if (lang === "ko")
+        text(E.years[1], 1029, yy, { size: 28, weight: 700, color: C.red });
+      else {
+        const w = text(E.years[0], 1029, yy, {
+          size: 26,
+          weight: 800,
+          tracking: 4,
+          color: C.red,
+        });
+        if (both)
+          text(E.years[2], 1029 + w + 22, yy, {
+            size: 26,
+            weight: 700,
+            family: KR,
+            color: "#c9ccd1",
+          });
+      }
       ctx.restore();
       if (opt.credit) {
         ctx.save();
@@ -7287,7 +7497,6 @@
       const hits = [
         [BEEP, 0.45, 20],
         [RESUME, 0.3, 9],
-        [21.0 + SHIFT, 0.3, 7],
         [0.08, 0.2, 5],
         [0.58, 0.2, 5],
         [1.08, 0.2, 5],
@@ -7311,7 +7520,7 @@
         [BEEP, 0.16, "255,255,255", 1],
         [BEEP + 0.03, 0.6, "236,34,66", 0.35],
         [RESUME, 0.12, "255,255,255", 0.3],
-        [21.0 + SHIFT, 0.18, "255,255,255", 0.14],
+        [20.3675 + SHIFT, 0.18, "255,255,255", 0.14], // the hit factor lands
         [FREEZE, 0.25, "255,255,255", 0.35],
       ];
       for (const [at, dur, rgb, a] of flashes) {
