@@ -2025,7 +2025,8 @@
         });
       }
       // stage brief / shot timer
-      if (t < BEEP) {
+      // hud runs on the final timeline: the brief leaves with the start signal
+      if (t < ins(BEEP)) {
         text("STAGE 01 — LONG COURSE", W - 96, 92, {
           size: 14,
           weight: 700,
@@ -7379,8 +7380,8 @@
       ctx.restore();
       overlays(t);
       // the frozen timer blinks on the final timeline's own beat, steady
-      // through the inserts and the stretches
-      timerHud(t, tf);
+      // through the inserts and the stretches (phase-locked to the beep)
+      timerHud(t, tf - ins(BEEP) + BEEP);
       if (opt.captions) caption(tf);
       hud(tf);
     }
