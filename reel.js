@@ -8432,7 +8432,7 @@
     [0, 2.14, 4.2], // DVC
     [2.14, BEEP, 7.0], // the range commands, up to the start signal
     [6.9, 12.95, 7.5], // the line of sight and the sights
-    [13.0, 15.7, 7.0], // targets and scoring, before the push to the stage
+    [13.15, 15.7, 6.6], // targets and scoring (its blinds in play at speed), up to the push
     [19.9 + SHIFT, 22.4 + SHIFT, 4.5], // the hit factor
     [22.4 + SHIFT, 25.1 + SHIFT, 6.0], // range is clear, up to the end card
   ];
