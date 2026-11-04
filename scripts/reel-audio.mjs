@@ -713,20 +713,27 @@ voice.pad(I(0), AM, span(0, 6), 0.8, 700);
 }
 
 // Targets and scoring: the C bar that the Divisions chapter cuts into resumes
-// after it on the scoring hit, and the groove runs on that hit's grid (the
-// zones light on its beats): a kick a second and a bass every two, into the G
-// on the next bar line, through the push to the course walk's hit.
+// after it on the scoring hit. The blinds play at speed and the table slowed
+// down, so the first zone lights a beat and a half after the hit: the hit's
+// beat holds into it, and the groove runs on the zones' grid from there (each
+// zone, then the cards, the popper and its fall land on its kicks): a kick a
+// second and a bass every two, into the G on the next bar line, through the
+// push to the course walk's hit.
 {
   const [at] = cuesOf('hit', I(13), I(13.5));
   const [walk] = cuesOf('hit', FLY.at, FLY.at + 0.01);
-  const change = at + Math.round((I(14) - at) / (4 * BEAT)) * 4 * BEAT;
+  const [zone] = cuesOf('blip', at, walk);
+  const change = zone + Math.round((I(14) - zone) / (4 * BEAT)) * 4 * BEAT;
   voice.pad(at, C, change - at, 0.9, 600);
   voice.pad(change, G, walk - change, 0.9, 600, { release: 0.4 });
-  for (const { t, n, whole } of grid(at, at, walk)) {
-    if (n % 2 === 0 && whole) kick(t, 0.55);
-    if (n % 4 === 0) voice.bass(t, 31, Math.min(1.8, walk - t), 0.5, 300);
+  for (const [a, to] of [[at, zone], [zone, walk]]) {
+    for (const { t, n, whole } of grid(a, a, to)) {
+      if (!whole) continue;
+      if (n % 2 === 0) kick(t, 0.55);
+      if (n % 4 === 0) voice.bass(t, 31, Math.min(1.8, to - t), 0.5, 300);
+    }
+    for (const { t, n } of grid(a, a, to, BEAT / 2)) if (n % 2) voice.hat(t, 0.3);
   }
-  for (const { t, n } of grid(at, at, walk, BEAT / 2)) if (n % 2) voice.hat(t, 0.3);
 }
 
 // The course walk: a held E, the dominant, swells and opens up over the walk
@@ -751,7 +758,12 @@ voice.pad(I(0), AM, span(0, 6), 0.8, 700);
 // stage drop's grid and follow the speed ramps: half time in slow motion,
 // sixteenth hats while fast-forwarding. The boom into each slow ramp is a
 // downbeat the grid starts again from (the tape stop into the ramp covers the
-// jump), up to the hit factor's pick-up.
+// jump). The chords go round once up to the reload, and again with the
+// picture after it: A minor on the boom into the drone's held shot over area
+// C, F on the next downbeat after it lets go into the mover, G on the next
+// once the picture is back at speed for the low port, and A minor again on
+// the last shot's bullet time, which holds still up to the hit factor's
+// pick-up.
 const STAGE_OUT = I(19.75 + S);
 const LAND = cuesOf('hit', I(19.9 + S), I(21 + S)).pop(); // the hit factor lands...
 const SLAM = cuesOf('hit', I(19.9 + S), LAND - 1e-3)[0] ?? LAND; // ...just after the operators slam
@@ -764,10 +776,27 @@ const HF_FROM = SLAM - Math.ceil((SLAM - STAGE_OUT) / BEAT) * BEAT; // the pick-
     const a = anchors.findLast((x) => x <= t + BEAT / 2);
     return a + Math.round((t - a) / BEAT) * BEAT;
   };
-  const chords = [[16, AM], [20, F], [22, C], [24, G], [26, AM]].map(([t, n]) => [snap(I(t)), n]);
+  const rampAt = (t) => MARKS.ramps.find(([a]) => Math.abs(a - t) < 1e-6);
+  const hold = anchors.find((a) => a > videoOf(MARKS.events.reload.at(-1))) ?? anchors.at(-1);
+  const last = anchors.at(-1);
+  // where the slow motion from `hold` ends: its first ramp, then the whole run
+  const [, letGo] = rampAt(hold);
+  let back = letGo;
+  for (let r; (r = rampAt(back)) && r[2] < 1; ) back = r[1];
+  // the next half-time downbeat (an even beat on the hold's grid)
+  const bar = (t) => hold + Math.ceil((t - hold) / (2 * BEAT) - 1e-6) * 2 * BEAT;
+  const chords = [
+    ...[[16, AM], [20, F], [22, C], [24, G]].map(([t, n]) => [snap(I(t)), n]),
+    [hold, AM],
+    [bar(letGo), F],
+    [bar(back), G],
+    [last, AM],
+  ].filter(([t], k, all) => k === 0 || (t > all[k - 1][0] + BEAT && t < HF_FROM));
   chords.forEach(([t, n], k) => voice.pad(t, n, (chords[k + 1]?.[0] ?? HF_FROM) - t, 1, 1500));
   anchors.forEach((at, k) => {
-    const to = anchors[k + 1] ?? HF_FROM;
+    // the last bullet time's groove ends with it: the pick-up takes over
+    const ramp = rampAt(at);
+    const to = anchors[k + 1] ?? (ramp?.[2] < 0.1 ? Math.min(ramp[1], HF_FROM) : HF_FROM);
     for (const { t, n } of grid(at, at, to, BEAT / 4)) {
       const rate = rateAt(t);
       const beat = n / 4;
