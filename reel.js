@@ -343,33 +343,39 @@
     [...str].reduce((w, ch) => w + (ch === "." || ch === " " ? 0.3 : 0.62), 0);
 
   // The opening's on-screen copy ([English, Korean]), here so that the font
-  // preloader can fetch every glyph. Times are in the original cut. Each text
-  // lands in under 0.3 s on the final timeline and then holds still: the
-  // three words of the motto land within the first 0.4 s and hold together
-  // until the wipe, which runs across them in reading order (it reaches
-  // DILIGENTIA at 2.47 s); the three range commands build up, each on its
-  // own stab (the stretch plays them at 2.49, 3.80 and 5.55 s, on the music's
-  // eighth notes; the beep is at 7.70).
+  // preloader can fetch every glyph. Times are in the original cut; the
+  // stretches play the motto at 0.61 and the commands at 0.55 of their pace,
+  // so the scenes time each landing on the final timeline (since()): every
+  // text settles in about 0.2 s and then holds still while the picture
+  // around it keeps moving. The three words of the motto slam in on
+  // sixteenths and are all still by 0.4 s; they hold together, three
+  // seconds, until the wipe runs across them in reading order (it reaches
+  // DILIGENTIA at 3.6 s). The three range commands build up, each on its
+  // own stab and each read, with its meaning and nothing else new, for two
+  // seconds or more before the next one lands: on the final timeline 3.62,
+  // 5.75 and 8.00 s, the last two on the beep's eighth-note grid (the beep
+  // is at 10.50).
   const OPENING = {
     // [Latin, English, Korean, slam]
     dvc: [
       ["DILIGENTIA", "ACCURACY", "정확", 0],
-      ["VIS", "POWER", "파워", 0.11],
-      ["CELERITAS", "SPEED", "속도", 0.22],
+      ["VIS", "POWER", "파워", 0.0764],
+      ["CELERITAS", "SPEED", "속도", 0.1529],
     ],
-    // the wipe from the motto to the commands, [from, to] (2.37–2.66 s on
+    // the wipe from the motto to the commands, [from, to] (3.44–3.84 s on
     // the final timeline): MAKE READY has risen behind it, and is uncovered
-    // (2.46–2.52 s) on its stab
+    // (3.55–3.65 s) on its stab
     wipe: [2.103, 2.329],
     // [command, its meaning, at]
     commands: [
       ["MAKE READY", ["Load and holster", "장전하고 준비"], 2.2075],
-      ["ARE YOU READY?", ["Silence = ready", "준비됐습니까?"], 3.159],
-      ["STANDBY", ["Beep in 1–4 s", "대기 — 1~4초 뒤 신호음"], 4.433],
+      ["ARE YOU READY?", ["Silence = ready", "준비됐습니까?"], 3.3807],
+      ["STANDBY", ["Beep in 1–4 s", "대기 — 1~4초 뒤 신호음"], 4.6214],
     ],
     seconds: ["s", "초"],
-    // STANDBY's heartbeat, on the music's eighth notes (6.24, 6.74, 7.24 s)
-    hearts: [4.939, 5.303, 5.667],
+    // STANDBY's heartbeat: a bar of four into the beep, which lands on the
+    // downbeat (8.5, 9.0, 9.5 and 10.0 s on the final timeline)
+    hearts: [4.8971, 5.1729, 5.4486, 5.7243],
     // the sights split: each half's name, and where its eye focuses
     iron: {
       name: ["IRON SIGHTS", "아이언 사이트"],
@@ -379,19 +385,26 @@
   };
 
   // Each line stays up long enough to read on the final timeline: at most
-  // about 7 Korean or 15 English characters a second, and two seconds or more
-  // (times here are in the original cut; the stretches slow some of it down).
-  // The motto goes without one: its meaning is on screen, under each word.
+  // 6 Korean letters or 13 English characters a second, and two and a half
+  // seconds or more (times here are in the original cut; the stretches slow
+  // some of it down). The motto goes without one: its meaning is on screen,
+  // under each word, and so do the first two range commands: each comes
+  // with its meaning, and a line under them would leave too little time to
+  // read it all before the next one lands. The opening's lines run with its
+  // beats (on the final timeline): the start signal from STANDBY up to the
+  // freeze (8.02–11.30 s; short, as STANDBY and its 1–4 s are read first),
+  // then each sight picture, the iron sights from the push into the rear
+  // sight (12.27–15.71) and the optic from just after the first dry recoil
+  // (15.91–18.78).
   const CAPTIONS = [
-    [2.22, 4.3, "레인지 오피서(RO)의 구령.", "The Range Officer's commands."],
-    [4.442, 6.8, "신호음이 울리면 시작!", "On the beep, the run starts."],
+    [4.63, 6.8, "신호음에 시작!", "The beep means go."],
     [
-      6.95,
-      9.95,
+      7.6,
+      10.38,
       "아이언 사이트 — 초점은 가늠쇠에.",
       "Iron sights: focus on the front sight.",
     ],
-    [10.1, 12.85, "옵틱 — 초점은 표적에.", "Optic: focus on the target."],
+    [10.54, 12.85, "옵틱 — 초점은 표적에.", "Optic: focus on the target."],
     // targets and scoring: one line for each of its two beats (the table,
     // then the cards), saying what the beat shows
     [
@@ -491,27 +504,28 @@
       type: "click",
       v: 0.35,
     })),
-    // STANDBY: a riser that peaks 0.18 s before the beep on screen (its dur
+    // STANDBY: a riser that peaks 0.24 s before the beep on screen (its dur
     // is in original seconds and stretches with the scene), and the heartbeat
-    { t: 4.47, type: "riser", dur: 1.4 },
+    { t: 4.65, type: "riser", dur: 1.22 },
     ...OPENING.hearts.map((t) => ({ t, type: "heart" })),
     { t: BEEP, type: "beep" },
     { t: BEEP, type: "drop" },
     { t: 6.32, type: "whoosh", v: 0.6 },
     { t: FREEZE, type: "freeze" },
-    // line of sight, push in, split, settle, focus, two dry recoils, the
-    // guns lowered, the divisions
+    // line of sight, push in, split, settle, focus (on the beep grid's kick
+    // at 14.5 s), two dry recoils (on its kicks at 15.5 and 16.5 s), the
+    // guns lowered, the divisions; see SIGHT
     { t: 6.95, type: "blip", v: 0.45 },
     { t: 7.06, type: "tick", v: 0.45 },
     { t: 7.25, type: "tick", v: 0.45 },
     { t: 7.3, type: "blip", v: 0.6 },
     { t: 7.45, type: "riser", dur: 0.5 },
     { t: 8.0, type: "hit", v: 0.7 },
-    { t: 9.22, type: "click", v: 0.7 },
-    { t: 9.3, type: "blip", v: 0.6 },
-    { t: 9.36, type: "blip", v: 0.5 },
-    { t: 9.72, type: "whoosh", v: 0.35 },
-    { t: 10.97, type: "whoosh", v: 0.35 },
+    { t: 9.42, type: "click", v: 0.7 },
+    { t: 9.5, type: "blip", v: 0.6 },
+    { t: 9.56, type: "blip", v: 0.5 },
+    { t: 10.177, type: "whoosh", v: 0.35 },
+    { t: 10.984, type: "whoosh", v: 0.35 },
     { t: 12.28, type: "whoosh", v: 0.45 },
     { t: 12.78, type: "whoosh", v: 0.6 },
     { t: 13.0, type: "hit", v: 0.6 },
@@ -2220,13 +2234,43 @@
     }
 
     // ============================================================ SCENES
-    // S0 — DVC: Diligentia, Vis, Celeritas. The three words slam in an
-    // eighth of a second apart, side by side, each with its meaning under it,
-    // and hold together, still, until the wipe to the range commands runs
-    // over them, left to right, in the order they are read.
+    // Final-timeline seconds since `at` (both in the original cut). The
+    // opening times its entrances in these, so a text lands just as fast
+    // however much a stretch slows its scene down.
+    const since = (t, at) => ins(t) - ins(at);
+
+    // A soft, slanted band of light that crosses the frame left to right as
+    // p runs from 0 to 1 (leaning like the wipe): the holds' slow sweep. It
+    // is screened over what is drawn so far, so the scenes draw it before
+    // their type and the ground lifts as it passes behind the words. Returns
+    // the band's centre at mid-height.
+    function lightSweep(p, a, y0 = 0, y1 = H) {
+      if (p <= 0 || p >= 1 || a <= 0) return null;
+      const x = lerp(-640, W + 640, p);
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.transform(1, 0, -0.18, 1, 0.09 * H, 0);
+      const g = ctx.createLinearGradient(x - 380, 0, x + 380, 0);
+      g.addColorStop(0, "rgba(255,255,255,0)");
+      g.addColorStop(0.5, `rgba(255,255,255,${a})`);
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(x - 380, y0, 760, y1 - y0);
+      ctx.restore();
+      return x;
+    }
+
+    // S0 — DVC: Diligentia, Vis, Celeritas. The three words slam in a
+    // sixteenth apart (0.125 s), side by side, each with its meaning under
+    // it, and hold together until the wipe to the range commands runs over
+    // them, left to right, in the order they are read. The hold is alive but
+    // the type reads as still: the camera eases in by 2.5 % (under 7 px/s at
+    // the far edge), a band of light sweeps across behind the words and a
+    // glint runs along the ruler with it.
     function sceneDVC(t) {
       if (t > OPENING.wipe[1]) return;
-      floorGrid(0.6 * ease.out3(seg(t, 0, 1.2)), t);
+      const f = since(t, 0); // the final timeline
+      floorGrid(0.6 * ease.out3(seg(f, 0, 1.6)), t);
       const lang = opt.lang;
       const size = 112;
       const tracking = -3;
@@ -2236,39 +2280,60 @@
       );
       const total = widths.reduce((a, b) => a + b, 0) + gap * 2;
       const y = 528;
-      // ruler under the words
-      const rw = ease.outExpo(seg(t, 0.0, 0.6)) * (total + 120);
       const ry = y + 46;
+      const sx = lightSweep(ease.inOut3(seg(f, 0.6, 3.3)), 0.07);
+      ctx.save();
+      const push = 1 + 0.025 * seg(f, 0.4, since(OPENING.wipe[1], 0));
+      ctx.translate(W / 2, y);
+      ctx.scale(push, push);
+      ctx.translate(-W / 2, -y);
+      // ruler under the words
+      const rw = ease.outExpo(seg(f, 0, 0.9)) * (total + 120);
       line(W / 2 - rw / 2, ry, W / 2 + rw / 2, ry, C.red, 2);
       for (let k = -45; k <= 45; k++) {
         const x = W / 2 + k * 20;
         if (Math.abs(x - W / 2) > rw / 2) continue;
         line(x, ry, x, ry + (k % 5 === 0 ? 16 : 7), "rgba(255,255,255,0.3)", 1);
       }
+      // the glint, where the band of light crosses the ruler
+      if (sx != null) {
+        const gx = sx - 0.18 * (ry - H / 2);
+        const x0 = Math.max(gx - 90, W / 2 - rw / 2);
+        const x1 = Math.min(gx + 90, W / 2 + rw / 2);
+        if (x1 > x0) {
+          const gl = ctx.createLinearGradient(gx - 90, 0, gx + 90, 0);
+          gl.addColorStop(0, "rgba(255,220,226,0)");
+          gl.addColorStop(0.5, "rgba(255,236,240,0.9)");
+          gl.addColorStop(1, "rgba(255,220,226,0)");
+          ctx.fillStyle = gl;
+          ctx.fillRect(x0, ry - 1.5, x1 - x0, 3);
+        }
+      }
       let x = W / 2 - total / 2;
       OPENING.dvc.forEach(([la, en, ko, at], k) => {
         const cx = x + widths[k] / 2;
         x += widths[k] + gap;
-        const lt = t - at;
+        const lt = since(t, at);
         if (lt < 0) return;
-        // the word lands in 0.12 s, with a chromatic hit
+        // the word is still 0.15 s after its slam, which lands with a
+        // chromatic hit
         kinetic(la, cx, y, {
           size,
           t: lt,
           tracking,
           align: "center",
-          stagger: 0.003,
-          dur: 0.11,
-          split: Math.max(0, 1 - lt / 0.1) * 9,
+          stagger: 0.004,
+          dur: 0.15,
+          split: Math.max(0, 1 - lt / 0.16) * 9,
         });
         // its meaning: in en the English, in ko the Korean, in both the two
-        const g = { t: lt - 0.02, align: "center", dur: 0.11, weight: 700 };
+        const g = { t: lt - 0.03, align: "center", dur: 0.16, weight: 700 };
         if (lang !== "ko")
           kinetic(en, cx, y + 110, {
             ...g,
             size: lang === "en" ? 36 : 30,
             tracking: lang === "en" ? 6 : 8,
-            stagger: 0.005,
+            stagger: 0.006,
             color: C.red,
           });
         if (lang !== "en")
@@ -2276,26 +2341,31 @@
             ...g,
             size: lang === "ko" ? 56 : 40,
             family: KR,
-            stagger: 0.012,
+            stagger: 0.015,
             color: lang === "ko" ? C.red : "#c9ccd1",
           });
       });
+      ctx.restore();
     }
 
     // S1 — range commands. The Range Officer's three commands build up as a
     // list, each with its meaning under it (the Korean in ko and both, what
-    // it asks for in en), and stay, still, until the start signal: the
-    // number of the latest one turns red. MAKE READY loads a magazine;
-    // STANDBY runs a clock through the 1–4 s window in which the beep comes.
+    // it asks for in en), and stay until the start signal: the number of
+    // the latest one turns red. Each is still about 0.25 s after its stab
+    // and is read alone for two seconds before the next one lands. MAKE
+    // READY loads a magazine; STANDBY runs a clock through the 1–4 s window
+    // in which the beep comes. Through the holds the list eases in by 2 %
+    // about its left edge (under 5 px/s anywhere, so the type reads as
+    // still), and a band of light sweeps behind each command as it lands.
     const CMD_X = 232;
     const CMD_Y = [318, 514, 710]; // baselines
     // MAKE READY rises behind the wipe, so that the wipe uncovers it already
     // still, on its stab
     const cmdRise = ([, , at], k) =>
-      k === 0 ? Math.min(at - 0.18, OPENING.wipe[0]) : at;
+      k === 0 ? Math.min(at - 0.25, OPENING.wipe[0]) : at;
     function sceneCommands(t) {
       if (t < 1.8 || t >= BEEP) return;
-      // a breath in, the last 0.18 s before the beep
+      // a breath in, the last 0.24 s before the beep
       const anticip = ease.in3(seg(t, 5.87, BEEP));
       ctx.save();
       ctx.translate(W / 2, H / 2);
@@ -2305,13 +2375,20 @@
       floorGrid(0.5, t);
       const lang = opt.lang;
       const cmds = OPENING.commands;
+      cmds.forEach(([, , at]) =>
+        lightSweep(ease.inOut3(seg(since(t, at), 0.15, 2.0)), 0.06),
+      );
+      const push = 1 + 0.02 * seg(since(t, 2.14), 0, since(BEEP, 2.14));
+      ctx.translate(150, H / 2);
+      ctx.scale(push, push);
+      ctx.translate(-150, -H / 2);
       const latest = cmds.findLastIndex((c, k) => t >= cmdRise(c, k));
       cmds.forEach(([cmd, meaning], k) => {
-        const lt = t - cmdRise(cmds[k], k);
+        const lt = since(t, cmdRise(cmds[k], k));
         if (lt < 0) return;
         const y = CMD_Y[k];
         ctx.save();
-        ctx.globalAlpha *= ease.out3(seg(lt, 0, 0.1));
+        ctx.globalAlpha *= ease.out3(seg(lt, 0, 0.15));
         text(`0${k + 1}`, 150, y - 62, {
           size: 24,
           weight: 700,
@@ -2319,14 +2396,14 @@
           color: k === latest ? C.red : C.dim,
         });
         ctx.restore();
-        // lands in under 0.3 s on the final timeline, with a chromatic hit
+        // still within 0.2 s on the final timeline, with a chromatic hit
         kinetic(cmd, CMD_X, y, {
           size: 112,
           t: lt,
           tracking: -3,
-          stagger: 0.005,
-          dur: 0.18,
-          split: Math.max(0, 1 - lt / 0.1) * 7,
+          stagger: 0.0035,
+          dur: 0.17,
+          split: Math.max(0, 1 - lt / 0.16) * 7,
         });
         const str = lang === "en" ? meaning[0] : meaning[1];
         kinetic(str, CMD_X + 4, y + 64, {
@@ -2335,8 +2412,8 @@
           family: lang === "en" ? SANS : KR,
           color: "#c9ccd1",
           t: lt - 0.03,
-          dur: 0.16,
-          stagger: Math.min(0.008, 0.04 / [...str].length),
+          dur: 0.17,
+          stagger: Math.min(0.008, 0.05 / [...str].length),
         });
       });
 
@@ -2345,8 +2422,8 @@
       const [, , ready] = cmds[0];
       const [, , standby] = cmds[2];
       const ma =
-        ease.out3(seg(t, ready, ready + 0.2)) *
-        (1 - seg(t, standby, standby + 0.15));
+        ease.out3(seg(since(t, ready), 0, 0.3)) *
+        (1 - seg(since(t, standby), 0, 0.25));
       if (ma > 0) {
         ctx.save();
         ctx.globalAlpha *= ma;
@@ -2384,17 +2461,17 @@
         const x1 = 1720;
         const y = CMD_Y[2] - 42;
         const sx = (s) => x0 + ((x1 - x0) * s) / 4;
-        const grow = ease.outExpo(seg(t, standby, standby + 0.18));
+        const grow = ease.outExpo(seg(since(t, standby), 0, 0.3));
         ctx.save();
         ctx.fillStyle = "rgba(255,255,255,0.12)";
         ctx.fillRect(x0, y - 2, (x1 - x0) * grow, 4);
         const pulse = OPENING.hearts.reduce(
-          (p, h) => Math.max(p, t >= h ? Math.exp(-(t - h) * 9) : 0),
+          (p, h) => Math.max(p, t >= h ? Math.exp(-since(t, h) * 7) : 0),
           0,
         );
         ctx.fillStyle = rgba(C.red, 0.35 + 0.35 * pulse);
         ctx.fillRect(sx(1), y - 10, (sx(4) - sx(1)) * grow, 20);
-        ctx.globalAlpha *= ease.out3(seg(t, standby + 0.02, standby + 0.12));
+        ctx.globalAlpha *= ease.out3(seg(since(t, standby), 0.03, 0.2));
         for (let k = 0; k <= 4; k++) {
           line(sx(k), y - 14, sx(k), y + 14, "rgba(255,255,255,0.5)", 2);
           text(`${k}`, sx(k), y + 52, {
@@ -2640,22 +2717,30 @@
       ctx.restore();
     }
 
-    // S3 — iron sights or an optic: the same shot pair through both.
+    // S3 — iron sights or an optic: the same shot pair through both. On the
+    // final timeline (the stretch plays it at 0.81): the halves open on the
+    // split's hit (12.45–12.83 s) and the names land; the sights settle and
+    // the focus lines land with their brackets on the beep grid's kick at
+    // 14.5 s; the dry recoils fall on its kicks at 15.5 and 16.5 s; the guns
+    // lower at 18.1 s and the blinds close at 18.65 s.
     const SIGHT = {
       // the A zone centre sits this high when the sights are on: low enough
       // to leave the names and focus lines above it clear, even in recoil
       aimY: 520,
       t0: 7.75,
       open: 8.05,
-      settle: 9.3,
+      settle: 9.5,
       // two dry recoil cycles: the clock is frozen, nothing is fired
-      recoils: [9.75, 11.0],
+      recoils: [10.2073, 11.014],
       lower: 12.3,
       out: 12.75,
     };
-    // seconds since the latest dry recoil (-Infinity before the first)
-    const sinceRecoil = (t) =>
-      t - (SIGHT.recoils.findLast((r) => t >= r) ?? Infinity);
+    // final-timeline seconds since the latest dry recoil (-Infinity before
+    // the first): a recoil is as sharp as it is in life, whatever the stretch
+    const sinceRecoil = (t) => {
+      const r = SIGHT.recoils.findLast((at) => t >= at);
+      return r == null ? -Infinity : since(t, r);
+    };
     const canBlur = "filter" in CanvasRenderingContext2D.prototype;
 
     let softLayer = null;
@@ -2798,17 +2883,26 @@
     // One first-person sight picture, centred on cx. kind: "iron" | "optic".
     function sightView(t, kind, cx) {
       const aimY = SIGHT.aimY;
-      const s = 6.4; // target px per cm
+      const f = ins(t); // the final timeline
+      // target px per cm: through the hold the range eases in by 4 %, about
+      // the point of aim, as the eye settles on its sight picture
+      const s = 6.4 * (1 + 0.04 * seg(f, ins(SIGHT.open), ins(SIGHT.out)));
       const G = 0.56; // the gun's scale in the sight picture
       const tgtY = aimY - TGT.aCentre * s; // target centre (the A zone centre is above it)
       const settle = ease.inOut3(seg(t, SIGHT.open, SIGHT.settle));
       const wob = (1 - settle) * (kind === "iron" ? 46 : 34);
+      // once settled, a hold is never quite still: the gun keeps a small,
+      // slow arc of movement over the target
+      const arc = settle * (kind === "iron" ? 4 : 3);
+      const ph = kind === "iron" ? 0 : 2.4;
       let sx =
         Math.sin(t * 4.7 + (kind === "iron" ? 0 : 1.3)) * wob +
-        (kind === "iron" ? (1 - settle) * 70 : 0);
+        (kind === "iron" ? (1 - settle) * 70 : 0) +
+        Math.sin(f * 1.7 + ph) * arc;
       let sy =
         Math.cos(t * 3.9 + (kind === "iron" ? 0.6 : 2.1)) * wob * 0.7 +
-        (kind === "iron" ? (1 - settle) * 60 : 0);
+        (kind === "iron" ? (1 - settle) * 60 : 0) +
+        Math.sin(f * 3.4 + ph + 0.8) * arc * 0.6;
       const rk = kick(sinceRecoil(t));
       sy -= rk.lift;
       const tilt = rk.tilt;
@@ -3009,8 +3103,9 @@
 
       // Each half's name (the Korean first in ko, under the English in
       // both) and, in red as its focus brackets come in, where its eye
-      // focuses. Every line lands in about 0.2 s and stays still, out of the
-      // recoil, until the blinds close.
+      // focuses. Every line is still about 0.2 s after it starts (on the
+      // final timeline) and stays still, out of the recoil, until the blinds
+      // close: the names for 5.6 s, the focus lines for 4 s.
       const lang = opt.lang;
       const ko = lang === "ko";
       [
@@ -3019,10 +3114,10 @@
       ].forEach(([x, { name, focus }]) => {
         const rise = (str, y, at, o) =>
           kinetic(str, x, y, {
-            t: t - at,
-            out: t - SIGHT.out,
-            stagger: Math.min(0.01, 0.06 / [...str].length),
-            dur: 0.22,
+            t: since(t, at),
+            out: since(t, SIGHT.out),
+            stagger: Math.min(0.01, 0.05 / [...str].length),
+            dur: 0.18,
             ...o,
           });
         const at = SIGHT.open;
