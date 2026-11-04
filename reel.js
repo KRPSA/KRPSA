@@ -4659,8 +4659,23 @@
     // which has no panel behind it until the clock resumes
     const CARD_AT = [86, 136]; // its top left corner
     const TIMER_RECT = [W - 340, 40, W - 90, 160];
+    // the stage's panels as they come in at RESUME (the slide-cycle panel
+    // grows later, for the reload)
+    const PANELS_AT_RESUME = HUD_RECTS.map((r) => r.slice());
     let cardUp = 0;
     let walking = false;
+    // 0..1: how far the walk has handed its labels over to the stage's
+    // panels. Those under a panel fade out before it comes in and stay out
+    // until the panel hides them itself (hudLive).
+    let handOver = 0;
+    // the labels drawn so far in a frame of the walk ([x0, y0, x1, y1, how
+    // far it is shown]), and how far a label gives way to one where they meet
+    const walkBoxes = [];
+    let unclutter = 0;
+    // where the target numbers stand in a frame of the walk (T1 to T8, over
+    // each paper target, see drawStageTarget): the walk names the kinds of
+    // target and leaves the numbers to the stage, so they step back for it
+    let walkTags = [];
     function labelAlpha(x, y, w, h) {
       const under = ([x0, , x1, y1]) =>
         x > x0 - 40 && x < x1 + 40 && y < y1 + 10;
@@ -4670,15 +4685,40 @@
         20,
         60,
       );
-      const inBand = stageCap && x - w / 2 < 1460;
-      const a = inBand ? edge * seg(H - 215 - y, 0, 25) : edge;
+      // (the walk keeps the band clear throughout, for its caption, and on
+      // through the hand-over until the stage's first caption takes it)
+      const inBand = (stageCap || walking || handOver > 0) && x - w / 2 < 1460;
+      let a = inBand ? edge * seg(H - 215 - y, 0, 25) : edge;
+      if (PANELS_AT_RESUME.some(under)) a *= 1 - handOver;
       if (!walking) return a;
-      // on the walk a label fades out as it nears the card or the timer
+      // on the walk a label fades out as it nears the card or the timer,
+      // and gives way to a label already drawn where it would land: seen low
+      // and from the side, one target's name can sit on its neighbour's
       const clear = ([x0, , x1, y1]) =>
         seg(Math.max(x0 - x - w / 2, x - w / 2 - x1, y - h - y1), 8, 36);
-      return (
-        a * (1 - cardUp * (1 - clear(cardLayout().rect))) * clear(TIMER_RECT)
+      const box = [x - w / 2, y - h, x + w / 2, y + 4];
+      // a label gives way over the last 10 px before it meets one
+      const meet = ([x0, y0, x1, y1, b]) =>
+        b *
+        (1 -
+          seg(
+            Math.max(x0 - box[2], box[0] - x1, y0 - box[3], box[1] - y1),
+            0,
+            10,
+          ));
+      const tag = walkTags.some(
+        ([qx, qy]) => Math.abs(qx - x) + Math.abs(qy - y) < 0.5,
       );
+      const shown =
+        a *
+        (1 - cardUp * (1 - clear(cardLayout().rect))) *
+        clear(TIMER_RECT) *
+        (tag ? 1 - unclutter : 1);
+      const out = shown * (1 - unclutter * Math.max(0, ...walkBoxes.map(meet)));
+      // it holds its place even where it gives way itself, so a crowd shows
+      // one name rather than passing it round
+      walkBoxes.push([...box, shown]);
+      return out;
     }
     // the stage's target names, in Korean for the Korean captions
     const TAG_KO = {
@@ -4752,6 +4792,21 @@
       hudLive = t > 16.05 && t < STAGE_END + 0.55; // while the panel is up
       walking = fly != null;
       cardUp = walking ? cardPanel(fly) : 0;
+      // over the end of the walk, on until the panels are up
+      handOver = walking
+        ? ease.inOut3(seg(fly, FLY.dur - 0.7, FLY.dur - 0.2))
+        : !hudLive && t >= RESUME && t < RESUME + 0.1
+          ? 1
+          : 0;
+      walkBoxes.length = 0;
+      unclutter = walking ? seg(fly, 0, 0.4) * (1 - handOver) : 0;
+      walkTags = !walking
+        ? []
+        : Object.keys(TARGETS)
+            .filter((k) => /^T\d/.test(k))
+            .map((k) =>
+              project(cam, [TARGETS[k].pos[0], 1.78, TARGETS[k].pos[2]]),
+            );
       for (let x = -12; x <= 12; x++)
         seg3(
           cam,
@@ -8159,12 +8214,13 @@
         ko,
         en,
       ]),
-      // one line over the course walk, as its card's numbers land and hold
+      // one line over the course walk, once its card has been read; it adds
+      // what the card does not say, and leaves as the stage resumes
       [
-        insStart(fly) + 0.25,
-        insStart(fly) + fly.dur - 0.32,
-        "스테이지 01 — 사격 위치 네 곳, 26발.",
-        "Stage 01: four positions, 26 rounds.",
+        insStart(fly) + 1.2,
+        insStart(fly) + fly.dur - 0.26,
+        "먼저 코스를 걸어 봅니다.",
+        "First, walk the course.",
       ],
     );
     CAPTIONS.sort((a, b) => a[0] - b[0]);
@@ -8179,12 +8235,14 @@
       c.t = ins(c.t);
     });
     CUES.push(...DIV_INFO.cues.map((c) => ({ ...c, t: insStart(div) + c.lt })));
-    // the course walk: a riser up to the stage's drop, a tick as each of the
-    // course card's numbers lands, and a whoosh peaking as the camera is at
-    // its fastest (see flyCamera): the dive from the overview, the two
-    // glides along the shooting areas, the climb back
+    // the course walk: a hit landing the riser from the push as the card
+    // opens, a riser up to the stage's drop, a tick as each of the course
+    // card's numbers lands, and a whoosh peaking as the camera is at its
+    // fastest (see flyCamera): the dive from the overview, the two glides
+    // along the shooting areas, the climb back
     CUES.push(
       ...[
+        { lt: 0, type: "hit", v: 0.5 },
         { lt: 0.05, type: "riser", dur: fly.dur - 0.1 },
         { lt: 0.15, type: "whoosh", v: 0.7 },
         ...[0.3, 0.37, 0.44].map((lt) => ({ lt, type: "tick", v: 0.5 })),
