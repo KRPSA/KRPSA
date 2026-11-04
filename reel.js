@@ -351,9 +351,10 @@
   // sixteenths and are all still by 0.4 s; they hold together, three
   // seconds, until the wipe runs across them in reading order (it reaches
   // DILIGENTIA at 3.6 s). The three range commands build up, each on its
-  // own stab and each read for two seconds or more before the next one
-  // lands: on the final timeline 3.62, 5.75 and 8.00 s, the last two on the
-  // beep's beat grid (the beep is at 10.50).
+  // own stab and each read, with its meaning and nothing else new, for two
+  // seconds or more before the next one lands: on the final timeline 3.62,
+  // 5.75 and 8.00 s, the last two on the beep's eighth-note grid (the beep
+  // is at 10.50).
   const OPENING = {
     // [Latin, English, Korean, slam]
     dvc: [
@@ -387,20 +388,16 @@
   // 6 Korean letters or 13 English characters a second, and two and a half
   // seconds or more (times here are in the original cut; the stretches slow
   // some of it down). The motto goes without one: its meaning is on screen,
-  // under each word. The opening's lines run with its beats (on the final
-  // timeline): the commands from MAKE READY up to STANDBY (3.65–7.80 s), the
-  // start signal from STANDBY up to the freeze (8.02–11.30), then each
-  // sight picture, the iron sights from the push into the rear sight
-  // (12.27–15.71) and the optic from just after the first dry recoil
+  // under each word, and so do the first two range commands: each comes
+  // with its meaning, and a line under them would leave too little time to
+  // read it all before the next one lands. The opening's lines run with its
+  // beats (on the final timeline): the start signal from STANDBY up to the
+  // freeze (8.02–11.30 s; short, as STANDBY and its 1–4 s are read first),
+  // then each sight picture, the iron sights from the push into the rear
+  // sight (12.27–15.71) and the optic from just after the first dry recoil
   // (15.91–18.78).
   const CAPTIONS = [
-    [
-      2.22,
-      4.5111,
-      "레인지 오피서(RO)의 구령.",
-      "The Range Officer's commands.",
-    ],
-    [4.63, 6.8, "신호음이 울리면 시작!", "On the beep, the run starts."],
+    [4.63, 6.8, "신호음에 시작!", "The beep means go."],
     [
       7.6,
       10.38,
