@@ -659,26 +659,37 @@
   // lt, 0..dur, while the game clock stays frozen. One idea at a time: a
   // title, then the five main handgun divisions one after another, each with
   // its name and one big label for what sets it apart, then the five in a
-  // line-up. Each beat carries about as much new text as a first-time viewer
-  // reads in its hold (some 7 Korean or 15 English characters a second), and
-  // the one caption only repeats the title. beats are the entrances,
-  // in local seconds (the title, the five divisions, the line-up); each holds
-  // until the next. Its captions ([from, to, ko, en]) and sound cues
-  // ({ lt, type, v }) are in local seconds too, for the timeline to shift
-  // into place. All of its on-screen copy lives here ([English, Korean]), so
-  // that the font preloader can fetch every glyph.
-  const DIV_BEATS = [0.0, 0.83, 2.51, 4.17, 6.39, 8.07, 10.0];
+  // line-up. Every beat holds its copy still for at least 2.2 s (the
+  // line-up's, the payoff, for about 4 s), longer than its words take to
+  // read at 6 Korean letters or 13 English characters a second; Standard's
+  // holds 0.85 s longer for its three box dimensions. beats are the
+  // entrances, in local seconds (the title, the five divisions, the
+  // line-up); each holds until the next.
+  // Its captions ([from, to, ko, en]) and sound cues ({ lt, type, v }) are in
+  // local seconds too, derived from the beats, for the timeline to shift into
+  // place. All of its on-screen copy lives here ([English, Korean]), so that
+  // the font preloader can fetch every glyph.
+  const DIV_BEATS = [0.0, 2.7, 5.05, 7.4, 10.6, 12.95, 15.3];
+  const DIV_DUR = 19.8;
   const DIV = {
-    dur: 12.0,
+    dur: DIV_DUR,
     beats: DIV_BEATS,
-    captions: [
+    // the title's line, handing over to Production as its copy rises, and
+    // the line-up's, gone before the blinds close
+    captions: (([, p, , , , , l]) => [
       [
-        0.15,
-        2.4,
+        0.1,
+        p + 0.1,
         "디비전은 장비로 나뉩니다.",
-        "Divisions are set by equipment.",
+        "Equipment sets the division.",
       ],
-    ],
+      [
+        l + 0.2,
+        l + 3.9,
+        "클래식과 리볼버도 있습니다.",
+        "Classic and Revolver, too.",
+      ],
+    ])(DIV_BEATS),
     // one cue on each visual beat, never two within 0.25 s
     cues: (([, p, po, s, o, op, l]) => [
       { lt: 0.3, type: "whoosh", v: 0.45 }, // the pistol inks in
@@ -693,10 +704,10 @@
       { lt: op + 0.3, type: "clank", v: 0.7 }, // the compensator seats
       { lt: l, type: "whoosh", v: 0.6 }, // the line-up
       { lt: l + 0.3, type: "hit", v: 0.45 }, // its names
-      { lt: 11.75, type: "whoosh", v: 0.45 }, // the blinds close
+      { lt: DIV_DUR - 0.25, type: "whoosh", v: 0.45 }, // the blinds close
     ])(DIV_BEATS),
     title: {
-      kicker: "IPSC HANDGUN",
+      kicker: ["IPSC HANDGUN", "IPSC 핸드건"],
       name: ["DIVISIONS", "디비전"],
       sub: ["Set by equipment", "장비로 나뉩니다"],
     },
@@ -3085,13 +3096,16 @@
     // title stays top left; one pistol morphs through the five divisions on
     // the right while, on the left, each one's name and its one big label
     // hold still long enough to read; then the five line up. Text rises in
-    // as kinetic type, still 0.18 s after its beat, and holds until just
-    // before the next beat, when it is pushed up out of its mask, gone
-    // before the next line rises into its place.
+    // as kinetic type, still 0.15 s after its beat, and holds until the next
+    // beat, when it rolls up out of its mask as the next line rises into its
+    // place. The holds are never dead: the camera pushes steadily in on the
+    // pistol (and, less, on the grid behind it), a slow light runs along its
+    // metal through each hold once its change has landed, and the giant
+    // index number behind it drifts up.
     const DIV_B = DIV.beats;
     const DIV_POSE = { x: 1295, y: 572, s: 2.55 };
-    const DIV_IN = 0.15; // a line's rise in
-    const DIV_OUT = 0.06; // its exit, ending on the next beat
+    const DIV_IN = 0.15; // a line's rise in, and the roll out of the one it replaces
+    const DIV_OUT = 0.06; // the marks' fade as their copy rolls out
     // the parts a label points at, as rects on the pistol (mm)
     const DIV_MARKS = {
       rear: [34, -3.5, 49, 9],
@@ -3101,26 +3115,28 @@
     };
     const divKo = () => opt.lang === "ko";
     // how far gone things leaving on beat at are (0..1)
-    const divGone = (lt, at) => seg(lt, at - DIV_OUT, at);
-    // A line of copy rising in at tIn (local s), as kinetic type, and pushed
-    // up out of its own mask, fading as it goes, in the DIV_OUT before tOut:
-    // it is gone before the next line rises into its place, and never
-    // crosses the line above. The stagger is capped so that long lines
-    // settle as fast as short ones.
+    const divGone = (lt, at) => seg(lt, at, at + DIV_OUT);
+    // A line of copy rising in at tIn (local s), as kinetic type, and from
+    // tOut rolling up out of its own mask, fading as it goes, in step with
+    // the next line rising in below it: more than a line height apart, the
+    // two never overlap, and neither crosses the line above. The stagger is
+    // capped so that long lines settle as fast as short ones.
     function divLine(str, x, y, o, tIn, tOut, lt) {
-      const t0 = tOut - DIV_OUT;
-      if (lt < tIn || lt >= tOut) return;
+      if (lt < tIn || lt >= tOut + DIV_IN) return;
+      const q = ease.outExpo(clamp((lt - tOut) / DIV_IN));
       ctx.save();
-      ctx.globalAlpha *= 1 - divGone(lt, tOut);
-      kinetic(str, x, y, {
+      if (q > 0) {
+        ctx.beginPath();
+        ctx.rect(0, y - o.size * 1.08, W, o.size * 1.42);
+        ctx.clip();
+        ctx.globalAlpha *= 1 - q;
+      }
+      kinetic(str, x, y - q * o.size * 1.4, {
         weight: 800,
         ...o,
         t: lt - tIn,
         dur: DIV_IN,
         stagger: Math.min(0.008, 0.024 / [...str].length),
-        out: lt - t0,
-        outDur: DIV_OUT,
-        outStagger: 0,
       });
       ctx.restore();
     }
@@ -3140,15 +3156,27 @@
       if (t < 0) return;
       const T = DIV.title;
       const ko = divKo();
-      kinetic(T.kicker, 98, 172, {
+      const kw = kinetic(ko ? T.kicker[1] : T.kicker[0], 98, 172, {
         size: 22,
         weight: 700,
-        tracking: 4,
+        family: ko ? KR : SANS,
+        tracking: ko ? 2 : 4,
         color: C.red,
         t,
         stagger: 0.008,
         dur: 0.24,
       });
+      if (opt.lang === "both")
+        kinetic(T.kicker[1].replace("IPSC ", ""), 98 + kw + 14, 172, {
+          size: 22,
+          weight: 700,
+          family: KR,
+          tracking: 2,
+          color: C.red,
+          t: t - 0.04,
+          stagger: 0.008,
+          dur: 0.24,
+        });
       const w = kinetic(ko ? T.name[1] : T.name[0], 96, 248, {
         size: 72,
         weight: ko ? 700 : 800,
@@ -3506,11 +3534,14 @@
       ctx.restore();
     }
 
-    // A giant, faint index number behind the gun, rolling up on each change.
+    // A giant, faint index number behind the gun, rolling up on each change
+    // and drifting slowly up while its division holds; the last one rolls
+    // away as the line-up comes in.
     function divNumeral(lt) {
       const k = DIV_B.findLastIndex((x) => lt >= x) - 1;
-      if (k < 0 || k > 4) return;
+      if (k < 0 || k > 5) return;
       const q = ease.inOutExpo(seg(lt, DIV_B[k + 1], DIV_B[k + 1] + 0.4));
+      const drift = (n) => 64 * seg(lt, DIV_B[n + 1], DIV_B[n + 2]);
       ctx.save();
       ctx.beginPath();
       ctx.rect(0, 320, W, 540);
@@ -3518,10 +3549,11 @@
       ctx.font = font(800, 560);
       ctx.textAlign = "center";
       ctx.textBaseline = "alphabetic";
-      ctx.fillStyle = "rgba(255,255,255,0.028)";
+      ctx.fillStyle = "rgba(255,255,255,0.045)";
       const x = DIV_POSE.x + 40;
-      if (k > 0) ctx.fillText(`0${k}`, x, 790 - q * 560);
-      ctx.fillText(`0${k + 1}`, x, 790 + (1 - q) * 560);
+      if (k > 0 && q < 1)
+        ctx.fillText(`0${k}`, x, 790 - drift(k - 1) - q * 560);
+      if (k < 5) ctx.fillText(`0${k + 1}`, x, 790 - drift(k) + (1 - q) * 560);
       ctx.restore();
     }
 
@@ -3531,14 +3563,20 @@
     const divSlotPose = (n, lt) => ({
       x: divSlot(n) - (DIV.specs[n].kit.comp ? 28 : 0),
       y: 520,
-      s: 1.2 * lerp(1, 1.02, ease.inOut3(seg(lt, DIV_B[6] + 0.5, DIV.dur))),
+      s: 1.2 * lerp(1, 1.03, seg(lt, DIV_B[6] + 0.3, DIV.dur)),
     });
+    // once the names have been read, a slow light runs along the five, from
+    // Open back to Production, until the blinds close
+    const divLineupSheen = (n, lt) => {
+      const a = DIV_B[6] + 1.3 + (4 - n) * 0.35;
+      return seg(lt, a, a + 1.6);
+    };
 
     // The pistol: it inks in under the title, then morphs through the five
-    // divisions; on the line-up it shrinks into Open's slot.
+    // divisions under a steady push in; on the line-up it shrinks into
+    // Open's slot.
     function divPistol(lt) {
       const [, p, , s, , , l] = DIV_B;
-      const k = DIV_B.findLastIndex((x) => lt >= x) - 1; // the division
       // every change lands with a small punch-in, and the box strike with a
       // hard one and a short shake, all over before the copy has settled
       const hitAt = s + DIV_STRIKE;
@@ -3549,12 +3587,20 @@
       );
       const jolt = lt >= hitAt ? 1 - seg(lt, hitAt, hitAt + 0.1) : 0;
       const kit = divKit(lt);
-      const calm = { ...DIV_POSE, s: DIV_POSE.s * (1 + 0.014 * bump) };
+      // the push: 10 % closer by the line-up, at an even pace through every
+      // hold, drifting right just enough that the gun's back edge stays put
+      // beside the copy
+      const push = seg(lt, 0, l);
+      const base = {
+        x: DIV_POSE.x + 28 * push,
+        y: DIV_POSE.y,
+        s: DIV_POSE.s * (1 + 0.1 * push),
+      };
+      const calm = { ...base, s: base.s * (1 + 0.014 * bump) };
       let pose = {
-        ...DIV_POSE,
-        x: DIV_POSE.x + Math.sin(lt * 157) * 3 * jolt,
-        y: DIV_POSE.y + Math.cos(lt * 131) * 3 * jolt,
-        s: DIV_POSE.s * (1 + 0.014 * bump + 0.024 * jolt),
+        x: base.x + Math.sin(lt * 157) * 3 * jolt,
+        y: base.y + Math.cos(lt * 131) * 3 * jolt,
+        s: base.s * (1 + 0.014 * bump + 0.024 * jolt),
       };
       const move = ease.inOut3(seg(lt, l, l + 0.3));
       if (move > 0) {
@@ -3565,13 +3611,28 @@
           s: lerp(pose.s, to.s, move),
         };
       }
+      // a slow light runs along the metal once it has turned solid, and
+      // again through each hold, from when its change has landed and its
+      // beam has passed until just before the next
+      const sheen =
+        lt >= l
+          ? divLineupSheen(4, lt)
+          : [
+              [1.4, 2.6],
+              ...DIV_B.slice(1, 6).map((at, i) => [
+                at + 0.6,
+                DIV_B[i + 2] - 0.1,
+              ]),
+            ]
+              .map(([a, b]) => seg(lt, a, b))
+              .find((q) => q > 0 && q < 1);
       divNumeral(lt);
       divBox(pose, kit.box, 0, "back");
       drawGun({
         ...pose,
-        blue: 1 - ease.inOut3(seg(lt, 0.45, 0.95)),
-        draw: ease.out3(seg(lt, 0.05, 0.75)),
-        sheen: seg(lt, 0.7, 1.25),
+        blue: 1 - ease.inOut3(seg(lt, 0.6, 1.4)),
+        draw: ease.out3(seg(lt, 0.05, 1.2)),
+        sheen: sheen ?? 0,
         optic: kit.optic,
         flush: kit.flush,
         magwell: kit.magwell,
@@ -3610,14 +3671,17 @@
         ctx.fillRect(x - 70, 300, 140, 540);
         line(x, 300, x, 840, rgba(C.red, 0.85 * a), 2);
       });
-      if (k < 0 || k > 4) return;
-      // the label's marks on the pistol: Production's sight line and the
-      // brackets, which lock on once the part has landed
-      const tIn = DIV_B[k + 1];
-      const out = 1 - divGone(lt, DIV_B[k + 2]);
-      const on = seg(lt, tIn + 0.12, tIn + 0.35) * out;
-      DIV.specs[k].marks.forEach((m) => divBrackets(pose, DIV_MARKS[m], on));
-      if (tIn === p) {
+      // the labels' marks on the pistol: Production's sight line and the
+      // brackets, which lock on once the part has landed and leave with the
+      // copy
+      DIV.specs.forEach((d, k) => {
+        const tIn = DIV_B[k + 1];
+        const tOut = DIV_B[k + 2];
+        if (lt < tIn || lt >= tOut + DIV_OUT) return;
+        const out = 1 - divGone(lt, tOut);
+        const on = seg(lt, tIn + 0.12, tIn + 0.35) * out;
+        d.marks.forEach((m) => divBrackets(pose, DIV_MARKS[m], on));
+        if (tIn !== p) return;
         const [rx, ry] = gunPoint(pose, GUN.rearSight[0], 1.2);
         const [fx, fy] = gunPoint(pose, GUN.sight[0], 1.2);
         const len = ease.outExpo(seg(lt, tIn + 0.05, tIn + 0.35));
@@ -3635,7 +3699,7 @@
         );
         ctx.setLineDash([]);
         ctx.restore();
-      }
+      });
     }
 
     // The line-up: the other four ink in as blueprints, then solid, beside
@@ -3657,7 +3721,8 @@
             const g = divSlotPose(n, lt);
             const blue = 1 - ease.inOut3(seg(lt, tn + 0.12, tn + 0.3));
             if (d.kit.flush) divBox(g, draw, 0, "back");
-            drawGun({ ...g, ...d.kit, blue, draw, fiber: 1 - blue });
+            const sheen = divLineupSheen(n, lt);
+            drawGun({ ...g, ...d.kit, blue, draw, fiber: 1 - blue, sheen });
             if (d.kit.flush) divBox(g, draw, 0, "front");
           }
         }
@@ -3740,7 +3805,15 @@
     // The whole chapter.
     function sceneDivisions(lt) {
       if (lt < 0 || lt > DIV.dur) return;
+      // the grid behind takes a third of the pistol's push, the whole chapter
+      // through (never so far that its edge shows)
+      const g = 1 + 0.03 * (lt / DIV.dur);
+      ctx.save();
+      ctx.translate(DIV_POSE.x + 9 * (lt / DIV.dur), DIV_POSE.y);
+      ctx.scale(g, g);
+      ctx.translate(-DIV_POSE.x, -DIV_POSE.y);
       blueprintGrid(0.45);
+      ctx.restore();
       divPistol(lt);
       divLineup(lt);
       divHeader(lt);
