@@ -1,7 +1,7 @@
 // Renders reel.js frame by frame in headless Chromium and encodes it with ffmpeg.
 //
 //   node scripts/reel-render.mjs --out reel.mp4 [--audio reel.wav] [--lang both|ko|en]
-//                                 [--fps 60] [--blur 4] [--credit]
+//                                 [--fps 60] [--blur 4] [--no-credit]
 //   node scripts/reel-render.mjs --stills 0.5,6.1,9.5 --dir stills/
 //   node scripts/reel-render.mjs --divisions --stills 1,3.8 --dir stills/
 //
@@ -32,7 +32,7 @@ const { values: args } = parseArgs({
     lang: { type: 'string', default: 'both' },
     fps: { type: 'string', default: '60' },
     blur: { type: 'string', default: '1' },
-    credit: { type: 'boolean', default: false },
+    'no-credit': { type: 'boolean', default: false },
     stills: { type: 'string' },
     divisions: { type: 'boolean', default: false },
     dir: { type: 'string', default: '.' },
@@ -58,7 +58,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><link rel="styles
 <script src="/reel.js"></script><script>
   const out = document.getElementById('c');
   const work = document.getElementById('w');
-  const opts = ${JSON.stringify({ lang: args.lang, credit: args.credit, assetBase: '/assets/' })};
+  const opts = ${JSON.stringify({ lang: args.lang, credit: !args['no-credit'], assetBase: '/assets/' })};
   const reel = KRPSAReel.create(work, opts);
   const octx = out.getContext('2d');
   // Average a few sub-frames across a 180° shutter for natural motion blur.
