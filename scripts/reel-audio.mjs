@@ -137,6 +137,7 @@ const saw = (ph) => 2 * (ph - Math.floor(ph + 0.5));
 const env = (t, a, d) => (t < a ? t / a : Math.exp(-(t - a) / d));
 
 // ------------------------------------------------------------------ voices
+const DUB = 0.16; // a heartbeat's second thump follows its first by this much
 const voice = {
   kick(t0, v = 1) {
     let ph = 0;
@@ -177,21 +178,38 @@ const voice = {
       return lp(x, cutoff * (0.35 + Math.exp(-t * 9))) * env(t, 0.004, dur * 0.45) * v;
     }, { gain: 0.42 });
   },
-  pad(t0, notes, dur, v = 1, cutoff = 1100) {
+  // A held chord. v and cutoff may be functions of how far through it is
+  // (0..1), for a chord that swells or opens up as it goes.
+  pad(t0, notes, dur, v = 1, cutoff = 1100, { attack = 0.6, release = 0.8 } = {}) {
+    const level = typeof v === 'function' ? v : () => v;
+    const fc = typeof cutoff === 'function' ? cutoff : () => cutoff;
     notes.forEach((n, k) => {
       const f = midi(n);
       const lp = svf(0.4);
       const ph = [0, 0.33, 0.66];
-      place(t0, dur + 0.8, (t) => {
+      place(t0, dur + release, (t) => {
         let x = 0;
         [-0.006, 0, 0.0071].forEach((d, j) => {
           ph[j] += (f * (1 + d)) / SR;
           x += saw(ph[j]);
         });
-        const a = Math.min(1, t / 0.6) * (t > dur ? Math.max(0, 1 - (t - dur) / 0.8) : 1);
-        return lp(x / 3, cutoff) * a * v;
+        const p = Math.min(1, t / dur);
+        const a = Math.min(1, t / attack) * (t > dur ? Math.max(0, 1 - (t - dur) / release) : 1);
+        return lp(x / 3, fc(p)) * a * level(p);
       }, { gain: 0.07, pan: (k / Math.max(1, notes.length - 1) - 0.5) * 0.7, send: 0.5 });
     });
+  },
+  // A soft bell: a sine and a quieter partial a twelfth up that dies sooner.
+  bell(t0, note, v = 1, pan = 0) {
+    const f = midi(note);
+    let a = 0;
+    let b = 0;
+    place(t0, 1.8, (t) => {
+      a += f / SR;
+      b += (3 * f) / SR;
+      const x = Math.sin(2 * Math.PI * a) * Math.exp(-t * 1.8) + Math.sin(2 * Math.PI * b) * 0.3 * Math.exp(-t * 7);
+      return x * Math.min(1, t / 0.004) * v;
+    }, { gain: 0.07, pan, send: 0.6 });
   },
   stab(t0, v = 1, notes = [57, 60, 64, 69]) {
     notes.forEach((n, k) => {
@@ -236,7 +254,7 @@ const voice = {
     place(t0, 0.34, (t) => lp(noise(), 800 + 9000 * (t / 0.34)) * (t / 0.34) ** 2, { gain: 0.35, send: 0.4 });
   },
   heart(t0) {
-    [0, 0.16].forEach((d, k) => {
+    [0, DUB].forEach((d, k) => {
       let ph = 0;
       place(t0 + d, 0.25, (t) => {
         ph += (58 - 14 * t) / SR;
@@ -548,15 +566,18 @@ const AM = [57, 60, 64];
 const F = [53, 57, 60];
 const C = [55, 60, 64];
 const G = [55, 59, 62];
-// Music is laid out against the original cut; I() maps those times onto the
-// final timeline, which adds the Divisions chapter and slows some scenes down
-// so their words can be read. Sections start and end at mapped times, and the
-// beats inside them run on the final timeline, so the tempo never drags.
+const E = [52, 56, 59, 64]; // the dominant, under the course walk
+const ROOT = new Map([[AM, 33], [F, 29], [C, 36], [G, 31]]);
+// Music is laid out section by section on the final timeline, between cues
+// found by type; I() maps a time of the original cut onto it where a section
+// needs one the cues do not give. The picture slows some scenes down so their
+// words can be read and plays two inserted chapters, but the beats always run
+// at BEAT on the final timeline, so the tempo never drags.
 const I = MARKS.ins;
-const [DIVI] = MARKS.inserts;
+const DIVI = MARKS.inserts.find((x) => x.kind === 'divisions');
+const FLY = MARKS.inserts.find((x) => x.kind === 'flyover'); // the course walk
 const S = MARKS.shift;
 const span = (a, b) => I(b) - I(a); // final length of original a..b
-const mod = (n, m) => ((n % m) + m) % m;
 // the final times of the cues of a type in [a, b)
 const cuesOf = (type, a, b) => CUES.filter((c) => c.type === type && c.t >= a - 1e-6 && c.t < b).map((c) => c.t);
 
@@ -564,35 +585,57 @@ const cuesOf = (type, a, b) => CUES.filter((c) => c.type === type && c.t >= a - 
 // a command, a hit, a drop, the logo, the heartbeat, the boom into slow
 // motion) is a beat the viewer sees, so each groove runs at BEAT from such a
 // cue, and where the picture's beats are not a whole number of beats apart it
-// starts again from the next one. No groove kick plays within CLEAR s of one
-// of these cues (the cue's own kick stands in for a beat that lands on it),
-// and no other groove note within CLEAR s of one unless it is on it: no flams.
+// starts again from the next one. No groove kick plays within KICK_CLEAR s of
+// one of these cues (the cue's own kick stands in for a beat that lands on
+// it, and one just before or after it would stumble into it), and no other
+// groove note within CLEAR s of one unless it is on it: no flams. A
+// heartbeat's second thump counts as a cue of its own.
 const CLEAR = 0.12;
-const KICKS = CUES.filter((c) => ['hit', 'stab', 'drop', 'logo', 'heart', 'slowmo'].includes(c.type)).map((c) => c.t);
+const KICK_CLEAR = 0.2;
+const KICKS = CUES.flatMap((c) =>
+  c.type === 'heart' ? [c.t, c.t + DUB] : ['hit', 'stab', 'drop', 'logo', 'slowmo'].includes(c.type) ? [c.t] : [],
+);
 const free = (t) => KICKS.every((k) => Math.abs(k - t) >= CLEAR || Math.abs(k - t) < 1e-3);
-const kick = (t, v) => KICKS.every((k) => Math.abs(k - t) >= CLEAR) && voice.kick(t, v);
-const hat = (t, v) => free(t) && voice.hat(t, v);
-// The steps of a groove anchored at `at` that fall in [from, to), as { t, n }
-// with n counted from the anchor (to the millisecond, so a groove that ends
-// on the next one's anchor leaves that beat to it); steps that would flam a
-// cue are left out.
+const kick = (t, v) => KICKS.every((k) => Math.abs(k - t) >= KICK_CLEAR) && voice.kick(t, v);
+// The steps of a groove anchored at `at` that fall in [from, to), as
+// { t, n, whole, hold } with n counted from the anchor. Steps that would flam
+// a cue are left out, and so is any within CLEAR of `to`, where the next
+// grid takes over (so a groove that ends on the next one's anchor leaves
+// that beat to it). Where the picture's beats are not a whole number of
+// steps apart, the step before the next grid runs long: whole is false for a
+// step with less than a full step left before `to` (kicks and claps skip
+// it), and hold is how long a note on the step lasts, up to `to` for the
+// last whole one.
 function grid(at, from, to, step = BEAT) {
   const out = [];
-  for (let n = Math.ceil((from - at - 1e-3) / step); at + n * step < to - 1e-3; n++) {
+  for (let n = Math.ceil((from - at - 1e-3) / step); at + n * step < to - CLEAR; n++) {
     const t = at + n * step;
-    if (free(t)) out.push({ t, n });
+    const room = to - t;
+    if (free(t)) out.push({ t, n, whole: room > step - 0.03, hold: room < 2 * step - 0.03 ? room : step });
   }
   return out;
 }
 
+// The motto: the pad comes up under its three slams, and a pulse on the
+// grid of the last one, a bass note a beat and a soft kick every two, grows
+// into MAKE READY's stab.
 voice.pad(I(0), AM, span(0, 6), 0.8, 700);
-voice.pad(I(6), AM, span(6, 8), 1, 1400);
-[[8, AM], [10, F], [12, C]].forEach(([t, n]) => voice.pad(I(t), n, Math.min(span(t, t + 2), DIVI.at - I(t)), 0.9, 600));
+{
+  const slam = cuesOf('hit', 0, I(2)).pop();
+  const [ready] = cuesOf('stab', I(2), I(6));
+  for (const { t, n, whole, hold } of grid(slam, slam + BEAT, ready)) {
+    if (!whole) continue;
+    const p = (t - slam) / (ready - slam);
+    if (n % 2 === 0) kick(t, 0.3 + 0.25 * p);
+    voice.bass(t, 33, hold, 0.35 + 0.3 * p, 220 + 260 * p);
+  }
+}
 
 // The range commands: a build from the first command to the start signal.
-// Each command's stab starts a bar (the commands land 2.6 and 3.5 beats
-// apart); the kick gives way halfway, and STANDBY's heartbeat takes over the
-// pulse, the bass and hats running on it up to the breath before the beep.
+// Each command's stab starts a bar (they land more than a whole number of
+// beats apart, so the beat before each runs long); the kick gives way
+// halfway, and STANDBY's heartbeat takes over the pulse, the bass and hats
+// running on it, around its double thump, up to the breath before the beep.
 {
   const stabs = cuesOf('stab', I(2), I(6));
   const [heart] = cuesOf('heart', I(2), I(6));
@@ -601,131 +644,221 @@ voice.pad(I(6), AM, span(6, 8), 1, 1400);
   const b = I(5.75);
   anchors.forEach((at, k) => {
     const to = Math.min(anchors[k + 1] ?? b, b);
-    for (const { t } of grid(at, at, Math.min(to, I(4)))) kick(t, 0.45);
-    for (const { t } of grid(at, at, to, BEAT / 2)) voice.bass(t, 33, BEAT / 2, 0.7, 260 + ((t - a) / (b - a)) * 450);
+    for (const { t, whole } of grid(at, at, to)) if (whole && t < I(4)) kick(t, 0.45);
+    for (const { t, whole, hold } of grid(at, at, to, BEAT / 2)) {
+      if (whole) voice.bass(t, 33, hold, 0.7, 260 + ((t - a) / (b - a)) * 450);
+    }
     for (const { t, n } of grid(at, at, to, BEAT / 4)) voice.hat(t, n % 2 ? 0.35 : 0.6);
   });
 }
 
-// The start signal and the sights, on the beep's grid (the split's hit lands
-// on it): a kick a second and a bass every two, up to the Divisions chapter.
+// The start signal and the sights. The beep's drop is a downbeat with a kick
+// a beat after it, and the frozen clock holds on a chord. The split's hit
+// starts the sights' groove (a kick a second, a bass note every two, soft
+// hats between) until they settle back onto the beep's grid, which the
+// picture keeps for the settle and the two dry recoils: they land on its
+// kicks, in F and then C, up to the Divisions chapter.
 {
   const [beep] = cuesOf('beep', I(5.9), I(6.1));
-  kick(I(6.5), 0.9);
-  for (const { t, n } of grid(beep, I(8), DIVI.at - CLEAR)) {
-    if (n % 2 === 0) kick(t, 0.55);
-    if (n % 4 === 0) voice.bass(t, t < I(10) ? 33 : t < I(12) ? 29 : 31, Math.min(1.8, DIVI.at - t), 0.5, 300);
+  const [split] = cuesOf('hit', I(7.9), I(8.1));
+  const [click] = cuesOf('click', I(9), I(10)); // as the sights settle
+  const settle = beep + Math.round((click - beep) / BEAT) * BEAT;
+  const turn = settle + 4 * BEAT;
+  kick(beep + BEAT, 0.9);
+  voice.pad(beep, AM, split - beep, 1, 1400);
+  voice.pad(split, AM, settle - split, 0.9, 600);
+  voice.pad(settle, F, turn - settle, 0.9, 600);
+  voice.pad(turn, C, DIVI.at - turn, 0.9, 600);
+  for (const [at, to] of [[split, settle], [settle, DIVI.at]]) {
+    for (const { t, n, whole } of grid(at, at, to)) {
+      if (!whole) continue;
+      if (n % 2 === 0) kick(t, 0.55);
+      if (n % 4 === 0) voice.bass(t, t < settle ? 33 : t < turn ? 29 : 31, Math.min(1.8, to - t), 0.5, 300);
+    }
+    for (const { t, n } of grid(at, at, to, BEAT / 2)) if (n % 2) voice.hat(t, 0.3);
   }
 }
 
-// The Divisions chapter: a lighter groove under the equipment morphs, on the
-// grid of its Open stab, with a chord every six beats. It breaks under the
-// line-up's whoosh and starts again on the line-up's hit.
+// The Divisions chapter: a lighter groove under the equipment morphs that
+// starts again as each division lands, so its name is a downbeat and the
+// chord changes with it (where a division holds for more than a whole
+// number of beats, its last beat holds on). It stops under the line-up's
+// whoosh, and the line-up's hit brings it back, in A minor, up to the
+// scoring hit just after the chapter.
 {
   const end = DIVI.at + DIVI.dur;
   const [open] = cuesOf('stab', DIVI.at, end);
   const [lineup] = cuesOf('hit', DIVI.at, end);
-  const brk = cuesOf('whoosh', open, lineup).pop() ?? lineup - CLEAR;
-  const g0 = open - Math.floor((open - DIVI.at) / BEAT + 1e-6) * BEAT; // the chapter's first beat
-  const bar = 6 * BEAT;
-  const prog = [F, C, G, AM];
-  for (let k = 0; g0 + k * bar < end - 0.5; k++) {
-    const t = k ? g0 + k * bar : DIVI.at;
-    voice.pad(t, prog[k % 4], Math.min(g0 + (k + 1) * bar, end) - t, 0.85, 900);
-  }
-  for (const [at, from, to] of [[open, DIVI.at, brk], [lineup, lineup, end - 0.3]]) {
-    for (const { t, n } of grid(at, from, to)) {
-      if (mod(n, 2) === 0) kick(t, 0.6);
-      hat(t + BEAT / 2, 0.5);
-      if (mod(n, 4) === 2) voice.clap(t, 0.45);
-      voice.bass(t, [29, 24, 31, 33][Math.floor((t - g0) / bar + 1e-6) % 4], BEAT, 0.55, 700);
+  const brk = cuesOf('whoosh', open, lineup).pop() ?? lineup;
+  const [score] = cuesOf('hit', end, I(13.5));
+  // the divisions before Open land with a cue each (a part seating follows
+  // its entrance by 0.25-0.3 s); the title's own whoosh is not one of them
+  const marks = CUES.filter((c) => c.t > DIVI.at + 1 && c.t < open);
+  const entrances = marks.filter((c, i) => i === 0 || c.t - marks[i - 1].t > 0.4).map((c) => c.t);
+  const bars = [DIVI.at, ...entrances, open, lineup];
+  const chords = [F, C, G, AM, F, G, AM];
+  bars.forEach((at, k) => {
+    const next = bars[k + 1] ?? score;
+    const to = next === lineup ? brk : next;
+    const chord = chords[Math.min(k, chords.length - 1)];
+    voice.pad(at, chord, next - at, 0.85, 900);
+    for (const { t, n, whole, hold } of grid(at, at, to)) {
+      if (!whole) continue;
+      if (n % 2 === 0) kick(t, 0.6);
+      if (n % 4 === 2) voice.clap(t, 0.45);
+      voice.bass(t, ROOT.get(chord), hold, 0.55, 700);
     }
-  }
+    for (const { t, n } of grid(at, at, to, BEAT / 2)) if (n % 2) voice.hat(t, 0.5);
+  });
 }
 
 // Targets and scoring: the C bar that the Divisions chapter cuts into resumes
 // after it on the scoring hit, and the groove runs on that hit's grid (the
 // zones light on its beats): a kick a second and a bass every two, into the G
-// on the next bar line, up to the push to the stage (the drop has its kick).
+// on the next bar line, through the push to the course walk's hit.
 {
   const [at] = cuesOf('hit', I(13), I(13.5));
+  const [walk] = cuesOf('hit', FLY.at, FLY.at + 0.01);
   const change = at + Math.round((I(14) - at) / (4 * BEAT)) * 4 * BEAT;
   voice.pad(at, C, change - at, 0.9, 600);
-  voice.pad(change, G, I(16) - change, 0.9, 600);
-  for (const { t, n } of grid(at, at, I(15.7))) {
-    if (n % 2 === 0) kick(t, 0.55);
-    if (n % 4 === 0) voice.bass(t, 31, Math.min(1.8, I(16) - t), 0.5, 300);
+  voice.pad(change, G, walk - change, 0.9, 600, { release: 0.4 });
+  for (const { t, n, whole } of grid(at, at, walk)) {
+    if (n % 2 === 0 && whole) kick(t, 0.55);
+    if (n % 4 === 0) voice.bass(t, 31, Math.min(1.8, walk - t), 0.5, 300);
+  }
+  for (const { t, n } of grid(at, at, walk, BEAT / 2)) if (n % 2) voice.hat(t, 0.3);
+}
+
+// The course walk: a held E, the dominant, swells and opens up over the walk
+// into the A minor the stage lands on, over a pedal on the grid of the
+// walk's hit (the stage's drop is ten beats on) that builds as it goes: an
+// eighth-note bass, a soft kick every two beats and then every beat, hats
+// coming in on the off-beats and then in sixteenths.
+{
+  const at = FLY.at;
+  const to = FLY.at + FLY.dur;
+  const p = (t) => (t - at) / (to - at);
+  voice.pad(at, E, to - at, (q) => 0.55 + 0.65 * q * q, (q) => 450 * 7 ** q, { release: 0.12 });
+  for (const { t, n, whole } of grid(at, at, to)) if (whole && (n % 2 === 0 || p(t) > 0.75)) kick(t, 0.35 + 0.3 * p(t));
+  for (const { t, hold } of grid(at, at, to, BEAT / 2)) voice.bass(t, 28, hold, 0.4 + 0.3 * p(t), 250 + 850 * p(t) ** 2);
+  for (const { t, n } of grid(at, at, to, BEAT / 4)) {
+    if ((n % 4 === 2 && p(t) > 0.3) || (n % 2 && p(t) > 0.7)) voice.hat(t, (n % 2 ? 0.25 : 0.4) + 0.3 * p(t));
   }
 }
 
 // The stage: its length comes from the shot list, and everything after it is
 // moved by MARKS.shift so it stays on the beat grid. Its drums run on the
 // stage drop's grid and follow the speed ramps: half time in slow motion,
-// sixteenth hats while fast-forwarding; the boom into a slow ramp is its beat.
-const STAGE_OUT = 19.75 + S;
-[[16, AM, 4], [20, F, 2], [22, C, 2], [24, G, 2], [26, AM, STAGE_OUT - 26]].forEach(([t, n, d]) => voice.pad(I(t), n, d, 1, 1500));
-for (let t = I(16); t < I(STAGE_OUT); t += BEAT) {
-  const rate = rateAt(t);
-  const beat = Math.round((t - I(16)) / BEAT);
-  if (rate < 0.1) {
-    // bullet time: a single held heartbeat
-    if (beat % 4 === 0) kick(t, 0.5);
-    continue;
-  }
-  if (rate < 1) {
-    if (beat % 2 === 0) kick(t, 0.75);
-    if (!free(t)) continue;
-    if (beat % 4 === 2) voice.clap(t, 0.6);
-    voice.bass(t, 33, BEAT, 0.6, 500);
-    continue;
-  }
-  kick(t, 0.85);
-  hat(t + BEAT / 2, 0.8);
-  if (beat % 2 === 1 && free(t)) voice.clap(t, 0.8);
-  if (rate > 1) [0.25, 0.75].forEach((d) => hat(t + BEAT * d, 0.45));
-  for (const d of [0, BEAT / 2]) if (free(t + d)) voice.bass(t + d, beat % 8 < 4 ? 33 : 29, BEAT / 2, 0.85, rate > 1 ? 1800 : 1200);
-}
-
-// The hit factor: the groove is on the hit factor landing (the operators slam
-// on the off-beat before it), with a beat to pick it up, and goes from F to G
-// two beats after the landing, up to the first range command.
+// sixteenth hats while fast-forwarding. The boom into each slow ramp is a
+// downbeat the grid starts again from (the tape stop into the ramp covers the
+// jump), up to the hit factor's pick-up.
+const STAGE_OUT = I(19.75 + S);
+const LAND = cuesOf('hit', I(19.9 + S), I(21 + S)).pop(); // the hit factor lands...
+const SLAM = cuesOf('hit', I(19.9 + S), LAND - 1e-3)[0] ?? LAND; // ...just after the operators slam
+const HF_FROM = SLAM - Math.ceil((SLAM - STAGE_OUT) / BEAT) * BEAT; // the pick-up's first beat
 {
-  const land = cuesOf('hit', I(19.9 + S), I(21 + S)).pop();
-  const [next] = cuesOf('stab', I(22 + S), I(25 + S));
-  const from = I(20 + S) - 0.01;
-  const change = land + 2 * BEAT;
-  voice.pad(I(20 + S), F, change - I(20 + S), 1, 1300);
-  voice.pad(change, G, next - change, 1, 1300);
-  for (const { t } of grid(land, from, next)) {
-    kick(t, 0.7);
-    hat(t + BEAT / 2, 0.6);
-  }
-  for (const { t } of grid(land, from, next, BEAT / 2)) voice.bass(t, t < change - 1e-3 ? 29 : 31, BEAT / 2, 0.7, 900);
+  const [drop] = cuesOf('drop', MARKS.resume, MARKS.resume + 0.01);
+  const anchors = [drop, ...cuesOf('slowmo', drop, HF_FROM)];
+  // a time moved onto the grid in force there
+  const snap = (t) => {
+    const a = anchors.findLast((x) => x <= t + BEAT / 2);
+    return a + Math.round((t - a) / BEAT) * BEAT;
+  };
+  const chords = [[16, AM], [20, F], [22, C], [24, G], [26, AM]].map(([t, n]) => [snap(I(t)), n]);
+  chords.forEach(([t, n], k) => voice.pad(t, n, (chords[k + 1]?.[0] ?? HF_FROM) - t, 1, 1500));
+  anchors.forEach((at, k) => {
+    const to = anchors[k + 1] ?? HF_FROM;
+    for (const { t, n } of grid(at, at, to, BEAT / 4)) {
+      const rate = rateAt(t);
+      const beat = n / 4;
+      const on = n % 4 === 0;
+      // kicks and claps want a whole beat before the next grid, the bass an eighth
+      const whole = to - t > BEAT - 0.03;
+      const eighth = to - t > BEAT / 2 - 0.03;
+      if (rate < 0.1) {
+        // bullet time: a single held heartbeat
+        if (on && beat % 4 === 0 && whole) kick(t, 0.5);
+        continue;
+      }
+      if (rate < 1) {
+        if (!on || !eighth) continue;
+        if (beat % 2 === 0 && whole) kick(t, 0.75);
+        if (beat % 4 === 2 && whole) voice.clap(t, 0.6);
+        voice.bass(t, 33, Math.min(BEAT, to - t), 0.6, 500);
+        continue;
+      }
+      if (on && whole) kick(t, 0.85);
+      if (on && whole && beat % 2 === 1) voice.clap(t, 0.8);
+      if (n % 4 === 2) voice.hat(t, 0.8);
+      if (rate > 1 && n % 2) voice.hat(t, 0.45);
+      if (n % 2 === 0 && eighth) voice.bass(t, beat % 8 < 4 ? 33 : 29, BEAT / 2, 0.85, rate > 1 ? 1800 : 1200);
+    }
+  });
 }
 
-// Range is clear: each command's stab starts a bar (they land 3.2 beats
-// apart), on Am, F and Am again, and the groove eases off bar by bar: the
-// kick goes after the first, and RANGE IS CLEAR holds, its chord and a long
-// bass note carrying on, with no beat for the logo to miss, through the iris
-// into the end card.
+// The hit factor: the operators slam and the hit factor lands 2/3 of a beat
+// later, so each is a downbeat: the pick-up out of the stage runs on the
+// slam's grid, and the groove on the landing's, going from F to G two beats
+// after it, up to the first range command.
+{
+  const [next] = cuesOf('stab', I(22 + S), I(25 + S));
+  const change = LAND + 2 * BEAT;
+  voice.pad(HF_FROM, F, change - HF_FROM, 1, 1300);
+  voice.pad(change, G, next - change, 1, 1300);
+  for (const [at, from, to] of [[SLAM, HF_FROM, LAND], [LAND, LAND, next]]) {
+    for (const { t, whole } of grid(at, from, to)) if (whole) kick(t, 0.7);
+    for (const { t, n, whole, hold } of grid(at, from, to, BEAT / 2)) {
+      if (n % 2) voice.hat(t, 0.6);
+      if (whole) voice.bass(t, t < change - 1e-3 ? 29 : 31, hold, 0.7, 900);
+    }
+  }
+}
+
+// Range is clear: each command's stab starts a bar (they land more than a
+// whole number of beats apart, so each bar's last beat runs long), on Am, F
+// and Am again, and the groove eases off bar by bar: the kick goes after the
+// first, and RANGE IS CLEAR holds, its chord and a long bass note carrying
+// on, with no beat for the logo to miss, through the iris into the end card.
+const [LOGO] = cuesOf('logo', I(24 + S), DURATION);
 {
   const stabs = cuesOf('stab', I(22 + S), I(25 + S));
-  const [logo] = cuesOf('logo', I(24 + S), DURATION);
   const chords = [[AM, 33], [F, 29], [AM, 33]];
   stabs.forEach((at, k) => {
-    const to = stabs[k + 1] ?? logo;
+    const to = stabs[k + 1] ?? LOGO;
     const [chord, note] = chords[Math.min(k, chords.length - 1)];
     voice.pad(at, chord, to - at, 0.8, 900);
     if (k === stabs.length - 1) {
       voice.bass(at, note, to - at + 0.3, 0.6, 450);
       return;
     }
-    for (const { t } of grid(at, at, to)) {
-      if (k === 0) kick(t, 0.5);
-      hat(t + BEAT / 2, 0.45);
+    for (const { t, whole } of grid(at, at, to)) if (k === 0 && whole) kick(t, 0.5);
+    for (const { t, n, whole, hold } of grid(at, at, to, BEAT / 2)) {
+      if (n % 2) voice.hat(t, 0.45);
+      if (whole) voice.bass(t, note, hold, 0.55, 700);
     }
-    for (const { t } of grid(at, at, to, BEAT / 2)) voice.bass(t, note, BEAT / 2, 0.55, 700);
   });
+}
+
+// The end card: the logo's chord carries on as a closing pad under the
+// credit, A minor to F and home, a bar each on the logo's grid, with a bass
+// note under each chord and a soft bell on the beats, until the reel fades
+// out with the picture at DURATION.
+const FADE = 1.4; // the master fade-out, ending at DURATION
+{
+  const bar = 4 * BEAT;
+  const AM9 = [45, 52, 57, 59, 64];
+  const FM7 = [41, 53, 57, 60, 64];
+  const last = DURATION - (LOGO + 2 * bar);
+  [[AM9, 33, bar], [FM7, 29, bar], [AM9, 33, last]].forEach(([chord, note, dur], k) => {
+    const t = LOGO + k * bar;
+    voice.pad(t, chord, dur, 0.9, 1300 - 150 * k, { attack: k ? 0.6 : 1.5 });
+    voice.bass(t, note, dur, 0.45, 350);
+  });
+  const bells = [[0, 0, 76, 72], [69, 72, 77, 72], [69, 72, 76, 71]];
+  for (const { t, n } of grid(LOGO, LOGO + 2 * BEAT, DURATION - FADE)) {
+    const note = bells[Math.min(Math.floor(n / 4), bells.length - 1)][n % 4];
+    if (note) voice.bell(t, note, 0.9 - 0.04 * n, n % 2 ? 0.25 : -0.25);
+  }
 }
 
 // ------------------------------------------------------------------ cues
@@ -917,7 +1050,7 @@ let peak = 0;
 for (let ch = 0; ch < 2; ch++) {
   for (let k = 0; k < N; k++) {
     const t = k / SR;
-    const fadeOut = t > DURATION - 1.4 ? Math.max(0, (DURATION - t) / 1.4) : 1;
+    const fadeOut = t > DURATION - FADE ? Math.max(0, (DURATION - t) / FADE) : 1;
     const v = Math.tanh((dry[ch][k] + rv[ch][k] * 0.9) * 1.1) * fadeOut;
     mix[ch][k] = v;
     peak = Math.max(peak, Math.abs(v));
