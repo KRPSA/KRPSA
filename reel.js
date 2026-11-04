@@ -294,10 +294,12 @@
       ko: "레인지 커맨드",
       en: "Range commands",
       short: { ko: "커맨드", en: "Ready" },
-      sub: { ko: "Make Ready → Standby", en: "Make Ready → Standby" },
+      sub: { ko: "장전 · 준비 확인", en: "Make Ready → Are You Ready?" },
     },
     {
-      t: BEEP,
+      // STANDBY's stab (OPENING.commands[2][2], declared below): the start
+      // signal is its 1–4 s wait and then the beep
+      t: 4.6214,
       ko: "시작 신호",
       en: "Start signal",
       short: { ko: "시작 신호", en: "Signal" },
@@ -8199,6 +8201,7 @@
   function player(figure) {
     const canvas = figure.querySelector("canvas");
     const captionEl = figure.querySelector("[data-reel-caption]");
+    const creditEl = figure.querySelector("[data-reel-credit]");
     const rail = figure.querySelector("[data-reel-chapters]");
     const audio = figure.querySelector("audio");
     const language = () =>
@@ -8220,6 +8223,7 @@
     let raf = 0;
     let held = 0; // how long the picture has waited for the soundtrack
     let captionIndex = -2;
+    let narrow = false; // a stage under 700 CSS px plays PHONE_CAPTIONS
 
     const buttons = CHAPTERS.map((chapter, i) => {
       const item = document.createElement("li");
@@ -8262,22 +8266,33 @@
         else button.removeAttribute("aria-current");
       });
       // the line whose own span holds t, else a neighbour's lead-in or tail
-      let ci = CAPTIONS.findIndex(([a, b]) => t >= a && t <= b);
+      const lines = narrow ? PHONE_CAPTIONS : CAPTIONS;
+      let ci = lines.findIndex(([a, b]) => t >= a && t <= b);
       if (ci < 0)
-        ci = CAPTIONS.findIndex(([a, b]) => t >= a - 0.05 && t <= b + 0.25);
+        ci = lines.findIndex(([a, b]) => t >= a - 0.05 && t <= b + 0.25);
       if (ci !== captionIndex && captionEl) {
         captionIndex = ci;
-        const line = CAPTIONS[ci];
-        captionEl.classList.remove("is-in");
-        captionEl.textContent = line
-          ? language() === "en"
-            ? line[3]
-            : line[2]
-          : "";
-        if (line) {
-          void captionEl.offsetWidth;
-          captionEl.classList.add("is-in");
-        }
+        const line = lines[ci];
+        const en = language() === "en";
+        show(captionEl, line ? line[en ? 3 : 2] : "");
+        // The end card's credit rides with the closing line, as real text;
+        // the stylesheet shows it where the canvas draws it too small to
+        // read (a narrow stage).
+        const [label, labelKo, name] = FINALE_COPY.end.credit;
+        const credit = en
+          ? `${label} — ${name.toUpperCase()}`
+          : `${labelKo} — ${name}`;
+        const closing = line && ci === lines.length - 1;
+        if (creditEl && creditEl.textContent !== (closing ? credit : ""))
+          show(creditEl, closing ? credit : "");
+      }
+    }
+    function show(element, text) {
+      element.classList.remove("is-in");
+      element.textContent = text;
+      if (text) {
+        void element.offsetWidth;
+        element.classList.add("is-in");
       }
     }
     function draw() {
@@ -8349,6 +8364,14 @@
     function resize() {
       const width = canvas.clientWidth;
       if (!width) return;
+      // A stage under 700 CSS px switches to the phone lines (an index into
+      // one list of lines means nothing in the other).
+      const isNarrow = width < 700;
+      if (isNarrow !== narrow) {
+        narrow = isNarrow;
+        captionIndex = -2;
+        updateChrome();
+      }
       const target = Math.round(
         Math.min(width * Math.min(window.devicePixelRatio || 1, 2), 2560),
       );
@@ -8558,6 +8581,50 @@
     CUES.sort((a, b) => a.t - b.t);
   }
 
+  // The site player's lines on a narrow stage (under 700 CSS px: phones,
+  // upright and on their side). There the canvas draws at a fifth of its
+  // size or less, so the range commands' meanings (40 px) come out at about
+  // 8 CSS px and the division labels (56 px) at 11; the HTML line, real
+  // text, carries them on the same beats: each command with its meaning,
+  // STANDBY's line naming the 1–4 s wait into the beep, and each division
+  // with what sets it apart. Everything else is CAPTIONS, and the MP4 is
+  // unchanged.
+  const PHONE_CAPTIONS = (() => {
+    const L = CAPTIONS.map((c) => [...c]);
+    const [ry, sb] = OPENING.commands.slice(1).map(([, , at]) => ins(at));
+    const d0 = insStart(INSERTS.find((x) => x.kind === "divisions"));
+    const B = DIV.beats.map((b) => d0 + b);
+    const spanning = (at) => L.find(([a, b]) => a <= at && b >= at);
+    const command = (k) => {
+      const [c, [en, ko]] = OPENING.commands[k];
+      return [`${c} — ${ko}`, `${c} — ${en}`];
+    };
+    const titleCase = (s) =>
+      s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+    // the beep's line starts on STANDBY's stab; the divisions' title line
+    // hands over as Production lands
+    const beep = spanning(ins(BEEP));
+    if (beep) {
+      beep[0] = sb;
+      beep[2] = "STANDBY — 1~4초 뒤 신호음에 시작!";
+      beep[3] = "STANDBY — go on the beep, in 1–4 s.";
+    }
+    const divTitle = spanning(B[1]);
+    if (divTitle) divTitle[1] = B[1] - 0.05;
+    L.push(
+      // MAKE READY rises behind the wipe and is uncovered on its stab
+      [ins(OPENING.wipe[0]), ry - 0.05, ...command(0)],
+      [ry, sb - 0.05, ...command(1)],
+      ...DIV.specs.map(({ name, label }, k) => [
+        B[k + 1] + 0.05,
+        B[k + 2] - 0.05,
+        `${name[1]} — ${label[1]}`,
+        `${titleCase(name[0])} — ${label[0].replace(/^\+ /, "").toLowerCase()}`,
+      ]),
+    );
+    return L.sort((a, b) => a[0] - b[0]);
+  })();
+
   window.KRPSAReel = {
     W,
     H,
@@ -8566,6 +8633,7 @@
     CHAPTERS,
     CUES,
     CAPTIONS,
+    PHONE_CAPTIONS,
     SHOTS: SHOTS.map((shot) => ({ ...shot, t: ins(shot.t) })),
     TARGETS,
     // target geometry in cm (centre origin, y down) for the tests

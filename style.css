@@ -3226,15 +3226,18 @@ html[lang="en"] .latest-announcements-heading h2 {
 @media (min-width: 701px) {
   /* Over the picture the caption is a single row: the label steps aside
      while a line is showing (it still names the figure for screen readers)
-     and comes back only after a pause, so it never flickers between lines. */
+     and comes back only after a real pause (1.2 s), so it never flickers
+     in the short gaps between lines (up to about a second). */
   .hero-reel-label {
-    transition: visibility 0s linear 0.35s;
+    transition: visibility 0s linear 1.2s;
   }
   .hero-reel-caption:has(.hero-reel-line:not(:empty)) .hero-reel-label {
     visibility: hidden;
     transition: none;
   }
-  /* The scrim then backs the line's grid row only. */
+  /* The scrim then backs the line's grid row and what is under it (the
+     credit): an absolutely positioned grid child's auto end is the grid's
+     padding edge. */
   .hero-reel-caption:has(.hero-reel-line:not(:empty))::before {
     grid-row: 2;
   }
@@ -3255,6 +3258,29 @@ html[lang="en"] .latest-announcements-heading h2 {
 }
 .hero-reel-line.is-in {
   animation: reel-caption-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+/* The end card's credit, as real text with the closing line, where the
+   stage is too narrow for the canvas to draw it readably (under 880 px it
+   comes out at 11 CSS px or less; 5 on a phone). A quiet line under the
+   caption, in the end card's grey. */
+.hero-reel-credit {
+  display: none;
+  padding-left: 0.9cqi;
+  border-left: 3px solid transparent;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  color: #a4a8af;
+  word-break: keep-all;
+}
+@container (max-width: 880px) {
+  .hero-reel-credit:not(:empty) {
+    display: block;
+  }
+}
+.hero-reel-credit.is-in {
+  animation: reel-caption-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
 }
 @keyframes reel-caption-in {
   from {
@@ -3462,8 +3488,20 @@ html[lang="en"] .latest-announcements-heading h2 {
   .reel-chapter-name {
     display: none;
   }
+  /* as from 1001 px, the chapter playing keeps its name, across two
+     columns (three on phones), so a touch screen, with no title tooltip,
+     still says which chapter is which */
+  .hero-reel-chapters li:has(> button[aria-current]) {
+    grid-column: span 2;
+  }
+  .hero-reel-chapters button[aria-current] .reel-chapter-name {
+    display: inline;
+  }
 }
 @media (max-width: 700px) {
+  .hero-reel-chapters li:has(> button[aria-current]) {
+    grid-column: span 3;
+  }
   .hero-reel-stage {
     top: max(48px, calc(50% - 250px));
     width: 100cqw;
@@ -3480,8 +3518,11 @@ html[lang="en"] .latest-announcements-heading h2 {
   .hero-reel-caption::before {
     display: none;
   }
-  .hero-reel-line {
+  .hero-reel-line,
+  .hero-reel-credit {
     padding-left: 12px;
+  }
+  .hero-reel-line {
     font-size: 18px;
   }
   .hero-reel-rail {
