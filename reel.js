@@ -2116,8 +2116,9 @@
           family: lang === "en" ? SANS : KR,
           t: lt,
           out,
-          stagger: 0.008,
-          dur: 0.4,
+          // in place within about a third of a second, however long the line
+          stagger: Math.min(0.008, 0.06 / primary.length),
+          dur: 0.26,
           outDur: exit * 0.8,
           outStagger: 0,
         });
@@ -8428,7 +8429,7 @@
   // it holds still.
   // Stretches are [from, to, seconds on screen] in original-cut time.
   const STRETCH = [
-    [0, 2.14, 3.5], // DVC
+    [0, 2.14, 4.2], // DVC
     [2.14, BEEP, 7.0], // the range commands, up to the start signal
     [6.9, 12.95, 7.5], // the line of sight and the sights
     [13.0, 15.7, 7.0], // targets and scoring, before the push to the stage
@@ -8437,7 +8438,7 @@
   ];
   const INSERTS = [
     { at: 12.95, dur: DIV_INFO.dur, kind: "divisions" },
-    { at: RESUME, dur: 4.0, kind: "flyover" }, // the course walk
+    { at: RESUME, dur: 5.0, kind: "flyover" }, // the course walk
   ];
   const FLY = INSERTS.find((x) => x.kind === "flyover");
   // [o0, o1, f0, f1]: original time o0..o1 plays over final time f0..f1;
@@ -8546,9 +8547,12 @@
         { lt: 0.05, type: "riser", dur: fly.dur - 0.1 },
         { lt: 0.15, type: "whoosh", v: 0.7 },
         ...[0.3, 0.37, 0.44].map((lt) => ({ lt, type: "tick", v: 0.5 })),
-        { lt: 1.5, type: "whoosh", v: 0.45 },
-        { lt: 2.2, type: "whoosh", v: 0.45 },
-        { lt: 3.25, type: "whoosh", v: 0.55 },
+        // the camera's moves scale with the walk (timed for 4 s)
+        ...[1.5, 2.2, 3.25].map((lt, i) => ({
+          lt: (lt * fly.dur) / 4,
+          type: "whoosh",
+          v: i < 2 ? 0.45 : 0.55,
+        })),
       ].map(({ lt, ...c }) => ({ ...c, t: insStart(fly) + lt })),
     );
     CUES.sort((a, b) => a.t - b.t);
