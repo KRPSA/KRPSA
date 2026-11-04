@@ -204,7 +204,7 @@
     // panel's title, 재장전 / RELOAD, holds still for its reading time; the
     // drone over area C is held, on the popper that starts the drop turner
     // and the mover, so that their names (the caption's) are read on screen
-    [10180, 11250, 0.37],
+    [10180, 11250, 0.5],
     [11250, 12050, 0.45],
     [14545, 14612, 0.05], // bullet time: the last shot
   ];
@@ -705,8 +705,8 @@
   // local seconds too, derived from the beats, for the timeline to shift into
   // place. All of its on-screen copy lives here ([English, Korean]), so that
   // the font preloader can fetch every glyph.
-  const DIV_BEATS = [0.0, 2.7, 5.05, 7.4, 10.6, 12.95, 15.3];
-  const DIV_DUR = 19.8;
+  const DIV_BEATS = [0.0, 1.9, 3.6, 5.3, 7.65, 9.35, 11.05];
+  const DIV_DUR = 14.0;
   const DIV = {
     dur: DIV_DUR,
     beats: DIV_BEATS,
@@ -8548,17 +8548,17 @@
   // it holds still.
   // Stretches are [from, to, seconds on screen] in original-cut time.
   const STRETCH = [
-    [0, 2.14, 4.2], // DVC
-    [2.14, BEEP, 7.0], // the range commands, up to the start signal
-    [6.9, 12.95, 7.5], // the line of sight and the sights
-    [13.15, 15.7, 6.6], // targets and scoring (its blinds in play at speed), up to the push
-    [19.9 + SHIFT, 22.4 + SHIFT, 4.5], // the hit factor
-    [22.4 + SHIFT, 25.1 + SHIFT, 6.0], // range is clear, up to the end card
+    [0, 2.14, 3.0], // DVC
+    [2.14, BEEP, 5.6], // the range commands, up to the start signal
+    [6.9, 12.95, 6.5], // the line of sight and the sights
+    [13.15, 15.7, 5.2], // targets and scoring (its blinds in play at speed), up to the push
+    [19.9 + SHIFT, 22.4 + SHIFT, 3.6], // the hit factor
+    [22.4 + SHIFT, 25.1 + SHIFT, 4.6], // range is clear, up to the end card
   ];
   const INSERTS = [
     // right after the motto: the equipment comes before the match
     { at: OPENING.divisions, dur: DIV_INFO.dur, kind: "divisions" },
-    { at: RESUME, dur: 5.0, kind: "flyover" }, // the course walk
+    { at: RESUME, dur: 3.6, kind: "flyover" }, // the course walk
   ];
   const FLY = INSERTS.find((x) => x.kind === "flyover");
   // [o0, o1, f0, f1]: original time o0..o1 plays over final time f0..f1;
@@ -8605,7 +8605,7 @@
   // seconds or so in all, for its lettering and its credit to be read
   // together before it fades
   const CUT = ins(BASE_DURATION);
-  const DURATION = Math.ceil(CUT + 3.3);
+  const DURATION = Math.ceil(CUT + 1.8);
   const TAIL = DURATION - CUT;
   {
     const [div, fly] = INSERTS;
