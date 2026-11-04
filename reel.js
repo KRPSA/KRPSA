@@ -4772,6 +4772,95 @@
       if (e > 0) blend(RIGS.overview(), e);
       return camera(pos, look, fov, roll);
     }
+    // The course walk before the clock resumes (lt: 0..FLY.dur, the clock
+    // frozen at st): down from the overview to area A, along behind the
+    // shooting areas, over the port and the low port, and back up to the
+    // overview. The path runs through its keys on a centripetal Catmull-Rom
+    // curve, some 6 m up and 5 m or more behind the shooting areas: high
+    // over the walls, 7.5 m or more from the shooter, nowhere near a target.
+    // It eases out of the stage's own frame and back into it, and between
+    // them keeps an even pace, a little slower through the keys, so the shot
+    // flows on under the course card.
+    const FLY_KEYS = [
+      // [share of the walk, position, look at, fov, roll]
+      [0.3, [-12.4, 6.0, -5.8], [-6.6, 0.2, 4.8], 42, -0.03],
+      [0.51, [0.4, 6.4, -6.8], [1.0, 0.2, 5.2], 40, 0],
+      [0.72, [12.8, 6.0, -5.4], [8.6, 0.2, 4.8], 42, 0.03],
+    ];
+    function flyCamera(lt, st, t) {
+      const over = RIGS.overview();
+      const keys = [
+        [0, ...over],
+        ...FLY_KEYS.map(([at, ...k]) => [at * FLY.dur, ...k]),
+        [FLY.dur, ...over],
+      ];
+      const n = keys.length - 1;
+      let i = 0;
+      while (i < n - 1 && lt >= keys[i + 1][0]) i++;
+      // the pace: still at both ends, and through each key at 0.85 of the
+      // mean of the speeds either side of it (a Hermite curve on the key
+      // index, its slopes from the chords between the keys)
+      const chord = (j) => Math.hypot(...sub(keys[j + 1][1], keys[j][1]));
+      const speed = (j) => chord(j) / (keys[j + 1][0] - keys[j][0]);
+      const h = keys[i + 1][0] - keys[i][0];
+      const pace = (j) =>
+        j === 0 || j === n
+          ? 0
+          : (((0.85 * (speed(j - 1) + speed(j))) / 2) * h) / chord(i);
+      const s = seg(lt, keys[i][0], keys[i + 1][0]);
+      const u =
+        (s * s * (s - 2) + s) * pace(i) +
+        s * s * (3 - 2 * s) +
+        s * s * (s - 1) * pace(i + 1);
+      const at = (j) => keys[clamp(j, 0, n)];
+      const ends = (j, f) =>
+        j < 0
+          ? sub(mul(f(at(0)), 2), f(at(1)))
+          : j > n
+            ? sub(mul(f(at(n)), 2), f(at(n - 1)))
+            : f(at(j));
+      // centripetal Catmull-Rom between key i and key i + 1
+      const curve = (f) => {
+        const P = [i - 1, i, i + 1, i + 2].map((j) => ends(j, f));
+        const T = [0];
+        for (let k = 1; k < 4; k++)
+          T.push(
+            T[k - 1] +
+              Math.max(1e-3, Math.hypot(...sub(P[k], P[k - 1]))) ** 0.5,
+          );
+        const q = lerp(T[1], T[2], u);
+        const L = (A, B, a, b) => lerp3(A, B, (q - T[a]) / (T[b] - T[a]));
+        const A1 = L(P[0], P[1], 0, 1);
+        const A2 = L(P[1], P[2], 1, 2);
+        const A3 = L(P[2], P[3], 2, 3);
+        return L(L(A1, A2, 0, 2), L(A2, A3, 1, 3), 1, 2);
+      };
+      const [fov, roll] = curve((k) => [k[3], k[4] * 100, 0]);
+      const fly = camera(
+        curve((k) => k[1]),
+        curve((k) => k[2]),
+        fov,
+        roll / 100,
+      );
+      // hand over exactly: from the stage's frame as the walk starts, and to
+      // its frame at RESUME as the walk ends
+      const w = Math.max(
+        1 - ease.inOut3(seg(lt, 0, 0.5)),
+        ease.inOut3(seg(lt, FLY.dur - 0.5, FLY.dur)),
+      );
+      if (w <= 0) return fly;
+      const edge = stageCamera(lt < FLY.dur / 2 ? t : RESUME, st);
+      const f = norm(lerp3(fly.f, edge.f, w));
+      const r0 = lerp3(fly.r, edge.r, w);
+      const r = norm(sub(r0, mul(f, dot(r0, f))));
+      return {
+        pos: lerp3(fly.pos, edge.pos, w),
+        f,
+        r,
+        u: cross(f, r),
+        focal: lerp(fly.focal, edge.focal, w),
+      };
+    }
     function polyHole3(cam, outer, inner, fill, stroke) {
       ctx.beginPath();
       [outer, inner].forEach((pts) => {
@@ -4800,6 +4889,28 @@
     // the caption on screen during the stage (set by sceneStage): labels keep
     // out of its band, and the targets it names are drawn up large
     let stageCap = null;
+    // over the course walk: the card's panel (as wide as its copy, see
+    // cardLayout) and how far it is up (0..1), and the frozen shot timer,
+    // which has no panel behind it until the clock resumes
+    const CARD_AT = [86, 136]; // its top left corner
+    const TIMER_RECT = [W - 340, 40, W - 90, 160];
+    // the stage's panels as they come in at RESUME (the slide-cycle panel
+    // grows later, for the reload)
+    const PANELS_AT_RESUME = HUD_RECTS.map((r) => r.slice());
+    let cardUp = 0;
+    let walking = false;
+    // 0..1: how far the walk has handed its labels over to the stage's
+    // panels. Those under a panel fade out before it comes in and stay out
+    // until the panel hides them itself (hudLive).
+    let handOver = 0;
+    // the labels drawn so far in a frame of the walk ([x0, y0, x1, y1, how
+    // far it is shown]), and how far a label gives way to one where they meet
+    const walkBoxes = [];
+    let unclutter = 0;
+    // where the target numbers stand in a frame of the walk (T1 to T8, over
+    // each paper target, see drawStageTarget): the walk names the kinds of
+    // target and leaves the numbers to the stage, so they step back for it
+    let walkTags = [];
     function labelAlpha(x, y, w, h) {
       const under = ([x0, , x1, y1]) =>
         x > x0 - 40 && x < x1 + 40 && y < y1 + 10;
@@ -4809,8 +4920,40 @@
         20,
         60,
       );
-      const inBand = stageCap && x - w / 2 < 1460;
-      return inBand ? edge * seg(H - 215 - y, 0, 25) : edge;
+      // (the walk keeps the band clear throughout, for its caption, and on
+      // through the hand-over until the stage's first caption takes it)
+      const inBand = (stageCap || walking || handOver > 0) && x - w / 2 < 1460;
+      let a = inBand ? edge * seg(H - 215 - y, 0, 25) : edge;
+      if (PANELS_AT_RESUME.some(under)) a *= 1 - handOver;
+      if (!walking) return a;
+      // on the walk a label fades out as it nears the card or the timer,
+      // and gives way to a label already drawn where it would land: seen low
+      // and from the side, one target's name can sit on its neighbour's
+      const clear = ([x0, , x1, y1]) =>
+        seg(Math.max(x0 - x - w / 2, x - w / 2 - x1, y - h - y1), 8, 36);
+      const box = [x - w / 2, y - h, x + w / 2, y + 4];
+      // a label gives way over the last 10 px before it meets one
+      const meet = ([x0, y0, x1, y1, b]) =>
+        b *
+        (1 -
+          seg(
+            Math.max(x0 - box[2], box[0] - x1, y0 - box[3], box[1] - y1),
+            0,
+            10,
+          ));
+      const tag = walkTags.some(
+        ([qx, qy]) => Math.abs(qx - x) + Math.abs(qy - y) < 0.5,
+      );
+      const shown =
+        a *
+        (1 - cardUp * (1 - clear(cardLayout().rect))) *
+        clear(TIMER_RECT) *
+        (tag ? 1 - unclutter : 1);
+      const out = shown * (1 - unclutter * Math.max(0, ...walkBoxes.map(meet)));
+      // it holds its place even where it gives way itself, so a crowd shows
+      // one name rather than passing it round
+      walkBoxes.push([...box, shown]);
+      return out;
     }
     // the stage's target names, in Korean for the Korean captions
     const TAG_KO = {
@@ -4861,13 +5004,14 @@
       ctx.restore();
     }
 
-    function sceneStage(t) {
-      if (t < 15.7 || t > STAGE_END + 1.2) return;
-      const tfin = ins(t);
+    // fly: local time inside the course walk (the clock stays frozen)
+    function sceneStage(t, fly = null) {
+      if (fly == null && (t < 15.7 || t > STAGE_END + 1.2)) return;
+      const tfin = fly == null ? ins(t) : insStart(FLY) + fly;
       stageCap =
         CAPTIONS.find((c) => tfin >= c[0] - 0.05 && tfin <= c[1] + 0.3) ?? null;
       const st = stageOfVideo(Math.max(t, RESUME)) / 1000;
-      const enter = stagePush(t);
+      const enter = fly == null ? stagePush(t) : 1;
       // out before the hit factor lands (19.9 + SHIFT)
       const leave = ease.in3(seg(t, STAGE_END + 0.3, STAGE_END + 0.55));
       ctx.save();
@@ -4879,8 +5023,25 @@
         ctx.clip();
       }
       ctx.globalAlpha = 1 - leave;
-      const cam = stageCamera(t, st);
+      const cam = fly == null ? stageCamera(t, st) : flyCamera(fly, st, t);
       hudLive = t > 16.05 && t < STAGE_END + 0.55; // while the panel is up
+      walking = fly != null;
+      cardUp = walking ? cardPanel(fly) : 0;
+      // over the end of the walk, on until the panels are up
+      handOver = walking
+        ? ease.inOut3(seg(fly, FLY.dur - 0.7, FLY.dur - 0.2))
+        : !hudLive && t >= RESUME && t < RESUME + 0.1
+          ? 1
+          : 0;
+      walkBoxes.length = 0;
+      unclutter = walking ? seg(fly, 0, 0.4) * (1 - handOver) : 0;
+      walkTags = !walking
+        ? []
+        : Object.keys(TARGETS)
+            .filter((k) => /^T\d/.test(k))
+            .map((k) =>
+              project(cam, [TARGETS[k].pos[0], 1.78, TARGETS[k].pos[2]]),
+            );
       for (let x = -12; x <= 12; x++)
         seg3(
           cam,
@@ -5168,6 +5329,7 @@
         }
       });
       ctx.restore();
+      if (fly != null) courseCard(fly);
 
       const la =
         ease.out3(seg(t, 16.0, 16.3)) *
@@ -5422,6 +5584,176 @@
       ctx.restore();
       SHOTS.forEach((s) => brass(go, st - s.st, s.i * 7 + 3));
       ctx.restore();
+    }
+
+    // The course card over the walk: what this stage asks of the shooter.
+    // STAGE 01 and LONG COURSE land together, then its three numbers, each
+    // over its name in the viewer's language (in both, English and the
+    // Korean under it); all of it holds still, at 22 px or more, until the
+    // card leaves for the slide-cycle panel that fades in at the same corner.
+    const COURSE_STATS = [
+      [SHOTS.length, ["ROUNDS", "발"]],
+      [Object.keys(AREAS).length, ["POSITIONS", "사격 위치"]],
+      [
+        Object.values(TARGETS).filter((tg) =>
+          ["swinger", "turner", "mover"].includes(tg.kind),
+        ).length,
+        ["MOVING TARGETS", "무빙 타겟"],
+      ],
+    ];
+    // the card's copy and where it sits in the viewer's language: the stats
+    // in columns as wide as their names, the panel round all of it
+    function cardLayout() {
+      const lang = opt.lang;
+      const [x0, y0] = CARD_AT;
+      const x = x0 + 40;
+      const title = { size: 104, tracking: -3 };
+      const sub = {
+        str: { ko: "롱 코스 · LONG COURSE", both: "LONG COURSE · 롱 코스" }[
+          lang
+        ],
+        o: { size: 26, weight: 700, family: KR, color: C.red },
+      };
+      if (!sub.str) {
+        sub.str = "LONG COURSE";
+        sub.o = { size: 24, weight: 800, tracking: 4, color: C.red };
+      }
+      const num = { size: 72, tracking: -1 };
+      const en = { size: 22, weight: 800, tracking: 2.4, color: "#c9ccd1" };
+      const ko = {
+        size: lang === "ko" ? 26 : 22,
+        weight: 700,
+        family: KR,
+        color: lang === "ko" ? "#c9ccd1" : C.dim,
+      };
+      const width = (str, o) =>
+        layout(str, font(o.weight ?? 800, o.size, o.family), o.tracking ?? 0)
+          .width;
+      let cx = x;
+      const stats = COURSE_STATS.map(([n, [e, k]]) => {
+        const lines =
+          lang === "ko"
+            ? [[k, ko]]
+            : lang === "en"
+              ? [[e, en]]
+              : [
+                  [e, en],
+                  [k, ko],
+                ];
+        const w = Math.max(
+          width(String(n), num),
+          ...lines.map(([s, o]) => width(s, o)),
+        );
+        const col = { x: cx, n: String(n), lines };
+        cx += w + 56;
+        return col;
+      });
+      const right = Math.max(x + width("STAGE 01", title), cx - 56) + 44;
+      return {
+        x,
+        title,
+        sub,
+        num,
+        stats,
+        // title, LONG COURSE, the rule, the numbers and their names
+        y: [y0 + 110, y0 + 154, y0 + 184, y0 + 272, y0 + 310, y0 + 340],
+        rect: [x0, y0, right, y0 + (lang === "both" ? 374 : 348)],
+      };
+    }
+
+    // how far the course card's panel is up at lt (inside the walk): it
+    // stays until its copy has gone, and is down as the walk ends, where the
+    // slide-cycle panel fades in at the same corner
+    const cardPanel = (lt) =>
+      ease.out3(seg(lt, 0, 0.3)) *
+      (1 - ease.inOut3(seg(lt, FLY.dur - 0.3, FLY.dur - 0.02)));
+
+    function courseCard(lt) {
+      const L = cardLayout();
+      const [x0, y0, x1] = L.rect;
+      const up = cardPanel(lt);
+      if (up <= 0) return;
+      // the panel opens down to the stats as they come in
+      const y1 = lerp(L.y[1] + 34, L.rect[3], ease.inOut3(seg(lt, 0.14, 0.38)));
+      // the copy leaves from the last stat back to the title, the panel last
+      const out = FLY.dur - 0.54;
+      ctx.save();
+      ctx.globalAlpha *= up;
+      ctx.translate(0, (1 - up) * 18);
+      ctx.fillStyle = "rgba(10,12,15,0.9)";
+      ctx.strokeStyle = "rgba(255,255,255,0.1)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(x0, y0, x1 - x0, y1 - y0, 6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.save();
+      ctx.clip();
+      // a soft light sweeps across the panel once the copy has landed
+      const sw = seg(lt, 1.0, 2.6);
+      if (sw > 0 && sw < 1) {
+        const sx = lerp(x0 - 300, x1 + 300, ease.inOut3(sw));
+        const g = ctx.createLinearGradient(sx - 160, 0, sx + 160, 0);
+        g.addColorStop(0, "rgba(255,255,255,0)");
+        g.addColorStop(0.5, "rgba(255,255,255,0.07)");
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+      }
+      // the walk's progress along the panel's foot
+      ctx.fillStyle = rgba(C.red, 0.85);
+      ctx.fillRect(x0, y1 - 3, (x1 - x0) * seg(lt, 0.3, FLY.dur - 0.3), 3);
+      ctx.restore();
+      // the red edge, as on the captions
+      const bar = ease.outExpo(seg(lt, 0.04, 0.4));
+      ctx.fillStyle = C.red;
+      ctx.fillRect(x0, y0 + 30, 4, (L.y[1] - y0 - 22) * bar);
+      ctx.restore();
+
+      const leave = (k) => out + 0.06 * k; // k counts back from the last stat
+      landLine(
+        "STAGE 01",
+        L.x - 4,
+        L.y[0],
+        L.title,
+        lt,
+        0.06,
+        0.26,
+        leave(4),
+        0.2,
+      );
+      landLine(L.sub.str, L.x, L.y[1], L.sub.o, lt, 0.12, 0.22, leave(4), 0.2);
+      ctx.save();
+      ctx.globalAlpha *=
+        ease.out3(seg(lt, 0.22, 0.52)) *
+        (1 - seg(lt, leave(3), leave(3) + 0.2));
+      line(
+        L.x,
+        L.y[2],
+        lerp(L.x, x1 - 40, ease.inOut3(seg(lt, 0.22, 0.6))),
+        L.y[2],
+        "rgba(255,255,255,0.18)",
+        1,
+      );
+      ctx.restore();
+      L.stats.forEach(({ x, n, lines }, k) => {
+        const at = 0.3 + k * 0.07; // with a tick each (CUES)
+        const exit = leave(L.stats.length - 1 - k);
+        landLine(n, x - 2, L.y[3], L.num, lt, at, 0.22, exit, 0.2);
+        lines.forEach(([str, o], j) =>
+          landLine(
+            str,
+            x,
+            L.y[4 + j],
+            o,
+            lt,
+            at + 0.04 * (j + 1),
+            0.2,
+            exit,
+            0.2,
+          ),
+        );
+      });
     }
 
     function drawStageTarget(cam, key, st) {
@@ -7789,6 +8121,8 @@
         if (tl.lt < 0.25) blinds(at + tl.lt, at - 0.2, at + 0.2);
         else if (tl.lt > tl.insert.dur - 0.25)
           blinds(at - (tl.insert.dur - tl.lt), at - 0.2, at + 0.2);
+      } else if (tl.insert?.kind === "flyover") {
+        sceneStage(t, tl.lt);
       } else {
         // the wipe runs over the held motto and uncovers MAKE READY
         const [wa, wb] = OPENING.wipe;
@@ -8090,7 +8424,8 @@
     typeof DIV !== "undefined" ? DIV : { dur: 12, captions: [], cues: [] };
   // The final timeline. The original cut plays at its own pace, except where
   // a stretch slows a scene down so its words stay up long enough to read,
-  // and where an insert (the divisions chapter) plays while it holds still.
+  // and where an insert (the divisions chapter, the course walk) plays while
+  // it holds still.
   // Stretches are [from, to, seconds on screen] in original-cut time.
   const STRETCH = [
     [0, 2.14, 3.5], // DVC
@@ -8100,7 +8435,11 @@
     [19.9 + SHIFT, 22.4 + SHIFT, 4.5], // the hit factor
     [22.4 + SHIFT, 25.1 + SHIFT, 6.0], // range is clear, up to the end card
   ];
-  const INSERTS = [{ at: 12.95, dur: DIV_INFO.dur, kind: "divisions" }];
+  const INSERTS = [
+    { at: 12.95, dur: DIV_INFO.dur, kind: "divisions" },
+    { at: RESUME, dur: 4.0, kind: "flyover" }, // the course walk
+  ];
+  const FLY = INSERTS.find((x) => x.kind === "flyover");
   // [o0, o1, f0, f1]: original time o0..o1 plays over final time f0..f1;
   // an insert holds the original cut still (o0 === o1) and carries `insert`
   const SEGS = (() => {
@@ -8148,7 +8487,7 @@
   const DURATION = Math.ceil(CUT + 3.3);
   const TAIL = DURATION - CUT;
   {
-    const [div] = INSERTS;
+    const [div, fly] = INSERTS;
     // chapters: one that starts exactly where an insert begins opens with it
     CHAPTERS.forEach((c) => {
       const at = INSERTS.find((x) => x.at === c.t);
@@ -8175,17 +8514,43 @@
         ko,
         en,
       ]),
+      // one line over the course walk, once its card has been read; it adds
+      // what the card does not say, and leaves as the stage resumes
+      [
+        insStart(fly) + 1.2,
+        insStart(fly) + fly.dur - 0.26,
+        "먼저 코스를 걸어 봅니다.",
+        "First, walk the course.",
+      ],
     );
     CAPTIONS.sort((a, b) => a[0] - b[0]);
     CAPTIONS[CAPTIONS.length - 1][1] += TAIL; // the closing line stays with the end card
     CUES.forEach((c) => {
       // a riser or a run of flutter stretches with the scene it plays under
-      // (but does not run on through an inserted chapter)
-      const across = INSERTS.some((x) => c.t < x.at && c.t + c.dur >= x.at);
-      if (c.dur != null && !across) c.dur = ins(c.t + c.dur) - ins(c.t);
+      // (but does not run on through an inserted chapter: it ends where the
+      // chapter begins, as the riser into the stage now runs into the walk)
+      const across = INSERTS.find((x) => c.t < x.at && c.t + c.dur >= x.at);
+      if (c.dur != null)
+        c.dur = (across ? insStart(across) : ins(c.t + c.dur)) - ins(c.t);
       c.t = ins(c.t);
     });
     CUES.push(...DIV_INFO.cues.map((c) => ({ ...c, t: insStart(div) + c.lt })));
+    // the course walk: a hit landing the riser from the push as the card
+    // opens, a riser up to the stage's drop, a tick as each of the course
+    // card's numbers lands, and a whoosh peaking as the camera is at its
+    // fastest (see flyCamera): the dive from the overview, the two glides
+    // along the shooting areas, the climb back
+    CUES.push(
+      ...[
+        { lt: 0, type: "hit", v: 0.5 },
+        { lt: 0.05, type: "riser", dur: fly.dur - 0.1 },
+        { lt: 0.15, type: "whoosh", v: 0.7 },
+        ...[0.3, 0.37, 0.44].map((lt) => ({ lt, type: "tick", v: 0.5 })),
+        { lt: 1.5, type: "whoosh", v: 0.45 },
+        { lt: 2.2, type: "whoosh", v: 0.45 },
+        { lt: 3.25, type: "whoosh", v: 0.55 },
+      ].map(({ lt, ...c }) => ({ ...c, t: insStart(fly) + lt })),
+    );
     CUES.sort((a, b) => a.t - b.t);
   }
 
