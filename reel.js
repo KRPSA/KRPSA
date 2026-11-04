@@ -385,8 +385,9 @@
   const END_IRIS = 24.6;
 
   // Each line stays up long enough to read on the final timeline: at most
-  // about 7 Korean or 15 English characters a second, and two seconds or more
-  // (times here are in the original cut; the stretches slow some of it down).
+  // about 6 Korean letters or 13 English characters a second, and two and a
+  // half seconds or more (times here are in the original cut; the stretches
+  // slow some of it down).
   // The motto goes without one: its meaning is on screen, under each word.
   const CAPTIONS = [
     [2.22, 4.3, "레인지 오피서(RO)의 구령.", "The Range Officer's commands."],
@@ -7328,8 +7329,10 @@
       // the grip before the slide locks back (22.51–22.58); the chamber is
       // shown empty for 1.2 s; on HAMMER DOWN, HOLSTER the slide goes home
       // (23.19), the hammer follows half a second later (23.435), and the
-      // pistol is holstered (23.66–23.975), gone well before RANGE IS CLEAR.
-      if (t < CLEAR_BEATS[2]) {
+      // pistol is holstered (23.66–23.975), carried down and turned until
+      // all of it is below the frame, and not drawn after that: gone 0.6 s
+      // on screen before RANGE IS CLEAR.
+      if (t < 23.975) {
         const drop = seg(t, 22.345, 22.58);
         const lock =
           ease.out3(seg(t, 22.513, 22.58)) *
@@ -7339,7 +7342,7 @@
         const drift = seg(t, 22.245, 23.66);
         const go = {
           x: lerp(2280, 1500, enter) - drift * 24,
-          y: 790 + holster * 520 - drift * 6,
+          y: 790 + holster * 720 - drift * 6,
           s: 2.5,
           rot: holster * 0.9,
         };
@@ -7372,11 +7375,12 @@
     // name as the site gives it (in Korean in ko, under the English in
     // both), IPSC's fifty years and, under them, the motion-design credit
     // (opt.credit). The iris opens at END_IRIS; the lettering is in and
-    // still as it uncovers it (lt 0), the credit rises in just after it
-    // (still by lt 0.6), and all of it holds to the end. The background
-    // holds still; only the crests catch a light sweep, twice. The card, its
-    // credit, the closing caption and the frame chrome all fade out
-    // together over the reel's last 0.3 s. Copy: FINALE_COPY.end.
+    // still as it uncovers it (by lt 0.02), the credit rises in with it
+    // (still by lt 0.25), and all of it holds still together for about six
+    // and a half seconds, to the end. The background holds still; only the
+    // crests catch a light sweep, every two seconds. The card, its credit,
+    // the closing caption and the frame chrome all fade out together over
+    // the reel's last 0.3 s. Copy: FINALE_COPY.end.
     const logoLayers = {};
     function sceneEnd(t) {
       if (t < END_IRIS) return;
@@ -7390,6 +7394,7 @@
       blueprintGrid(0.5);
       const lt = t - (END_IRIS + 0.2);
       const fade = 1 - seg(t, 27.7 + TAIL, 28 + TAIL);
+      const fadeAt = 27.7 + TAIL - (END_IRIS + 0.2); // in lt
       ctx.globalAlpha = fade;
       // a crest rises into place, then a light sweeps across it
       const crest = (name, cx, cy, h, d) => {
@@ -7405,9 +7410,13 @@
         ctx.clip();
         // The light sweep is composited on the crest's own layer, so it only
         // touches the crest's pixels and never the background around it. It
-        // runs once as the crest settles and again two seconds later.
+        // runs as the crest settles and again every two seconds, as long as
+        // a sweep ends before the card fades out (three times).
+        const k = Math.max(0, Math.floor((lt - d) / 2));
         const sw =
-          lt < d + 2 ? seg(lt, d + 0.4, d + 1.6) : seg(lt, d + 2.4, d + 3.6);
+          d + 2 * k + 1.6 < fadeAt
+            ? seg(lt, d + 0.4 + 2 * k, d + 1.6 + 2 * k)
+            : 0;
         if (sw > 0 && sw < 1) {
           const lc = (logoLayers[name] ||= document
             .createElement("canvas")
@@ -7439,7 +7448,8 @@
       // the two shields read as the same size.
       crest("ipsc-crest.png", 410, 540, 380, 0);
       crest("krpsa-logo.png", 773, 540, 402, 0.12);
-      // the lettering: at rest by 24.52, as the iris uncovers it
+      // the lettering: at rest by lt 0.02 (END_IRIS + 0.22), as the iris
+      // uncovers it
       const wm = kinetic("KRPSA", 1023, 545, {
         size: 190,
         t: lt + 0.3,
@@ -7489,54 +7499,38 @@
       }
       ctx.restore();
       // the credit, a line of its own under the years, in the lettering's
-      // column: it rises in on the card (still by lt 0.6) and holds with it
+      // column: it rises in with the lettering (still by lt 0.25) and holds
+      // with it to the end. The label and its dash in grey, the name in
+      // white; in both, the Korean line under the English one.
       if (opt.credit) {
         const [label, labelKo, name] = E.credit;
         const cy = yy + 72;
-        const at = 0.35;
-        const land = 0.25;
-        const grey = "#a4a8af";
-        if (lang === "ko") {
+        const credit = (lab, who, y, o, at) => {
           const w = landLine(
-            labelKo,
+            `${lab} — `,
             1029,
-            cy,
-            { size: 24, weight: 700, family: KR, color: grey },
+            y,
+            { ...o, color: "#a4a8af" },
             lt,
             at,
-            land,
+            0.25,
           );
           landLine(
-            ` — ${name}`,
+            who,
             1029 + w,
-            cy,
-            { size: 24, weight: 800, color: C.white },
+            y,
+            { ...o, family: undefined, weight: 800, color: C.white },
             lt,
             at + 0.02,
-            land,
+            0.25,
           );
-        } else {
-          const o = { size: 22, weight: 700, tracking: 3, color: grey };
-          const w = landLine(`${label} — `, 1029, cy, o, lt, at, land);
-          const wn = landLine(
-            name.toUpperCase(),
-            1029 + w,
-            cy,
-            { ...o, weight: 800, color: C.white },
-            lt,
-            at + 0.02,
-            land,
-          );
-          if (both)
-            landLine(
-              labelKo,
-              1029 + w + wn + 20,
-              cy,
-              { size: 22, weight: 700, family: KR, color: grey },
-              lt,
-              at + 0.04,
-              land,
-            );
+        };
+        const kr = { weight: 700, family: KR, tracking: 0 };
+        if (lang === "ko") credit(labelKo, name, cy, { ...kr, size: 24 }, 0);
+        else {
+          const o = { size: 22, weight: 700, tracking: 3 };
+          credit(label, name.toUpperCase(), cy, o, 0);
+          if (both) credit(labelKo, name, cy + 36, { ...kr, size: 22 }, 0.04);
         }
       }
       ctx.restore();
@@ -7980,9 +7974,11 @@
       o1 === Infinity ? o0 + (f - f0) : o0 + ((f - f0) * (o1 - o0)) / (f1 - f0);
     return { t, insert: null, lt: 0 };
   }
-  // the end card holds about 1.3 s past the cut, to a whole second
+  // the end card holds about 3.3 s past the cut, to a whole second: seven
+  // seconds or so in all, for its lettering and its credit to be read
+  // together before it fades
   const CUT = ins(BASE_DURATION);
-  const DURATION = Math.ceil(CUT + 1.3);
+  const DURATION = Math.ceil(CUT + 3.3);
   const TAIL = DURATION - CUT;
   {
     const [div] = INSERTS;
