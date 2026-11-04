@@ -384,6 +384,12 @@
     optic: { name: ["OPTIC", "옵틱"], focus: ["FOCUS: TARGET", "초점 → 표적"] },
   };
 
+  // The iris onto the end card opens at this time of sceneEnd's clock (the
+  // original cut less SHIFT and END_HOLD): 0.3 s past the range-is-clear
+  // stretch, so that RANGE IS CLEAR holds its two seconds before the iris
+  // reaches it.
+  const END_IRIS = 24.6;
+
   // Each line stays up long enough to read on the final timeline: at most
   // 6 Korean letters or 13 English characters a second, and two and a half
   // seconds or more (times here are in the original cut; the stretches slow
@@ -406,15 +412,15 @@
     ],
     [10.54, 12.85, "옵틱 — 초점은 표적에.", "Optic: focus on the target."],
     // targets and scoring: one line for each of its two beats (the table,
-    // then the cards), saying what the beat shows
+    // then the cards), saying what the beat shows (3.6 and 3.2 s on screen)
     [
       13.047,
-      14.55,
+      14.466,
       "종이 표적은 A·C·D 존으로 채점.",
       "Paper scores by zone: A, C, D.",
     ],
     [
-      14.634,
+      14.5429, // the cards (SCORING_CARDS)
       15.945,
       "철판은 넘어져야 득점, 노슛·미스는 −10점.",
       "Steel must fall; no-shoot/miss −10.",
@@ -466,17 +472,18 @@
       "Points ÷ time. Highest hit factor wins.",
     ],
     [
-      // from the first command through the RANGE IS CLEAR hold, until the
-      // iris to the end card
+      // from the first command through the RANGE IS CLEAR hold, until just
+      // before the iris to the end card
       22.06 + SHIFT,
-      25.0 + SHIFT,
+      END_IRIS - 0.1 + SHIFT + END_HOLD,
       "언로드, 쇼 클리어, 해머 다운 — 끝까지 안전.",
       "Unload, show clear, hammer down.",
     ],
     [
-      // the end card's anniversary line, said again; its exit (the last
-      // 0.3 s) ends with the reel, as the card and the chrome fade out
-      24.6 + SHIFT + END_HOLD,
+      // the end card's anniversary line, said again as the lettering lands;
+      // its exit (the last 0.3 s) ends with the reel, as the card, its
+      // credit and the chrome fade out
+      END_IRIS + 0.3 + SHIFT + END_HOLD,
       27.7 + SHIFT + END_HOLD,
       "IPSC 50주년, 1976–2026.",
       "IPSC at fifty.",
@@ -529,11 +536,12 @@
     { t: 12.28, type: "whoosh", v: 0.45 },
     { t: 12.78, type: "whoosh", v: 0.6 },
     { t: 13.0, type: "hit", v: 0.6 },
-    // the zones lit in turn on the beat, then the three cards (sceneTargets)
-    ...[13.237, 13.474, 13.711].map((t) => ({ t, type: "blip", v: 0.55 })),
-    { t: 14.634, type: "tick", v: 0.8 },
-    { t: 14.774, type: "steel" },
-    { t: 15.0, type: "clank", v: 0.5 }, // as the steel icon lands
+    // the zones lit in turn, a second apart on the scoring hit's beat, then
+    // the three cards, the popper shot and its fall (see sceneTargets)
+    ...[13.3857, 13.7714, 14.1571].map((t) => ({ t, type: "blip", v: 0.55 })),
+    { t: 14.5429, type: "tick", v: 0.8 },
+    { t: 14.7357, type: "steel" },
+    { t: 14.9286, type: "clank", v: 0.5 }, // as the steel icon lands
     { t: 15.62, type: "riser", dur: 0.38 },
     { t: RESUME, type: "drop" },
     ...SHOTS.flatMap((s) => [
@@ -618,25 +626,27 @@
       v: 0.3,
     })),
     { t: 20.3675 + SHIFT, type: "hit", v: 1 },
-    // range is clear (see sceneClear): a stab on each command, and the pistol
+    // range is clear (see sceneClear and CLEAR_BEATS): a stab on each
+    // command, 2.4 s apart on screen, and the pistol
     { t: 22.022 + SHIFT, type: "stab", v: 0.8 },
-    { t: 22.21 + SHIFT, type: "clank", v: 0.6 }, // the magazine drops free
-    { t: 22.37 + SHIFT, type: "slide", v: 0.6 }, // on the lock
-    { t: 23.101 + SHIFT, type: "stab", v: 0.8 },
-    { t: 23.135 + SHIFT, type: "slide", v: 0.8 }, // the slide going home
-    { t: 23.36 + SHIFT, type: "click", v: 0.9 }, // hammer down
-    { t: 24.136 + SHIFT, type: "stab", v: 1 },
+    { t: 22.345 + SHIFT, type: "clank", v: 0.6 }, // the magazine drops free
+    { t: 22.513 + SHIFT, type: "slide", v: 0.6 }, // on the lock
+    { t: 23.174 + SHIFT, type: "stab", v: 0.8 },
+    { t: 23.19 + SHIFT, type: "slide", v: 0.8 }, // the slide going home
+    { t: 23.435 + SHIFT, type: "click", v: 0.9 }, // hammer down
+    { t: 24.254 + SHIFT, type: "stab", v: 1 },
     // the iris opening onto the end card, rising into the logo hit
-    { t: 24.3 + SHIFT + END_HOLD, type: "whoosh", v: 0.5 },
-    { t: 24.5 + SHIFT + END_HOLD, type: "logo" },
+    { t: END_IRIS + SHIFT + END_HOLD, type: "whoosh", v: 0.5 },
+    { t: END_IRIS + 0.2 + SHIFT + END_HOLD, type: "logo" },
   ];
 
   // On-screen copy of the explained scenes after the divisions chapter
   // (sceneTargets, sceneHitFactor, sceneClear, sceneEnd), [English, Korean],
-  // here so that the font preloader can fetch every glyph. Each beat carries
-  // no more new text than a first-time viewer reads in its hold (about 7
-  // Korean letters or 15 English characters a second), and its caption says
-  // the same thing.
+  // here so that the font preloader can fetch every glyph. Every line lands
+  // within 0.35 s on screen and then holds still for two seconds or more,
+  // and each beat carries no more new text than a first-time viewer reads
+  // in its hold (about 6 Korean letters or 13 English characters a second);
+  // its caption says the same thing.
   const FINALE_COPY = {
     scoring: {
       title: ["SCORING", "채점"],
@@ -666,6 +676,8 @@
     end: {
       name: ["KOREA PRACTICAL SHOOTING ASSOCIATION", "대한민국 실용사격 협회"],
       years: ["IPSC  ·  50 YEARS", "IPSC 1976–2026  ·  50주년", "50주년"],
+      // the motion-design credit (opt.credit): [label, Korean label, name]
+      credit: ["MOTION DESIGN", "모션 디자인", "Claude"],
     },
   };
 
@@ -3955,6 +3967,23 @@
       });
     }
 
+    // A gleam running once along a red rule (x, y, w, h) as p goes 0 → 1.
+    function gleam(x, y, w, h, p) {
+      if (p <= 0 || p >= 1) return;
+      const gx = x + lerp(-90, w + 90, ease.inOut3(p));
+      const g = ctx.createLinearGradient(gx - 90, 0, gx + 90, 0);
+      g.addColorStop(0, "rgba(255,255,255,0)");
+      g.addColorStop(0.5, "rgba(255,255,255,0.75)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, y, w, h);
+      ctx.clip();
+      ctx.fillStyle = g;
+      ctx.fillRect(x, y, w, h);
+      ctx.restore();
+    }
+
     // The push from scoring to the stage: one eased value moves both scenes,
     // so the stage's left edge follows the scoring panel's right edge.
     const stagePush = (t) => ease.inOut3(seg(t, 15.7, 16.0));
@@ -3988,21 +4017,26 @@
     }
 
     // S4 — targets and scoring, in two beats (at this stretch a second on
-    // screen is 0.47 s of the cut). Beat one, as the blinds open: the target
-    // and its points table (title, the Major and Minor heads, the zone rows
-    // A, C and D), every line still within 0.25 s of its start and held;
-    // then, on the beat, each zone lights up in turn on the target, with its
-    // hits and its row. Beat two, at 14.63: steel, no-shoot and miss, three
-    // cards together, held with the table until the push to the stage at
-    // 15.7. Copy: FINALE_COPY.scoring.
+    // screen is 0.386 s of the cut; times below are on screen, from 13.0).
+    // Beat one, as the blinds open: the target and its points table (title,
+    // the Major and Minor heads, the zone rows A, C and D), every line still
+    // within 0.3 s of its start and all of it by 0.6 s; then, a second apart
+    // on the scoring hit's beat (1, 2 and 3 s), each zone lights up in turn
+    // on the target, with its hits and its row. Beat two, at 4 s: steel,
+    // no-shoot and miss, three cards together, still by 4.3 s; the popper is
+    // shot at 4.5 s and lies down by 5 s, and a light runs across the target
+    // and the cards while they hold with the table until the push to the
+    // stage (7 s). The table reads for 3.4 s before the cards and 6.4 s in
+    // all, the cards for 2.7 s.
+    // Copy: FINALE_COPY.scoring.
     // [zone, Major, Minor, the row's entrance, its zone lit on the target]
     const SCORING_ROWS = [
-      ["A", 5, 5, 13.118, 13.237],
-      ["C", 4, 3, 13.142, 13.474],
-      ["D", 2, 1, 13.166, 13.711],
+      ["A", 5, 5, 13.1, 13.3857],
+      ["C", 4, 3, 13.112, 13.7714],
+      ["D", 2, 1, 13.124, 14.1571],
     ];
-    const SCORING_CARDS = [14.634, 14.644, 14.653]; // steel, no-shoot, miss
-    const STEEL_HIT = 14.774;
+    const SCORING_CARDS = [14.5429, 14.5506, 14.5583]; // steel, no-shoot, miss
+    const STEEL_HIT = 14.7357; // the popper is shot; it lies down by 14.9286
     function sceneTargets(t) {
       if (t < 12.9 || t > 16.1) return;
       const whip = stagePush(t);
@@ -4017,17 +4051,30 @@
       const pick = (pair) => (ko ? pair[1] : pair[0]);
       const face = (o) =>
         ko ? { ...o, weight: 700, family: KR, tracking: 0 } : o;
-      const LAND = 0.12; // 0.25 s on screen
+      const LAND = 0.115; // 0.3 s on screen
       floorGrid(0.35, t);
       // the target
       const tx = 540;
       const ty = 540;
       const s = 10.5;
-      // a zone glows for about half a second on screen, into the next one
+      // Once the popper is down, a soft light runs left to right across the
+      // target and then the cards (1.7 s on screen), over their surfaces
+      // only; their letters stay put.
+      const sweep = seg(t, 14.95, 15.62);
+      const sweepX = lerp(100, W + 200, ease.inOut3(sweep));
+      const light = (a) => {
+        const g = ctx.createLinearGradient(sweepX - 170, 0, sweepX + 170, 90);
+        g.addColorStop(0, "rgba(255,255,255,0)");
+        g.addColorStop(0.5, `rgba(255,255,255,${a})`);
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        return g;
+      };
+      // a zone glows for 0.7 s on screen and is dark again as the next one
+      // lights
       const glow = (i) => {
         const at = SCORING_ROWS[i][4];
         return (
-          seg(t, at, at + 0.04) * (1 - ease.out3(seg(t, at + 0.17, at + 0.26)))
+          seg(t, at, at + 0.04) * (1 - ease.out3(seg(t, at + 0.27, at + 0.37)))
         );
       };
       drawTarget(tx, ty, s, {
@@ -4039,6 +4086,18 @@
         hiC: glow(1) * 0.8,
         hiD: glow(2) * 0.8,
       });
+      if (sweep > 0 && sweep < 1) {
+        ctx.save();
+        ctx.translate(tx, ty);
+        ctx.scale(s, s);
+        tracePath(ctx, TGT.outer);
+        ctx.scale(1 / s, 1 / s);
+        ctx.translate(-tx, -ty);
+        ctx.clip();
+        ctx.fillStyle = light(0.13);
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
       // bullet holes: two in A, one in C, one in D (cm from the centre),
       // each as its zone lights up
       [
@@ -4209,10 +4268,18 @@
         ctx.roundRect(cx, cy, cw, chh, 6);
         ctx.fill();
         ctx.stroke();
+        // the light runs across the card, behind its icon and name
+        if (sweep > 0 && sweep < 1) {
+          ctx.save();
+          ctx.clip();
+          ctx.fillStyle = light(0.08);
+          ctx.fillRect(cx, cy, cw, chh);
+          ctx.restore();
+        }
         // the icon: the popper (shot down when it is hit), the white
         // no-shoot, the outline of a target that was missed
         if (i === 0) {
-          const fall = ease.in3(seg(t, STEEL_HIT, 15.0));
+          const fall = ease.in3(seg(t, STEEL_HIT, 14.9286));
           const bx = cx + cw / 2;
           const by = cy + 134;
           ctx.save();
@@ -7204,11 +7271,13 @@
     }
 
     // S6 — hit factor: points ÷ time = hit factor, each number under its
-    // name. The equation builds in about 0.6 s on screen (the time flies in
-    // from the shot timer, the points roll up, the operators slam on the
-    // off-beat, the hit factor rolls in and lands on the beat at 20.3675),
-    // then holds still, names and all, until it leaves at 21.92: 2.1 s on
-    // screen at this stretch, for the first range command to rise at 22.02.
+    // name (at this stretch a second on screen is 0.556 s of the cut). The
+    // equation builds in about 0.75 s on screen (the time flies in from the
+    // shot timer, the points roll up, the operators slam on the off-beat, the
+    // hit factor rolls in and lands on the beat at 20.3675, 0.84 s in), then
+    // holds still, names and all, for 2.8 s while a soft light drifts behind
+    // it and a gleam runs along its underline, until it leaves at 21.92,
+    // just before the first range command rises at 22.022.
     // Copy: FINALE_COPY.hitFactor.
     function sceneHitFactor(t) {
       if (t < 19.9 || t > 22.05) return;
@@ -7219,6 +7288,19 @@
       const y = 600;
       const size = 150;
       const land = 20.3675; // the last digit of the hit factor
+      // while it holds, a soft light drifts behind it, left to right
+      const drift = seg(t, 20.3, 21.99);
+      if (drift > 0 && drift < 1) {
+        const lx = lerp(200, W - 200, drift);
+        const g = ctx.createRadialGradient(lx, y - 70, 0, lx, y - 70, 640);
+        g.addColorStop(0, "rgba(255,255,255,0.055)");
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.save();
+        ctx.globalAlpha *= Math.sin(drift * Math.PI);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
       // positions
       const xP = 230;
       const xDiv = 560;
@@ -7226,7 +7308,7 @@
       const xEq = 1140;
       const xHF = 1270;
       // time flies in from the HUD
-      const fly = ease.inOut3(seg(t, 19.95, 20.15));
+      const fly = ease.inOut3(seg(t, 19.95, 20.13)); // 0.32 s on screen
       const tsz = lerp(64, size, fly);
       const tx = lerp(W - 96 - timeWidth(fmt2(STAGE_MS)) * 64, xT, fly);
       const ty = lerp(150, y, fly);
@@ -7330,6 +7412,8 @@
         const ul = ease.outExpo(seg(t, land, land + 0.13));
         ctx.fillStyle = C.red;
         ctx.fillRect(xHF, y + 26, w * ul, 8);
+        // a gleam runs along the underline, once, as the equation holds
+        gleam(xHF, y + 26, w, 8, seg(t, 20.95, 21.5));
         // a ripple round the digits, kept clear of their names
         if (t > land && t < land + 0.38) {
           const rp = seg(t, land, land + 0.38);
@@ -7346,24 +7430,28 @@
       ctx.restore();
     }
 
-    // S7 — range is clear: the three commands one at a time, each in its
-    // English words (with the Korean under it in ko and both), still within
-    // 0.14 s on screen of its start and held about 1.45 s, while the pistol
-    // does what it says: magazine out, slide locked back, chamber shown
-    // empty; slide forward, hammer down, holstered. RANGE IS CLEAR holds
-    // until the end card's iris (25.1) reaches it. Copy: FINALE_COPY.clear.
-    const CLEAR_BEATS = [22.022, 23.101, 24.136]; // on screen 51.49, 53.09, 54.70
+    // S7 — range is clear: the three commands one at a time, 2.4 s apart on
+    // screen, each in its English words (with the Korean under it in ko and
+    // both), still within 0.2 s on screen of its stab and held 2.1 s, while
+    // the pistol does what it says: magazine out, slide locked back, chamber
+    // shown empty; slide forward, hammer down, holstered. The first command
+    // is still in the hit factor's stretch (0.556 s of the cut a second),
+    // the others in this one's (0.45). RANGE IS CLEAR holds, a gleam running
+    // along its rule, until the end card's iris (END_IRIS) reaches it.
+    // Copy: FINALE_COPY.clear.
+    const CLEAR_BEATS = [22.022, 23.174, 24.254];
     function sceneClear(t) {
-      if (t < CLEAR_BEATS[0] || t > 24.8 + END_HOLD) return;
+      if (t < CLEAR_BEATS[0] || t > END_IRIS + 0.5 + END_HOLD) return;
       const lang = opt.lang;
       const gloss = lang !== "en";
       FINALE_COPY.clear.forEach(([en, kr], k) => {
         const at = CLEAR_BEATS[k];
-        // gone just before the next one rises into its place
-        const out = (CLEAR_BEATS[k + 1] ?? Infinity) - 0.035;
-        // 0.14 s on screen (the first is still in the hit factor's stretch)
-        const land = k ? 0.09 : 0.103;
-        if (t < at || t > out + 0.035) return;
+        // pushed out over 0.07 s on screen, gone just before the next one
+        // rises into its place
+        const out = (CLEAR_BEATS[k + 1] ?? Infinity) - 0.036;
+        // 0.2 s on screen
+        const land = k ? 0.09 : 0.111;
+        if (t < at || t > out + 0.032) return;
         const last = k === 2;
         // clear of the screen centre, where the end card's iris opens
         const y = 450;
@@ -7376,12 +7464,14 @@
           at,
           land,
           out,
-          0.035,
+          0.032,
         );
         if (last) {
           const w = ease.outExpo(seg(t, at, at + 0.12)) * 520;
           ctx.fillStyle = C.red;
           ctx.fillRect(150, 486, w, 8);
+          // a gleam along the rule as the line holds
+          gleam(150, 486, w, 8, seg(t, at + 0.35, at + 0.75));
         }
         if (gloss)
           landLine(
@@ -7398,23 +7488,28 @@
             at + 0.01,
             land,
             out,
-            0.035,
+            0.032,
           );
       });
-      // the gun: magazine out, slide locked back, show clear, slide forward,
-      // hammer down, holster. The magazine clears the grip (22.31) before
-      // the slide comes back (22.36–22.42) and the chamber is shown empty;
-      // the slide goes home on HAMMER DOWN, HOLSTER, and the hammer follows.
-      if (t < CLEAR_BEATS[2]) {
-        const drop = seg(t, 22.2, 22.48);
+      // the gun, slid in on the first command (0.4 s on screen) and drifting
+      // gently while it works: the magazine drops free (22.345) and clears
+      // the grip before the slide locks back (22.51–22.58); the chamber is
+      // shown empty for 1.2 s; on HAMMER DOWN, HOLSTER the slide goes home
+      // (23.19), the hammer follows half a second later (23.435), and the
+      // pistol is holstered (23.66–23.975), carried down and turned until
+      // all of it is below the frame, and not drawn after that: gone 0.6 s
+      // on screen before RANGE IS CLEAR.
+      if (t < 23.975) {
+        const drop = seg(t, 22.345, 22.58);
         const lock =
-          ease.out3(seg(t, 22.36, 22.42)) *
-          (1 - ease.in3(seg(t, 23.13, 23.16)));
-        const holster = ease.in3(seg(t, 23.6, 23.9));
-        const enter = ease.out3(seg(t, CLEAR_BEATS[0], 22.2));
+          ease.out3(seg(t, 22.513, 22.58)) *
+          (1 - ease.in3(seg(t, 23.19, 23.22)));
+        const holster = ease.in3(seg(t, 23.66, 23.975));
+        const enter = ease.out3(seg(t, CLEAR_BEATS[0], 22.245));
+        const drift = seg(t, 22.245, 23.66);
         const go = {
-          x: lerp(2280, 1500, enter),
-          y: 790 + holster * 520,
+          x: lerp(2280, 1500, enter) - drift * 24,
+          y: 790 + holster * 720 - drift * 6,
           s: 2.5,
           rot: holster * 0.9,
         };
@@ -7422,14 +7517,14 @@
           ...go,
           slide: lock * 27,
           // cocked by the stage's last shot until HAMMER DOWN
-          hammer: 1 - ease.in3(seg(t, 23.36, 23.4)),
+          hammer: 1 - ease.in3(seg(t, 23.435, 23.475)),
           mag: { dx: -drop * 18, dy: drop * drop * 900, rot: drop * 0.8 },
         });
         // the empty chamber, ringed while the slide is back
-        if (t > 22.42 && t < 23.08) {
+        if (t > 22.58 && t < 23.12) {
           const [cx, cy] = gunPoint(go, GUN.port[0], GUN.port[1]);
           ctx.save();
-          ctx.globalAlpha = env(t, 22.42, 23.08, 0.05, 0.05);
+          ctx.globalAlpha = env(t, 22.58, 23.12, 0.04, 0.04);
           ctx.strokeStyle = C.white;
           ctx.lineWidth = 2;
           ctx.setLineDash([5, 5]);
@@ -7445,14 +7540,18 @@
     // S8 — end card: the IPSC crest and the KRPSA crest side by side (the
     // Confederation and its Region, no separator), then the lettering: the
     // name as the site gives it (in Korean in ko, under the English in
-    // both) and IPSC's fifty years. The lettering is in and still as the
-    // iris uncovers it (24.55) and holds; only the crests catch a light
-    // sweep. The card, the closing caption and the frame chrome all fade
-    // out over the reel's last 0.3 s. Copy: FINALE_COPY.end.
+    // both), IPSC's fifty years and, under them, the motion-design credit
+    // (opt.credit). The iris opens at END_IRIS; the lettering is in and
+    // still as it uncovers it (by lt 0.02), the credit rises in with it
+    // (still by lt 0.25), and all of it holds still together for about six
+    // and a half seconds, to the end. The background holds still; only the
+    // crests catch a light sweep, every two seconds. The card, its credit,
+    // the closing caption and the frame chrome all fade out together over
+    // the reel's last 0.3 s. Copy: FINALE_COPY.end.
     const logoLayers = {};
     function sceneEnd(t) {
-      if (t < 24.3) return;
-      const iris = ease.inOut3(seg(t, 24.3, 24.75));
+      if (t < END_IRIS) return;
+      const iris = ease.inOut3(seg(t, END_IRIS, END_IRIS + 0.45));
       const r = iris * 1300;
       ctx.save();
       ctx.beginPath();
@@ -7460,8 +7559,9 @@
       ctx.clip();
       background(t);
       blueprintGrid(0.5);
-      const lt = t - 24.5;
+      const lt = t - (END_IRIS + 0.2);
       const fade = 1 - seg(t, 27.7 + TAIL, 28 + TAIL);
+      const fadeAt = 27.7 + TAIL - (END_IRIS + 0.2); // in lt
       ctx.globalAlpha = fade;
       // a crest rises into place, then a light sweeps across it
       const crest = (name, cx, cy, h, d) => {
@@ -7476,8 +7576,14 @@
         ctx.rect(-w / 2 - 10, h / 2 - (h + 20) * p, w + 20, (h + 20) * p);
         ctx.clip();
         // The light sweep is composited on the crest's own layer, so it only
-        // touches the crest's pixels and never the background around it.
-        const sw = seg(lt, d + 0.4, d + 1.6);
+        // touches the crest's pixels and never the background around it. It
+        // runs as the crest settles and again every two seconds, as long as
+        // a sweep ends before the card fades out (three times).
+        const k = Math.max(0, Math.floor((lt - d) / 2));
+        const sw =
+          d + 2 * k + 1.6 < fadeAt
+            ? seg(lt, d + 0.4 + 2 * k, d + 1.6 + 2 * k)
+            : 0;
         if (sw > 0 && sw < 1) {
           const lc = (logoLayers[name] ||= document
             .createElement("canvas")
@@ -7509,7 +7615,8 @@
       // the two shields read as the same size.
       crest("ipsc-crest.png", 410, 540, 380, 0);
       crest("krpsa-logo.png", 773, 540, 402, 0.12);
-      // the lettering: at rest by 24.52, as the iris uncovers it
+      // the lettering: at rest by lt 0.02 (END_IRIS + 0.22), as the iris
+      // uncovers it
       const wm = kinetic("KRPSA", 1023, 545, {
         size: 190,
         t: lt + 0.3,
@@ -7558,17 +7665,40 @@
           });
       }
       ctx.restore();
+      // the credit, a line of its own under the years, in the lettering's
+      // column: it rises in with the lettering (still by lt 0.25) and holds
+      // with it to the end. The label and its dash in grey, the name in
+      // white; in both, the Korean line under the English one.
       if (opt.credit) {
-        ctx.save();
-        ctx.globalAlpha *= ease.out3(seg(lt, 1.2, 1.6));
-        text("MOTION DESIGN — CLAUDE", W - 96, H - 150, {
-          size: 12,
-          weight: 700,
-          tracking: 3,
-          color: C.faint,
-          align: "right",
-        });
-        ctx.restore();
+        const [label, labelKo, name] = E.credit;
+        const cy = yy + 72;
+        const credit = (lab, who, y, o, at) => {
+          const w = landLine(
+            `${lab} — `,
+            1029,
+            y,
+            { ...o, color: "#a4a8af" },
+            lt,
+            at,
+            0.25,
+          );
+          landLine(
+            who,
+            1029 + w,
+            y,
+            { ...o, family: undefined, weight: 800, color: C.white },
+            lt,
+            at + 0.02,
+            0.25,
+          );
+        };
+        const kr = { weight: 700, family: KR, tracking: 0 };
+        if (lang === "ko") credit(labelKo, name, cy, { ...kr, size: 24 }, 0);
+        else {
+          const o = { size: 22, weight: 700, tracking: 3 };
+          credit(label, name.toUpperCase(), cy, o, 0);
+          if (both) credit(labelKo, name, cy + 36, { ...kr, size: 22 }, 0.04);
+        }
       }
       ctx.restore();
       if (iris > 0 && iris < 1) {
@@ -8011,9 +8141,11 @@
       o1 === Infinity ? o0 + (f - f0) : o0 + ((f - f0) * (o1 - o0)) / (f1 - f0);
     return { t, insert: null, lt: 0 };
   }
-  // the end card holds about 1.3 s past the cut, to a whole second
+  // the end card holds about 3.3 s past the cut, to a whole second: seven
+  // seconds or so in all, for its lettering and its credit to be read
+  // together before it fades
   const CUT = ins(BASE_DURATION);
-  const DURATION = Math.ceil(CUT + 1.3);
+  const DURATION = Math.ceil(CUT + 3.3);
   const TAIL = DURATION - CUT;
   {
     const [div] = INSERTS;
