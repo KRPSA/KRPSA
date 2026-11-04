@@ -294,7 +294,9 @@
       sub: { ko: "정확 · 파워 · 속도", en: "Accuracy · Power · Speed" },
     },
     {
-      t: 2,
+      // MAKE READY's stab (OPENING.commands[0][2], declared below), after
+      // the Divisions chapter
+      t: 2.2075,
       ko: "레인지 커맨드",
       en: "Range commands",
       short: { ko: "커맨드", en: "Ready" },
@@ -368,10 +370,10 @@
       ["VIS", "POWER", "파워", 0.0764],
       ["CELERITAS", "SPEED", "속도", 0.1529],
     ],
-    // the wipe from the motto to the commands, [from, to] (3.44–3.84 s on
-    // the final timeline): MAKE READY has risen behind it, and is uncovered
-    // (3.55–3.65 s) on its stab
-    wipe: [2.103, 2.329],
+    // the Divisions chapter goes in here, after the motto has held, with
+    // venetian blinds closing over the motto (from 0.2 s before) and opening
+    // onto the range commands (until 0.2 s after)
+    divisions: 2.103,
     // [command, its meaning, at]
     commands: [
       ["MAKE READY", ["Load and holster", "장전하고 준비"], 2.2075],
@@ -507,7 +509,7 @@
       v: 0.8 + k * 0.05,
     })),
     { t: 1.81, type: "swell" },
-    { t: OPENING.wipe[0], type: "whoosh", v: 0.7 },
+    { t: OPENING.divisions - 0.2, type: "whoosh", v: 0.7 }, // blinds into Divisions
     // a stab on each range command; the magazine loads round by round
     ...OPENING.commands.map(([, , t], k) => ({
       t,
@@ -2283,13 +2285,13 @@
 
     // S0 — DVC: Diligentia, Vis, Celeritas. The three words slam in a
     // sixteenth apart (0.125 s), side by side, each with its meaning under
-    // it, and hold together until the wipe to the range commands runs over
-    // them, left to right, in the order they are read. The hold is alive but
+    // it, and hold together until the blinds close over them into the
+    // Divisions chapter. The hold is alive but
     // the type reads as still: the camera eases in by 2.5 % (under 7 px/s at
     // the far edge), a band of light sweeps across behind the words and a
     // glint runs along the ruler with it.
     function sceneDVC(t) {
-      if (t > OPENING.wipe[1]) return;
+      if (t >= OPENING.divisions) return;
       const f = since(t, 0); // the final timeline
       floorGrid(0.6 * ease.out3(seg(f, 0, 1.6)), t);
       const lang = opt.lang;
@@ -2304,7 +2306,7 @@
       const ry = y + 46;
       const sx = lightSweep(ease.inOut3(seg(f, 0.6, 3.3)), 0.07);
       ctx.save();
-      const push = 1 + 0.025 * seg(f, 0.4, since(OPENING.wipe[1], 0));
+      const push = 1 + 0.025 * seg(f, 0.4, since(OPENING.divisions, 0));
       ctx.translate(W / 2, y);
       ctx.scale(push, push);
       ctx.translate(-W / 2, -y);
@@ -2380,10 +2382,10 @@
     // still), and a band of light sweeps behind each command as it lands.
     const CMD_X = 232;
     const CMD_Y = [318, 514, 710]; // baselines
-    // MAKE READY rises behind the wipe, so that the wipe uncovers it already
+    // MAKE READY has risen behind the blinds, so that they open on it already
     // still, on its stab
     const cmdRise = ([, , at], k) =>
-      k === 0 ? Math.min(at - 0.25, OPENING.wipe[0]) : at;
+      k === 0 ? Math.min(at - 0.25, OPENING.divisions) : at;
     function sceneCommands(t) {
       if (t < 1.8 || t >= BEEP) return;
       // a breath in, the last 0.24 s before the beep
@@ -2520,43 +2522,6 @@
         ctx.restore();
       }
       ctx.restore();
-    }
-
-    // S0 → S1 wipe. It runs at an even pace on the final timeline, across
-    // the stretch's change of rate.
-    function wipe(t, a, b, drawA, drawB) {
-      const p = ease.inOut3(seg(ins(t), ins(a), ins(b)));
-      const edge = lerp(-260, W + 260, p);
-      const skew = 160;
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(edge, 0);
-      ctx.lineTo(W + 400, 0);
-      ctx.lineTo(W + 400, H);
-      ctx.lineTo(edge - skew, H);
-      ctx.closePath();
-      ctx.clip();
-      drawA(t);
-      ctx.restore();
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(-400, 0);
-      ctx.lineTo(edge, 0);
-      ctx.lineTo(edge - skew, H);
-      ctx.lineTo(-400, H);
-      ctx.closePath();
-      ctx.clip();
-      background(t);
-      drawB(t);
-      ctx.restore();
-      ctx.fillStyle = C.red;
-      ctx.beginPath();
-      ctx.moveTo(edge, 0);
-      ctx.lineTo(edge + 70, 0);
-      ctx.lineTo(edge + 70 - skew, H);
-      ctx.lineTo(edge - skew, H);
-      ctx.closePath();
-      ctx.fill();
     }
 
     // Gun pose through S2–S3.
@@ -8248,7 +8213,7 @@
       ctx.translate(sx, sy);
       if (tl.insert?.kind === "divisions") {
         drawDivisions(tl.lt);
-        // venetian blinds in from the sights beat and out to the targets
+        // venetian blinds in from the motto and out to the range commands
         const at = tl.insert.at;
         if (tl.lt < 0.25) blinds(at + tl.lt, at - 0.2, at + 0.2);
         else if (tl.lt > tl.insert.dur - 0.25)
@@ -8256,18 +8221,20 @@
       } else if (tl.insert?.kind === "flyover") {
         sceneStage(t, tl.lt);
       } else {
-        // the wipe runs over the held motto and uncovers MAKE READY
-        const [wa, wb] = OPENING.wipe;
-        if (t < wa) sceneDVC(t);
-        else if (t < wb) wipe(t, wa, wb, sceneDVC, sceneCommands);
+        // the motto, then (after the Divisions chapter) the range commands,
+        // with blinds over the cut on either side of it
+        const dv = OPENING.divisions;
+        if (t < dv) sceneDVC(t);
         else sceneCommands(t);
+        if (t >= dv - 0.2 && t <= dv + 0.25) blinds(t, dv - 0.2, dv + 0.2);
         sceneBeep(t);
         sceneLineOfSight(t);
-        if (t < INSERTS[0].at) sceneSights(t);
+        if (t < 12.95) sceneSights(t);
         sceneTargets(t);
         sceneStage(t);
         sceneHitFactor(t - SHIFT);
         sceneClear(t - SHIFT);
+        // the sights to targets and scoring
         if (t >= 12.75 && t <= 13.25) blinds(t, 12.75, 13.15);
         sceneEnd(t - SHIFT - END_HOLD);
       }
@@ -8589,7 +8556,8 @@
     [22.4 + SHIFT, 25.1 + SHIFT, 6.0], // range is clear, up to the end card
   ];
   const INSERTS = [
-    { at: 12.95, dur: DIV_INFO.dur, kind: "divisions" },
+    // right after the motto: the equipment comes before the match
+    { at: OPENING.divisions, dur: DIV_INFO.dur, kind: "divisions" },
     { at: RESUME, dur: 5.0, kind: "flyover" }, // the course walk
   ];
   const FLY = INSERTS.find((x) => x.kind === "flyover");
@@ -8741,8 +8709,8 @@
     const divTitle = spanning(B[1]);
     if (divTitle) divTitle[1] = B[1] - 0.05;
     L.push(
-      // MAKE READY rises behind the wipe and is uncovered on its stab
-      [ins(OPENING.wipe[0]), ry - 0.05, ...command(0)],
+      // MAKE READY is in place as the blinds open after Divisions
+      [ins(OPENING.divisions), ry - 0.05, ...command(0)],
       [ry, sb - 0.05, ...command(1)],
       ...DIV.specs.map(({ name, label }, k) => [
         B[k + 1] + 0.05,
