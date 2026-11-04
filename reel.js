@@ -200,7 +200,11 @@
     [3085, 3150, 0.04], // bullet time: the first swinger shot in flight
     [3150, 3450, 0.45],
     [3480, 5500, 1.4],
-    [7550, 10180, 1.3], // the reload on the run
+    // the reload on the run (7550-10180) plays at real speed, so that its
+    // panel's title, 재장전 / RELOAD, holds still for its reading time; the
+    // drone over area C is held, on the popper that starts the drop turner
+    // and the mover, so that their names (the caption's) are read on screen
+    [10180, 11250, 0.37],
     [11250, 12050, 0.45],
     [14545, 14612, 0.05], // bullet time: the last shot
   ];
@@ -445,13 +449,15 @@
     ],
     [
       vt(7460) - 0.09, // the slide locks back on the 15th shot
-      vt(10300) - 0.17,
+      vt(10120) - 0.01, // out at the cut to the drone
       // short: the reload panel's title (재장전 / RELOAD) shares the beat
       "빈 탄창은 달리며 교체.",
       "Swap mags on the run.",
     ],
     [
-      vt(10300) - 0.01, // the popper that starts both
+      // in as the drone swings round onto the popper that starts both, so
+      // that the targets it names are up large as they come into view
+      vt(10120) + 0.15,
       vt(12050) + 0.23,
       "포퍼 하나로 드롭 터너·무버 작동.",
       "One popper, two targets.",
@@ -4887,14 +4893,14 @@
     // How much of a stage label to show, from its box (w × h, centred on x,
     // standing on y): none under a HUD panel or above one, where it would sit
     // on the panel's border, and fading out within about 60 px of the frame.
-    // the caption on screen during the stage (set by sceneStage): labels keep
-    // out of its band, and the targets it names are drawn up large
-    let stageCap = null;
+    // the captions on screen during the stage (set by sceneStage): labels
+    // keep out of their band, and the targets they name are drawn up large
+    let stageCaps = [];
     // over the course walk: the card's panel (as wide as its copy, see
-    // cardLayout) and how far it is up (0..1), and the frozen shot timer,
-    // which has no panel behind it until the clock resumes
+    // cardLayout) and how far it is up (0..1), and the frozen shot timer on
+    // its plate (as wide as the stage's panel, which takes over from it)
     const CARD_AT = [86, 136]; // its top left corner
-    const TIMER_RECT = [W - 340, 40, W - 90, 160];
+    const TIMER_RECT = [W - 420, 44, W - 72, 176];
     // the stage's panels as they come in at RESUME (the slide-cycle panel
     // grows later, for the reload)
     const PANELS_AT_RESUME = HUD_RECTS.map((r) => r.slice());
@@ -4923,7 +4929,8 @@
       );
       // (the walk keeps the band clear throughout, for its caption, and on
       // through the hand-over until the stage's first caption takes it)
-      const inBand = (stageCap || walking || handOver > 0) && x - w / 2 < 1460;
+      const inBand =
+        (stageCaps.length || walking || handOver > 0) && x - w / 2 < 1460;
       let a = inBand ? edge * seg(H - 215 - y, 0, 25) : edge;
       if (PANELS_AT_RESUME.some(under)) a *= 1 - handOver;
       if (!walking) return a;
@@ -4967,12 +4974,34 @@
       PORT: "포트",
       "LOW PORT": "낮은 포트",
     };
+    // The course walk names the moving targets (and the popper that starts
+    // them) up large, from the push into it on, so that the card's 3 MOVING
+    // TARGETS / 무빙 타겟 can be matched to them on the course. The ones the
+    // stage's first line goes on to name stay large; the others ease back
+    // as the walk hands over to the stage.
+    const WALK_FEATURE = ["POPPER", "SWINGER", "DROP TURNER", "MOVER"];
+    const FIRST_NAMES = CAPTIONS.find((c) => c[4])[4];
+    let featuring = false; // over the walk and the push into it
+    // the names drawn up large in a frame: their boxes, so that a hit pop
+    // keeps clear of them, and their drawing, which waits until the shots'
+    // tracers and pops are down, so that nothing is drawn over a name
+    const nameBoxes = [];
+    const nameDraws = [];
     function label3(cam, p, str, color = "rgba(255,255,255,0.75)", size = 13) {
       const q = project(cam, p);
       if (q[2] < 0.5) return;
-      const named = stageCap?.[4]?.includes(str);
+      // how far it is drawn up large (0..1): named by a line on screen, or
+      // featured by the walk
+      const large = stageCaps.some((c) => c[4]?.includes(str))
+        ? 1
+        : featuring && WALK_FEATURE.includes(str)
+          ? FIRST_NAMES.includes(str)
+            ? 1
+            : 1 - handOver
+          : 0;
+      const named = large > 0;
       const ko = opt.lang === "en" ? null : TAG_KO[str];
-      const sz = named ? 22 : size;
+      const sz = lerp(size, 22, large);
       const main = opt.lang === "ko" && ko ? ko : str;
       const isKo = main !== str;
       const sub = opt.lang === "both" ? ko : null;
@@ -4983,34 +5012,52 @@
       ).width;
       const a = labelAlpha(q[0], q[1] + (sub ? sz : 0), w, sz * (sub ? 2 : 1));
       if (a <= 0) return;
-      ctx.save();
-      ctx.globalAlpha *= a;
+      // a name drawn up large is white (the others are dimmed)
+      const alpha = ctx.globalAlpha * a * (named ? lerp(0.75, 1, large) : 1);
       const col = named ? C.white : color;
-      text(main, q[0], q[1], {
-        size: sz,
-        weight: 800,
-        tracking: isKo ? 0 : 1.5,
-        align: "center",
-        color: col,
-        family: isKo ? KR : SANS,
-      });
-      if (sub)
-        text(sub, q[0], q[1] + sz + 2, {
-          size: Math.max(12, sz - 2),
-          weight: 700,
+      const draw = () => {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        text(main, q[0], q[1], {
+          size: sz,
+          weight: 800,
+          tracking: isKo ? 0 : 1.5,
           align: "center",
           color: col,
-          family: KR,
+          family: isKo ? KR : SANS,
         });
-      ctx.restore();
+        // a name drawn up large keeps its Korean at full size
+        if (sub)
+          text(sub, q[0], q[1] + sz + 2, {
+            size: Math.max(12, sz - 2 * (1 - large)),
+            weight: 700,
+            align: "center",
+            color: col,
+            family: KR,
+          });
+        ctx.restore();
+      };
+      if (!named) return draw();
+      nameBoxes.push([
+        q[0] - w / 2 - 6,
+        q[1] - sz - 6,
+        q[0] + w / 2 + 6,
+        q[1] + (sub ? sz + 6 : 4) + 6,
+      ]);
+      nameDraws.push(draw);
     }
 
     // fly: local time inside the course walk (the clock stays frozen)
     function sceneStage(t, fly = null) {
       if (fly == null && (t < 15.7 || t > STAGE_END + 1.2)) return;
       const tfin = fly == null ? ins(t) : insStart(FLY) + fly;
-      stageCap =
-        CAPTIONS.find((c) => tfin >= c[0] - 0.05 && tfin <= c[1] + 0.3) ?? null;
+      // where one line hands over to the next, the names of both are drawn
+      // up large: the next one's before they come into view, the last one's
+      // until the line has gone (so no name changes size on screen); the
+      // stage's first line's from RESUME, where the walk hands its names over
+      stageCaps = CAPTIONS.filter(
+        (c) => tfin >= c[0] - 0.15 && tfin <= c[1] + 0.3,
+      );
       const st = stageOfVideo(Math.max(t, RESUME)) / 1000;
       const enter = fly == null ? stagePush(t) : 1;
       // out before the hit factor lands (19.9 + SHIFT)
@@ -5027,6 +5074,7 @@
       const cam = fly == null ? stageCamera(t, st) : flyCamera(fly, st, t);
       hudLive = t > 16.05 && t < STAGE_END + 0.55; // while the panel is up
       walking = fly != null;
+      featuring = walking || t < RESUME;
       cardUp = walking ? cardPanel(fly) : 0;
       // over the end of the walk, on until the panels are up
       handOver = walking
@@ -5035,6 +5083,8 @@
           ? 1
           : 0;
       walkBoxes.length = 0;
+      nameBoxes.length = 0;
+      nameDraws.length = 0;
       unclutter = walking ? seg(fly, 0, 0.4) * (1 - handOver) : 0;
       walkTags = !walking
         ? []
@@ -5312,6 +5362,38 @@
           const pa = ease.out3(seg(dt, 0.05, 0.15)) * (1 - seg(dt, 0.55, 0.9));
           const lbl = s.zone === "S" ? "+5 A" : `+${s.points} ${s.zone}`;
           const w = layout(lbl, font(800, 22), 1).width + 20;
+          // It keeps off the names drawn up large. One born under a name
+          // rises to the name's foot and waits there, a later pop on the
+          // same target stacking under it (and moving up into its place as
+          // it fades); one born over a name stays over it. Where it slides
+          // in under a name from the side (on the mover), it eases in.
+          const born = project(
+            cam,
+            add(hitWorld(s, st), [0, 0.42 + 0.05 * 0.45, 0]),
+          );
+          const stack = SHOTS.filter(
+            (o) => o.target === s.target && o.st < s.st,
+          ).reduce(
+            (sum, o) =>
+              sum +
+              44 *
+                ease.out3(seg(dt, 0.03, 0.15)) *
+                (1 - seg(st - o.st, 0.55, 0.9)),
+            0,
+          );
+          nameBoxes.forEach(([x0, y0, x1, y1]) => {
+            const k = seg(
+              Math.min(P[0] + w / 2 - x0, x1 - P[0] + w / 2),
+              0,
+              16,
+            );
+            if (k <= 0) return;
+            const kept =
+              born[1] - 11 > (y0 + y1) / 2
+                ? Math.max(P[1], y1 + 30 + stack)
+                : Math.min(P[1], y0 - 8);
+            P[1] = lerp(P[1], kept, k);
+          });
           ctx.save();
           ctx.globalAlpha *= pa * labelAlpha(P[0], P[1] + 8, w, 38);
           const hot = s.zone === "A" || s.zone === "S";
@@ -5329,12 +5411,50 @@
           ctx.restore();
         }
       });
+      // the names last, over the tracers, the activators' lines and the pops
+      nameDraws.forEach((draw) => draw());
       ctx.restore();
-      if (fly != null) courseCard(fly);
 
       const la =
         ease.out3(seg(t, 16.0, 16.3)) *
         (1 - seg(t, STAGE_END + 0.3, STAGE_END + 0.55));
+      // Over the walk the course passes under the frozen clock and the
+      // wordmark: a plate behind the clock (where the stage's panel comes in
+      // at RESUME, and on under it until it is in) and a soft dark patch
+      // behind the wordmark keep the props off their letters.
+      const plate =
+        fly != null
+          ? ease.out3(seg(fly, 0, 0.3))
+          : t >= RESUME && t < RESUME + 0.3
+            ? 1
+            : 0;
+      if (plate > 0) {
+        ctx.save();
+        ctx.globalAlpha = plate;
+        ctx.fillStyle = "rgba(10,12,15,0.9)";
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const [x0, y0, x1, y1] = TIMER_RECT;
+        ctx.roundRect(x0, y0, x1 - x0, y1 - y0, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (fly != null && opt.chrome) {
+        ctx.save();
+        ctx.globalAlpha = cardPanel(fly);
+        ctx.translate(165, 95);
+        ctx.scale(1, 0.5);
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 150);
+        g.addColorStop(0, "rgba(10,12,15,0.92)");
+        g.addColorStop(0.55, "rgba(10,12,15,0.92)");
+        g.addColorStop(1, "rgba(10,12,15,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(-150, -150, 300, 300);
+        ctx.restore();
+      }
+      if (fly != null) courseCard(fly);
       if (la <= 0) return;
       // in bullet time the panel steps back to let the round and its target
       // through; the clock and the ramp badge stay readable
@@ -5474,7 +5594,8 @@
       // it opens into a split screen
       const [rl0e, , , rl3e] = EVENTS.reload;
       // held open after the last step so its title (재장전 / RELOAD) stays
-      // settled for its reading time; closed before the cut to the drone
+      // settled for its reading time (the reload plays at real speed: about
+      // 2.2 s still on screen); closed before the cut to the drone
       const split = ease.inOut3(env(st, rl0e - 0.05, rl3e + 1.38, 0.3, 0.2));
       const px = lerp(96, 60, split);
       const py = lerp(168, 150, split);
@@ -5681,12 +5802,17 @@
       ctx.save();
       ctx.globalAlpha *= up;
       ctx.translate(0, (1 - up) * 18);
-      ctx.fillStyle = "rgba(10,12,15,0.9)";
+      // all but opaque, and feathered, so that the course flowing on under
+      // it neither shows through nor is cut off hard at its edge
+      ctx.fillStyle = "rgba(10,12,15,0.96)";
       ctx.strokeStyle = "rgba(255,255,255,0.1)";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.roundRect(x0, y0, x1 - x0, y1 - y0, 6);
+      ctx.shadowColor = "rgba(10,12,15,0.85)";
+      ctx.shadowBlur = 28;
       ctx.fill();
+      ctx.shadowBlur = 0;
       ctx.stroke();
       ctx.save();
       ctx.clip();
@@ -6028,7 +6154,10 @@
             "rgba(255,255,255,0.45)",
           );
         });
-        label3(cam, at(0, 2.3, 0.45), "MOVER");
+        // held still over the middle of its run, on the target's own plane
+        // just above the paper, which crosses under it (a tag riding the
+        // carriage would never hold still long enough to read)
+        label3(cam, at(0, 1.7, 0), "MOVER");
       }
       if (/^T\d/.test(key))
         label3(
