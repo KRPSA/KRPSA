@@ -660,16 +660,17 @@
   // title, then the five main handgun divisions one after another, each with
   // its name and one big label for what sets it apart, then the five in a
   // line-up. Every beat holds its copy still for at least 2.2 s (the
-  // line-up's for 2.6 s), longer than its words take to read at 6 Korean
-  // letters or 13 English characters a second; Standard's holds a little
-  // longer for its box dimensions. beats are the entrances, in local seconds
-  // (the title, the five divisions, the line-up); each holds until the next.
+  // line-up's, the payoff, for about 4 s), longer than its words take to
+  // read at 6 Korean letters or 13 English characters a second; Standard's
+  // holds 0.85 s longer for its three box dimensions. beats are the
+  // entrances, in local seconds (the title, the five divisions, the
+  // line-up); each holds until the next.
   // Its captions ([from, to, ko, en]) and sound cues ({ lt, type, v }) are in
   // local seconds too, derived from the beats, for the timeline to shift into
   // place. All of its on-screen copy lives here ([English, Korean]), so that
   // the font preloader can fetch every glyph.
-  const DIV_BEATS = [0.0, 2.7, 5.05, 7.4, 9.95, 12.3, 14.65];
-  const DIV_DUR = 17.8;
+  const DIV_BEATS = [0.0, 2.7, 5.05, 7.4, 10.6, 12.95, 15.3];
+  const DIV_DUR = 19.8;
   const DIV = {
     dur: DIV_DUR,
     beats: DIV_BEATS,
@@ -684,7 +685,7 @@
       ],
       [
         l + 0.2,
-        l + 2.8,
+        l + 3.9,
         "클래식과 리볼버도 있습니다.",
         "Classic and Revolver, too.",
       ],
@@ -3097,9 +3098,10 @@
     // hold still long enough to read; then the five line up. Text rises in
     // as kinetic type, still 0.15 s after its beat, and holds until the next
     // beat, when it rolls up out of its mask as the next line rises into its
-    // place. The holds are never dead: the camera pushes slowly in on the
-    // pistol, a light runs along its metal once each change has landed, and
-    // the giant index number behind it drifts up.
+    // place. The holds are never dead: the camera pushes steadily in on the
+    // pistol (and, less, on the grid behind it), a slow light runs along its
+    // metal through each hold once its change has landed, and the giant
+    // index number behind it drifts up.
     const DIV_B = DIV.beats;
     const DIV_POSE = { x: 1295, y: 572, s: 2.55 };
     const DIV_IN = 0.15; // a line's rise in, and the roll out of the one it replaces
@@ -3539,7 +3541,7 @@
       const k = DIV_B.findLastIndex((x) => lt >= x) - 1;
       if (k < 0 || k > 5) return;
       const q = ease.inOutExpo(seg(lt, DIV_B[k + 1], DIV_B[k + 1] + 0.4));
-      const drift = (n) => 40 * seg(lt, DIV_B[n + 1], DIV_B[n + 2]);
+      const drift = (n) => 64 * seg(lt, DIV_B[n + 1], DIV_B[n + 2]);
       ctx.save();
       ctx.beginPath();
       ctx.rect(0, 320, W, 540);
@@ -3547,7 +3549,7 @@
       ctx.font = font(800, 560);
       ctx.textAlign = "center";
       ctx.textBaseline = "alphabetic";
-      ctx.fillStyle = "rgba(255,255,255,0.028)";
+      ctx.fillStyle = "rgba(255,255,255,0.045)";
       const x = DIV_POSE.x + 40;
       if (k > 0 && q < 1)
         ctx.fillText(`0${k}`, x, 790 - drift(k - 1) - q * 560);
@@ -3561,18 +3563,18 @@
     const divSlotPose = (n, lt) => ({
       x: divSlot(n) - (DIV.specs[n].kit.comp ? 28 : 0),
       y: 520,
-      s: 1.2 * lerp(1, 1.02, ease.inOut3(seg(lt, DIV_B[6] + 0.5, DIV.dur))),
+      s: 1.2 * lerp(1, 1.03, seg(lt, DIV_B[6] + 0.3, DIV.dur)),
     });
-    // once the names have settled, a light runs along the five, from Open
-    // back to Production
+    // once the names have been read, a slow light runs along the five, from
+    // Open back to Production, until the blinds close
     const divLineupSheen = (n, lt) => {
-      const a = DIV_B[6] + 0.9 + (4 - n) * 0.14;
-      return seg(lt, a, a + 0.9);
+      const a = DIV_B[6] + 1.3 + (4 - n) * 0.35;
+      return seg(lt, a, a + 1.6);
     };
 
     // The pistol: it inks in under the title, then morphs through the five
-    // divisions under a slow push in; on the line-up it shrinks into Open's
-    // slot.
+    // divisions under a steady push in; on the line-up it shrinks into
+    // Open's slot.
     function divPistol(lt) {
       const [, p, , s, , , l] = DIV_B;
       // every change lands with a small punch-in, and the box strike with a
@@ -3585,13 +3587,14 @@
       );
       const jolt = lt >= hitAt ? 1 - seg(lt, hitAt, hitAt + 0.1) : 0;
       const kit = divKit(lt);
-      // the push: 3 % closer by the line-up, drifting right just enough that
-      // the gun's back edge stays put beside the copy
+      // the push: 10 % closer by the line-up, at an even pace through every
+      // hold, drifting right just enough that the gun's back edge stays put
+      // beside the copy
       const push = seg(lt, 0, l);
       const base = {
-        x: DIV_POSE.x + 8 * push,
+        x: DIV_POSE.x + 28 * push,
         y: DIV_POSE.y,
-        s: DIV_POSE.s * (1 + 0.03 * push),
+        s: DIV_POSE.s * (1 + 0.1 * push),
       };
       const calm = { ...base, s: base.s * (1 + 0.014 * bump) };
       let pose = {
@@ -3608,14 +3611,18 @@
           s: lerp(pose.s, to.s, move),
         };
       }
-      // a light runs along the metal as it turns solid, and again once each
-      // change has landed and its beam has passed
+      // a slow light runs along the metal once it has turned solid, and
+      // again through each hold, from when its change has landed and its
+      // beam has passed until just before the next
       const sheen =
         lt >= l
           ? divLineupSheen(4, lt)
           : [
-              [0.7, 1.25],
-              ...DIV_B.slice(1, 6).map((at) => [at + 0.75, at + 1.85]),
+              [1.4, 2.6],
+              ...DIV_B.slice(1, 6).map((at, i) => [
+                at + 0.6,
+                DIV_B[i + 2] - 0.1,
+              ]),
             ]
               .map(([a, b]) => seg(lt, a, b))
               .find((q) => q > 0 && q < 1);
@@ -3623,8 +3630,8 @@
       divBox(pose, kit.box, 0, "back");
       drawGun({
         ...pose,
-        blue: 1 - ease.inOut3(seg(lt, 0.45, 0.95)),
-        draw: ease.out3(seg(lt, 0.05, 0.75)),
+        blue: 1 - ease.inOut3(seg(lt, 0.6, 1.4)),
+        draw: ease.out3(seg(lt, 0.05, 1.2)),
         sheen: sheen ?? 0,
         optic: kit.optic,
         flush: kit.flush,
@@ -3798,7 +3805,15 @@
     // The whole chapter.
     function sceneDivisions(lt) {
       if (lt < 0 || lt > DIV.dur) return;
+      // the grid behind takes a third of the pistol's push, the whole chapter
+      // through (never so far that its edge shows)
+      const g = 1 + 0.03 * (lt / DIV.dur);
+      ctx.save();
+      ctx.translate(DIV_POSE.x + 9 * (lt / DIV.dur), DIV_POSE.y);
+      ctx.scale(g, g);
+      ctx.translate(-DIV_POSE.x, -DIV_POSE.y);
       blueprintGrid(0.45);
+      ctx.restore();
       divPistol(lt);
       divLineup(lt);
       divHeader(lt);
