@@ -2159,7 +2159,9 @@
       }
       // stage brief / shot timer
       // hud runs on the final timeline: the brief leaves with the start signal
-      if (t < ins(BEEP)) {
+      const div = INSERTS.find((x) => x.kind === "divisions");
+      const inDiv = t >= insStart(div) && t < insStart(div) + div.dur;
+      if (t < ins(BEEP) && !inDiv) {
         text("STAGE 01 — LONG COURSE", W - 96, 92, {
           size: 14,
           weight: 700,
@@ -8264,7 +8266,7 @@
     // chapter rail held still.
     function renderDivisions(time) {
       const lt = clamp(time, 0, DIV.dur);
-      const t = 7.5 + (lt % 8); // a reel time inside the freeze, clear of its flashes
+      const t = OPENING.divisions - 0.001; // the reel holds here for the chapter
       const k = canvas.width / W;
       ctx.setTransform(k, 0, 0, k, 0, 0);
       ctx.globalAlpha = 1;
@@ -8548,8 +8550,8 @@
   // it holds still.
   // Stretches are [from, to, seconds on screen] in original-cut time.
   const STRETCH = [
-    [0, 2.14, 3.0], // DVC
-    [2.14, BEEP, 5.6], // the range commands, up to the start signal
+    [0, OPENING.divisions, 3.0], // DVC, up to the Divisions chapter
+    [OPENING.divisions, BEEP, 5.6], // the range commands, up to the start signal
     [6.9, 12.95, 6.5], // the line of sight and the sights
     [13.15, 15.7, 5.2], // targets and scoring (its blinds in play at speed), up to the push
     [19.9 + SHIFT, 22.4 + SHIFT, 3.6], // the hit factor
@@ -8689,7 +8691,9 @@
   const PHONE_CAPTIONS = (() => {
     const L = CAPTIONS.map((c) => [...c]);
     const [ry, sb] = OPENING.commands.slice(1).map(([, , at]) => ins(at));
-    const d0 = insStart(INSERTS.find((x) => x.kind === "divisions"));
+    const div = INSERTS.find((x) => x.kind === "divisions");
+    const d0 = insStart(div);
+    const d1 = d0 + div.dur; // the blinds open onto the range commands
     const B = DIV.beats.map((b) => d0 + b);
     const spanning = (at) => L.find(([a, b]) => a <= at && b >= at);
     const command = (k) => {
@@ -8708,9 +8712,13 @@
     }
     const divTitle = spanning(B[1]);
     if (divTitle) divTitle[1] = B[1] - 0.05;
+    // the chapter's own lines end with it
+    L.forEach((c) => {
+      if (c[0] >= d0 && c[0] < d1) c[1] = Math.min(c[1], d1 - 0.05);
+    });
     L.push(
       // MAKE READY is in place as the blinds open after Divisions
-      [ins(OPENING.divisions), ry - 0.05, ...command(0)],
+      [d1, ry - 0.05, ...command(0)],
       [ry, sb - 0.05, ...command(1)],
       ...DIV.specs.map(({ name, label }, k) => [
         B[k + 1] + 0.05,

@@ -50,6 +50,10 @@ test('chapters, captions and sound cues stay inside the reel', () => {
     assert.ok(i === 0 || from >= reel.CAPTIONS[i - 1][1], 'captions do not overlap');
   });
   for (const cue of reel.CUES) assert.ok(cue.t >= 0 && cue.t < reel.DURATION, `${cue.type} at ${cue.t}`);
+  reel.PHONE_CAPTIONS.forEach(([from, to, ko, en], i) => {
+    assert.ok(from < to && to <= reel.DURATION && ko && en);
+    assert.ok(i === 0 || from >= reel.PHONE_CAPTIONS[i - 1][1], 'phone lines do not overlap');
+  });
 });
 
 test('the homepage plays the reel as the first hero slide', async () => {
